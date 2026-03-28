@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 function IconGrid() {
   return (
@@ -59,6 +62,8 @@ function NavItem({ href, icon, label, active, disabled }: NavItemProps) {
 }
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950">
       <div className="px-4 py-5 border-b border-white/[0.06]">
@@ -72,8 +77,8 @@ export function Sidebar() {
 
       <nav className="flex-1 p-3 space-y-0.5">
         <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Overview</p>
-        <NavItem href="/" icon={<IconGrid />} label="Dashboard" active />
-        <NavItem href="#" icon={<IconRepeat />} label="Recurring" disabled />
+        <NavItem href="/" icon={<IconGrid />} label="Dashboard" active={pathname === '/'} />
+        <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
         <NavItem href="#" icon={<IconSettings />} label="Settings" disabled />
       </nav>

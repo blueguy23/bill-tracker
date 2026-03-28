@@ -38,8 +38,9 @@ export function BillsView({ initialBills }: BillsViewProps) {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const json = await res.json() as { error?: string };
-        throw new Error(json.error ?? 'Failed to update bill');
+        let message = 'Failed to update bill';
+        try { const json = await res.json() as { error?: string }; message = json.error ?? message; } catch { /* empty body */ }
+        throw new Error(message);
       }
     } else {
       const res = await fetch('/api/v1/bills', {
@@ -48,8 +49,9 @@ export function BillsView({ initialBills }: BillsViewProps) {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const json = await res.json() as { error?: string };
-        throw new Error(json.error ?? 'Failed to create bill');
+        let message = `Failed to create bill (${res.status})`;
+        try { const json = await res.json() as { error?: string }; message = json.error ?? message; } catch { /* empty body */ }
+        throw new Error(message);
       }
     }
     router.refresh();

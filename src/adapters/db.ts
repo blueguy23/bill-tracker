@@ -6,10 +6,16 @@ let _instance: Promise<StrictDB> | null = null;
 
 export function getDb(): Promise<StrictDB> {
   if (!_instance) {
-    if (!process.env.STRICTDB_URI) {
-      throw new Error('STRICTDB_URI environment variable is not set');
+    // StrictDB internally uses MONGODB_URI for pool lookups — bridge from STRICTDB_URI if needed.
+    const uri = process.env.MONGODB_URI ?? process.env.STRICTDB_URI;
+    if (!uri) {
+      throw new Error('MONGODB_URI environment variable is not set');
     }
-    _instance = StrictDB.create({ uri: process.env.STRICTDB_URI });
+    if (!process.env.MONGODB_URI) process.env.MONGODB_URI = uri;
+    _instance = StrictDB.create({ uri }).catch((err) => {
+      _instance = null;
+      return Promise.reject(err);
+    });
   }
   return _instance;
 }

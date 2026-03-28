@@ -168,7 +168,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
 
           <div>
             <label className={label}>URL</label>
-            <input className={input} type="url" value={form.url} onChange={(e) => set('url', e.target.value)} placeholder="https://billing.example.com" />
+            <input className={input} type="text" value={form.url} onChange={(e) => set('url', e.target.value)} placeholder="https://billing.example.com" />
           </div>
 
           <div>

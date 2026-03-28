@@ -3,6 +3,8 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // strictdb is ESM-only — tell Next.js to import it natively instead of bundling
+  serverExternalPackages: ['strictdb', 'mongodb'],
   images: {
     formats: ['image/webp'],
   },

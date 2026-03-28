@@ -9,7 +9,7 @@ function byId(id: string): StrictFilter<Bill> {
 }
 
 export async function listBills(db: StrictDB): Promise<Bill[]> {
-  return db.queryMany<Bill>(COLLECTION, {}, { sort: { dueDate: 1 } });
+  return db.queryMany<Bill>(COLLECTION, {}, { sort: { dueDate: 1 }, limit: 500 });
 }
 
 export async function getBillById(db: StrictDB, id: string): Promise<Bill | null> {
