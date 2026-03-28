@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { StrictDB, StrictFilter } from 'strictdb';
 import type { Bill, CreateBillDto, UpdateBillDto } from '@/types/bill';
+import { createPayment } from '@/adapters/payments';
 
 const COLLECTION = 'bills';
 
@@ -39,6 +40,7 @@ export async function createBill(db: StrictDB, data: CreateBillDto): Promise<Bil
 }
 
 export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto): Promise<Bill | null> {
+  const existing = await getBillById(db, id);
   const updates: Partial<Bill> & { updatedAt: Date } = { updatedAt: new Date() };
 
   if (data.name !== undefined) updates.name = data.name;
@@ -52,12 +54,22 @@ export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto):
   if (data.notes !== undefined) updates.notes = data.notes;
 
   if (data.dueDate !== undefined) {
-    // isRecurring in the patch takes precedence; fall back to what we'd set in this update
-    const isRecurring = data.isRecurring ?? false;
+    // isRecurring in the patch takes precedence; fall back to existing value
+    const isRecurring = data.isRecurring ?? existing?.isRecurring ?? false;
     updates.dueDate = isRecurring ? Number(data.dueDate) : new Date(data.dueDate as string);
   }
 
   await db.updateOne<Bill>(COLLECTION, byId(id), { $set: updates });
+
+  // Create a payment record when isPaid transitions false → true
+  if (data.isPaid === true && existing && !existing.isPaid) {
+    await createPayment(db, {
+      billId: existing._id,
+      billName: existing.name,
+      amount: existing.amount,
+    });
+  }
+
   // Returns null if document never existed (or was concurrently deleted) — handler maps to 404
   return getBillById(db, id);
 }

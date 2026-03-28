@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import type { BillResponse } from '@/types/bill';
 import { CategoryBadge } from './CategoryBadge';
+import { PaymentHistoryModal } from './PaymentHistoryModal';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -56,6 +58,8 @@ interface BillTableProps {
 }
 
 export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTableProps) {
+  const [historyBill, setHistoryBill] = useState<{ id: string; name: string } | null>(null);
+
   if (bills.length === 0) {
     return (
       <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-16 text-center">
@@ -66,6 +70,7 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
   }
 
   return (
+    <>
     <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
       <table className="min-w-full" data-testid="bills-table">
         <thead>
@@ -126,6 +131,13 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
                 <td className="px-5 py-4">
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
+                      onClick={() => setHistoryBill({ id: bill._id, name: bill.name })}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                      data-testid={`history-${bill._id}`}
+                    >
+                      History
+                    </button>
+                    <button
                       onClick={() => onEdit(bill)}
                       className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
                       data-testid={`edit-${bill._id}`}
@@ -148,5 +160,13 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
         </tbody>
       </table>
     </div>
+
+    <PaymentHistoryModal
+      billId={historyBill?.id ?? ''}
+      billName={historyBill?.name ?? ''}
+      isOpen={historyBill !== null}
+      onClose={() => setHistoryBill(null)}
+    />
+    </>
   );
 }

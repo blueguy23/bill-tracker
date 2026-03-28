@@ -25,6 +25,15 @@ function IconRepeat() {
   );
 }
 
+function IconCalendar() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -79,6 +88,7 @@ export function Sidebar() {
         <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Overview</p>
         <NavItem href="/" icon={<IconGrid />} label="Dashboard" active={pathname === '/'} />
         <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
+        <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
         <NavItem href="#" icon={<IconSettings />} label="Settings" disabled />
       </nav>
