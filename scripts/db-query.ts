@@ -57,6 +57,7 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'example-count-docs': () => import('./queries/example-count-docs.js'),
 
   // --- Add your queries below this line ---
+  'list-bills': () => import('./queries/list-bills.js'),
 };
 
 // ---------------------------------------------------------------------------
