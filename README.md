@@ -1,7 +1,5 @@
 # bill-tracker
 
-> Scaffolded with [Claude Code Mastery Starter Kit](https://github.com/TheDecipherist/claude-code-mastery-project-starter-kit) (default profile)
-
 ## Tech Stack
 
 - **Framework:** Next.js (App Router)
