@@ -1,0 +1,12 @@
+.env
+.env.*
+.git/
+node_modules/
+.next/
+dist/
+coverage/
+test-results/
+playwright-report/
+*.md
+!README.md
+_ai_temp/

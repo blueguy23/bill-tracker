@@ -1,0 +1,33 @@
+# Environment
+.env
+.env.*
+.env.local
+
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+dist/
+out/
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local overrides
+CLAUDE.local.md
+
+# Temporary AI research files
+_ai_temp/

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "installedBy": "claude-code-mastery-starter-kit",
+  "language": "node",
+  "features": {
+    "mongo": {
+      "version": "1.0.0",
+      "installedAt": "2026-03-28T08:09:57Z",
+      "updatedAt": null,
+      "files": [
+        "scripts/db-query.ts",
+        "scripts/queries/example-find-user.ts",
+        "scripts/queries/example-count-docs.ts"
+      ]
+    },
+    "vitest": {
+      "version": "1.0.0",
+      "installedAt": "2026-03-28T08:09:57Z",
+      "updatedAt": null,
+      "files": [
+        "vitest.config.ts"
+      ]
+    },
+    "playwright": {
+      "version": "1.0.0",
+      "installedAt": "2026-03-28T08:09:57Z",
+      "updatedAt": null,
+      "files": [
+        "playwright.config.ts"
+      ]
+    },
+    "docker": {
+      "version": "1.0.0",
+      "installedAt": "2026-03-28T08:09:57Z",
+      "updatedAt": null,
+      "files": [
+        "Dockerfile"
+      ]
+    }
+  }
+}
