@@ -41,6 +41,15 @@
             "command": "bash .claude/hooks/lint-on-save.sh"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/lint-on-save.sh"
+          }
+        ]
       }
     ],
     "Stop": [

@@ -32,3 +32,23 @@ CLAUDE.local.md
 
 # Temporary AI research files
 _ai_temp/
+
+# Added by starter kit update
+.env.production
+.env.staging
+secrets.json
+credentials.json
+service-account.json
+.claude/settings.local.json
+build/
+*.tsbuildinfo
+.nyc_output/
+.vscode/settings.json
+*~
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.mdd/
+*.bak
+*.tmp

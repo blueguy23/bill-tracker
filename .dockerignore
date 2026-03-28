@@ -10,3 +10,17 @@ playwright-report/
 *.md
 !README.md
 _ai_temp/
+
+# Added by starter kit update
+.env.local
+secrets.json
+credentials.json
+.gitignore
+.vscode/
+.idea/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+project-docs/
+.DS_Store
+Thumbs.db
