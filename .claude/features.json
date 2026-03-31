@@ -6,7 +6,7 @@
     "mongo": {
       "version": "1.0.0",
       "installedAt": "2026-03-28T08:09:57Z",
-      "updatedAt": null,
+      "updatedAt": "2026-03-28T18:37:54.293655Z",
       "files": [
         "scripts/db-query.ts",
         "scripts/queries/example-find-user.ts",
@@ -16,7 +16,7 @@
     "vitest": {
       "version": "1.0.0",
       "installedAt": "2026-03-28T08:09:57Z",
-      "updatedAt": null,
+      "updatedAt": "2026-03-28T18:37:54.293655Z",
       "files": [
         "vitest.config.ts"
       ]
@@ -24,7 +24,7 @@
     "playwright": {
       "version": "1.0.0",
       "installedAt": "2026-03-28T08:09:57Z",
-      "updatedAt": null,
+      "updatedAt": "2026-03-28T18:37:54.293655Z",
       "files": [
         "playwright.config.ts"
       ]
