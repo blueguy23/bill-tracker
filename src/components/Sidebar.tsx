@@ -34,6 +34,15 @@ function IconCalendar() {
   );
 }
 
+function IconPieChart() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.21 15.89A10 10 0 118 2.83" />
+      <path d="M22 12A10 10 0 0012 2v10z" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -89,6 +98,7 @@ export function Sidebar() {
         <NavItem href="/" icon={<IconGrid />} label="Dashboard" active={pathname === '/'} />
         <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
         <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
+        <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
         <NavItem href="#" icon={<IconSettings />} label="Settings" disabled />
       </nav>
