@@ -272,7 +272,7 @@ test.describe('Monthly Summary Page (/summary)', () => {
         await expect(tableEl.locator('th', { hasText: 'Category' })).toBeVisible();
         await expect(tableEl.locator('th', { hasText: 'Bills' })).toBeVisible();
         await expect(tableEl.locator('th', { hasText: 'Total' })).toBeVisible();
-        await expect(tableEl.locator('th', { hasText: 'Paid' })).toBeVisible();
+        await expect(tableEl.locator('th').filter({ hasText: /^Paid$/ })).toBeVisible();
         await expect(tableEl.locator('th', { hasText: 'Unpaid' })).toBeVisible();
       }
     });
@@ -381,13 +381,13 @@ test.describe('Active Navigation State', () => {
 
       const activeLink = page.locator('aside nav a', { hasText: label });
       await expect(activeLink).toBeVisible();
-      await expect(activeLink).toHaveClass(/bg-white/);
+      await expect(activeLink).toHaveClass(/bg-white\/\[0\.08\]/);
 
-      // All other navigable links should NOT have the active class
+      // All other navigable links should NOT have the active class (hover:bg-white/[0.04] is not active)
       for (const other of routes) {
         if (other.path === path) continue;
         const otherLink = page.locator('aside nav a', { hasText: other.label });
-        await expect(otherLink).not.toHaveClass(/bg-white/);
+        await expect(otherLink).not.toHaveClass(/bg-white\/\[0\.08\]/);
       }
     });
   }

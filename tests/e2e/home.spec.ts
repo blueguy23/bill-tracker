@@ -139,7 +139,7 @@ test.describe('Sidebar Navigation', () => {
     await expect(dashboardLink).toBeVisible();
     // Active state uses bg-white/[0.08] and text-white; inactive uses text-zinc-500
     // We verify the class contains the active token
-    await expect(dashboardLink).toHaveClass(/bg-white/);
+    await expect(dashboardLink).toHaveClass(/bg-white\/\[0\.08\]/);
   });
 
   test('should navigate to /recurring when Recurring link is clicked', async ({ page }) => {
