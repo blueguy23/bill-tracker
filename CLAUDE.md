@@ -537,11 +537,11 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 
 ### Merge Status
 
-| Branch | Merged to main |
-|--------|---------------|
-| `feat/initial-setup` | ❌ Not yet |
-| `feat/simplefin-sync` | ❌ Not yet |
-| `feat/budget-alerts` | ❌ Not yet |
+| Branch | Merged to master |
+|--------|-----------------|
+| `feat/initial-setup` | ✅ Merged |
+| `feat/simplefin-sync` | ✅ Merged |
+| `feat/budget-alerts` | ✅ Merged |
 
 ### Merge Order (IMPORTANT — read before Session 3)
 
