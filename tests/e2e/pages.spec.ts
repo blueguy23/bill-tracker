@@ -367,12 +367,87 @@ test.describe('Budget Page (/budget)', () => {
 // Cross-page: Active Nav State
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Credit Health Page (/credit)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Credit Health Page (/credit)', () => {
+  test.describe('page structure', () => {
+    test('should render correct URL, heading, and subtitle', async ({ page }) => {
+      await page.goto('/credit');
+      await expect(page).toHaveURL('/credit');
+      await expect(page.locator('h1')).toContainText('Credit Health');
+      await expect(page.locator('p').filter({ hasText: 'Credit utilization and payment activity' })).toBeVisible();
+    });
+
+    test('should set the correct document title', async ({ page }) => {
+      await page.goto('/credit');
+      await expect(page).toHaveTitle(/Credit Health/);
+    });
+
+    test('should mark Credit Health link as active in sidebar', async ({ page }) => {
+      await page.goto('/credit');
+      const link = page.locator('aside nav a', { hasText: 'Credit Health' });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveClass(/bg-white\/\[0\.08\]/);
+    });
+  });
+
+  test.describe('score and overview', () => {
+    test('should render a health score card or no-accounts message', async ({ page }) => {
+      await page.goto('/credit');
+      const scoreCard = page.locator('text=Health Score');
+      const emptyState = page.locator('text=No credit accounts found');
+      const hasScore = await scoreCard.isVisible().catch(() => false);
+      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      expect(hasScore || hasEmpty).toBe(true);
+    });
+
+    test('should render overall utilization section when accounts exist', async ({ page }) => {
+      await page.goto('/credit');
+      const hasAccounts = await page.locator('text=Overall Utilization').isVisible().catch(() => false);
+      const hasEmpty = await page.locator('text=No credit accounts found').isVisible().catch(() => false);
+      expect(hasAccounts || hasEmpty).toBe(true);
+    });
+  });
+
+  test.describe('accounts grid', () => {
+    test('should render accounts grid or empty state', async ({ page }) => {
+      await page.goto('/credit');
+      const hasGrid = await page.locator('text=Credit Accounts').isVisible().catch(() => false);
+      const hasEmpty = await page.locator('text=No credit accounts found').isVisible().catch(() => false);
+      expect(hasGrid || hasEmpty).toBe(true);
+    });
+  });
+
+  test.describe('recent payments', () => {
+    test('should render the Recent Payments section when accounts exist', async ({ page }) => {
+      await page.goto('/credit');
+      const hasPayments = await page.locator('text=Recent Payments').isVisible().catch(() => false);
+      const hasEmpty = await page.locator('text=No credit accounts found').isVisible().catch(() => false);
+      expect(hasPayments || hasEmpty).toBe(true);
+    });
+  });
+
+  test.describe('navigation', () => {
+    test('should navigate to dashboard when Dashboard link is clicked', async ({ page }) => {
+      await page.goto('/credit');
+      await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
+      await expect(page).toHaveURL('/');
+      await expect(page.locator('h1')).toContainText('Dashboard');
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 test.describe('Active Navigation State', () => {
   const routes = [
     { path: '/', label: 'Dashboard' },
     { path: '/recurring', label: 'Recurring' },
     { path: '/summary', label: 'Summary' },
     { path: '/budget', label: 'Budget' },
+    { path: '/credit', label: 'Credit Health' },
   ];
 
   for (const { path, label } of routes) {

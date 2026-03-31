@@ -43,6 +43,15 @@ function IconPieChart() {
   );
 }
 
+function IconCreditCard() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -99,6 +108,7 @@ export function Sidebar() {
         <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
         <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
         <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
+        <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
         <NavItem href="#" icon={<IconSettings />} label="Settings" disabled />
       </nav>
