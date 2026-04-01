@@ -120,16 +120,13 @@ test.describe('Sidebar Navigation', () => {
     await expect(nav.locator('a', { hasText: 'Budget' })).toBeVisible();
   });
 
-  test('should render the Settings item as disabled (not a link)', async ({ page }) => {
+  test('should render the Settings item as a link to /settings', async ({ page }) => {
     await page.goto('/');
 
     const nav = page.locator('aside nav');
-    // Settings is rendered as a <div> (not <a>) when disabled
-    const settingsItem = nav.locator('div', { hasText: 'Settings' });
-    await expect(settingsItem).toBeVisible();
-    // Confirm there is no <a> element for Settings
     const settingsLink = nav.locator('a', { hasText: 'Settings' });
-    await expect(settingsLink).toHaveCount(0);
+    await expect(settingsLink).toBeVisible();
+    await expect(settingsLink).toHaveAttribute('href', '/settings');
   });
 
   test('should mark Dashboard link as active on /', async ({ page }) => {

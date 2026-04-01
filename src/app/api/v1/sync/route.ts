@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { SimpleFINClient } from '@/lib/simplefin/client';
 import { runDailySync, QuotaExceededError } from '@/handlers/sync';
+import { notifySyncCompleted, notifySyncFailed } from '@/handlers/notifications';
 
 function getClient() {
   return new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
@@ -14,10 +15,15 @@ export async function POST(): Promise<Response> {
       { status: 503 },
     );
   }
+  const db = await getDb();
   try {
-    const db = await getDb();
     const client = getClient();
     const result = await runDailySync(db, client, 'manual');
+    void notifySyncCompleted(db, {
+      accountsUpdated: result.accountsUpdated,
+      transactionsImported: result.transactionsUpserted,
+      warnings: result.warnings,
+    });
     return NextResponse.json({ synced: true, ...result });
   } catch (err) {
     if (err instanceof QuotaExceededError) {
@@ -26,6 +32,7 @@ export async function POST(): Promise<Response> {
         { status: 429 },
       );
     }
+    void notifySyncFailed(db, { errorMessage: String(err) });
     console.error('[POST /api/v1/sync]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

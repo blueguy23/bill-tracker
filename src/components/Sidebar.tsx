@@ -110,7 +110,7 @@ export function Sidebar() {
         <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
         <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
-        <NavItem href="#" icon={<IconSettings />} label="Settings" disabled />
+        <NavItem href="/settings" icon={<IconSettings />} label="Settings" active={pathname === '/settings'} />
       </nav>
 
       <div className="p-4 border-t border-white/[0.06]">

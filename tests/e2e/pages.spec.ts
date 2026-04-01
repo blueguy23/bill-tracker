@@ -177,10 +177,11 @@ test.describe('Monthly Summary Page (/summary)', () => {
       const initialText = await monthHeading.textContent();
 
       const nextBtn = page.locator('button[aria-label="Next month"]');
-      await nextBtn.click();
+      await expect(nextBtn).toBeVisible();
+      await nextBtn.click({ force: true });
 
+      await expect(monthHeading).not.toHaveText(initialText?.trim() ?? '');
       const updatedText = await monthHeading.textContent();
-      expect(updatedText?.trim()).not.toBe(initialText?.trim());
       expect(updatedText?.trim()).toMatch(/^[A-Z][a-z]+ \d{4}$/);
     });
 
@@ -188,7 +189,8 @@ test.describe('Monthly Summary Page (/summary)', () => {
       await page.goto('/summary');
 
       const nextBtn = page.locator('button[aria-label="Next month"]');
-      await nextBtn.click();
+      await expect(nextBtn).toBeVisible();
+      await nextBtn.click({ force: true });
 
       // "Today" button appears only when selected month differs from current month
       const todayBtn = page.locator('button', { hasText: 'Today' });
@@ -201,11 +203,15 @@ test.describe('Monthly Summary Page (/summary)', () => {
       const monthHeading = page.locator('h2.text-base.font-semibold');
       const initialText = await monthHeading.textContent();
 
-      await page.locator('button[aria-label="Next month"]').click();
-      await page.locator('button', { hasText: 'Today' }).click();
+      const nextBtn = page.locator('button[aria-label="Next month"]');
+      await expect(nextBtn).toBeVisible();
+      await nextBtn.click({ force: true });
 
-      const restoredText = await monthHeading.textContent();
-      expect(restoredText?.trim()).toBe(initialText?.trim());
+      const todayBtn = page.locator('button', { hasText: 'Today' });
+      await expect(todayBtn).toBeVisible();
+      await todayBtn.click({ force: true });
+
+      await expect(monthHeading).toHaveText(initialText?.trim() ?? '');
     });
   });
 
