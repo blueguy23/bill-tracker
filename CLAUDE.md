@@ -526,6 +526,33 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | — | Discord Notifications | `feat/session-3` | ✅ Built |
 | — | Transaction Subscription Detection | `feat/session-3` | ✅ Built |
 
+### What Was Built — Session 3 (`feat/session-3`)
+
+**Credit Health Module**
+- `/credit` page with FICO score gauge, utilization per card, payment history
+- `GET /api/v1/credit` — derives score components from synced account/transaction data
+- Score model: payment history 35%, utilization 30%, age 15%, mix 10%, inquiries 10%
+
+**Discord Notifications**
+- `src/lib/discord/` — embed builder + webhook client
+- `src/handlers/notifications.ts` — event dispatcher with 24h cooldown/dedup via `notificationLog` adapter
+- Triggered on sync: bill_due_soon (≤7 days), budget_exceeded, credit_utilization_alert
+- `src/adapters/notificationLog.ts` — `dismissedNotifications` collection, idempotent dedup
+
+**Transaction Subscription Detection (Session 5)**
+- `src/lib/subscriptions/normalize.ts` — normalizeDescription, MERCHANT_MAP (30+ merchants), inferCategory
+- `src/lib/subscriptions/detect.ts` — detectSubscriptions: groups transactions by normalized key, computes day-gaps, classifies weekly/biweekly/monthly/quarterly intervals, confidence high/medium
+- `src/lib/subscriptions/autoMatch.ts` — findAutoMatches: compares transactions to unpaid recurring bills by amount ±$1, date ±5 days, description
+- `src/adapters/subscriptions.ts` — dismissedSubscriptions collection, idempotent dismiss
+- `src/handlers/subscriptions.ts` — handleListSubscriptions, handleDismissSubscription
+- Routes: `GET /api/v1/subscriptions`, `POST /api/v1/subscriptions/dismiss`, `GET /api/v1/subscriptions/matches`
+- `src/app/subscriptions/page.tsx` + `src/components/SubscriptionsView.tsx` — confidence badges, convert-to-bill, dismiss with optimistic UI
+- `src/components/MatchBanner.tsx` — dismissible amber banner on dashboard when auto-matches exist
+- Sidebar updated: Subscriptions nav item between Budget and Credit Health
+
+**Settings Page**
+- `/settings` page (basic scaffold) — sidebar link is a real route, not disabled
+
 ### SimpleFIN Live Connection — Known Fixes Applied
 
 These bugs were found and fixed during live SimpleFIN testing (2026-04-01) on `feat/session-3`:
@@ -541,7 +568,7 @@ When switching to a **live SimpleFIN connection**, verify whether `org.name` is 
 
 | Branch | Unit Tests | E2E Tests |
 |--------|-----------|-----------|
-| `feat/session-3` (current) | 198/198 ✅ | 481/484 ✅ (3 pre-existing mobile-chrome flakes unrelated to Session 5) |
+| `feat/session-3` (current) | 198/198 ✅ | 481/484 ✅ (3 pre-existing mobile-chrome flakes) |
 
 ### Merge Status
 
@@ -552,6 +579,13 @@ When switching to a **live SimpleFIN connection**, verify whether `org.name` is 
 | `feat/budget-alerts` | ✅ Merged |
 | `feat/session-3` | ⬜ Not yet merged — ready to merge |
 
+### Next Session Ideas
+
+- **Merge `feat/session-3` to main** — all features complete, tests green
+- **FICO score improvement advisor** — track utilization trends over time, surface actionable alerts (pay before statement closes, keep oldest account open, etc.)
+- **Manual transaction tagging** — let user categorize one-off transactions outside of auto-detection
+- **Export / reports** — monthly PDF/CSV export of bills, spending by category
+- **Push notifications** — browser push or email in addition to Discord
 
 ### Known Pre-Launch Gaps
 
