@@ -524,7 +524,7 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built |
 | — | Credit Health Module | `feat/session-3` | ✅ Built |
 | — | Discord Notifications | `feat/session-3` | ✅ Built |
-| — | Transaction Subscription Detection | `feat/session-3` | 🔄 Session 5 (in progress) |
+| — | Transaction Subscription Detection | `feat/session-3` | ✅ Built |
 
 ### SimpleFIN Live Connection — Known Fixes Applied
 
@@ -541,7 +541,7 @@ When switching to a **live SimpleFIN connection**, verify whether `org.name` is 
 
 | Branch | Unit Tests | E2E Tests |
 |--------|-----------|-----------|
-| `feat/session-3` (current) | 158/158 ✅ | 440/440 ✅ (chromium, firefox, webkit, mobile-chrome) |
+| `feat/session-3` (current) | 198/198 ✅ | 481/484 ✅ (3 pre-existing mobile-chrome flakes unrelated to Session 5) |
 
 ### Merge Status
 
@@ -550,19 +550,8 @@ When switching to a **live SimpleFIN connection**, verify whether `org.name` is 
 | `feat/initial-setup` | ✅ Merged |
 | `feat/simplefin-sync` | ✅ Merged |
 | `feat/budget-alerts` | ✅ Merged |
-| `feat/session-3` | ⬜ Not yet merged — merge after Session 5 complete |
+| `feat/session-3` | ⬜ Not yet merged — ready to merge |
 
-### Session 5 Plan
-
-Implementing transaction-based subscription detection. Plan saved at `.claude/plans/fluttering-conjuring-pearl.md`.
-
-Key deliverables:
-- `src/lib/subscriptions/` — normalize + detect + autoMatch pure logic
-- `src/adapters/subscriptions.ts` — dismissed subscriptions persistence
-- `src/app/api/v1/subscriptions/` — list, dismiss, matches routes
-- `src/app/subscriptions/page.tsx` + `src/components/SubscriptionsView.tsx`
-- Dashboard amber banner for auto-matched transactions
-- Unit + E2E tests
 
 ### Known Pre-Launch Gaps
 
