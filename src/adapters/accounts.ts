@@ -28,3 +28,15 @@ export async function listRecentTransactions(db: StrictDB, accountId?: string): 
     : { posted: { $gte: thirtyDaysAgo } };
   return db.queryMany<Transaction>(TRANSACTIONS, filter, { sort: { posted: -1 }, limit: 500 });
 }
+
+export async function listTransactionsForDetection(
+  db: StrictDB,
+  days = 90,
+): Promise<Transaction[]> {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return db.queryMany<Transaction>(
+    TRANSACTIONS,
+    { posted: { $gte: cutoff }, amount: { $lt: 0 }, pending: false },
+    { sort: { posted: -1 }, limit: 5000 },
+  );
+}
