@@ -5,12 +5,7 @@ const ACCOUNTS = 'accounts';
 const TRANSACTIONS = 'transactions';
 
 export async function upsertAccount(db: StrictDB, account: Account): Promise<void> {
-  await db.updateOne<Account>(
-    ACCOUNTS,
-    { _id: account._id },
-    { $set: account },
-    // upsert: true — StrictDB updateOne with upsert flag
-  );
+  await db.updateOne<Account>(ACCOUNTS, { _id: account._id }, { $set: account }, true);
 }
 
 export async function upsertTransaction(db: StrictDB, txn: Transaction): Promise<boolean> {

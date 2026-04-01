@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-03-31)
+## Feature Roadmap — Session Status (as of 2026-04-01)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -524,7 +524,18 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built |
 | — | Credit Health Module | `feat/session-3` | ✅ Built |
 | — | Discord Notifications | `feat/session-3` | ✅ Built |
-| — | Forecasting & Export | — | ⬜ Session 5 |
+| — | Transaction Subscription Detection | `feat/session-3` | 🔄 Session 5 (in progress) |
+
+### SimpleFIN Live Connection — Known Fixes Applied
+
+These bugs were found and fixed during live SimpleFIN testing (2026-04-01) on `feat/session-3`:
+
+- **`src/lib/simplefin/client.ts`** — `fetch` rejects credentials in URL; fixed by stripping user:pass and sending as `Authorization: Basic` header
+- **`src/adapters/accounts.ts`** — `upsertAccount` was missing `upsert: true` (4th arg to `db.updateOne`); accounts were never inserted
+- **`src/lib/simplefin/transform.ts`** — `org` field not sent by SimpleFIN beta bridge; added `inferOrgName()` with bank name patterns + `inferAccountType()` now falls back to account name keywords
+- **`src/lib/simplefin/transform.ts`** — `inferAccountType` only checked `extra.type`; added name-based pattern fallback for when banks don't send type
+
+When switching to a **live SimpleFIN connection**, verify whether `org.name` is now populated — if so, `inferOrgName` fallback can be simplified.
 
 ### Test Coverage
 
@@ -539,12 +550,19 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `feat/initial-setup` | ✅ Merged |
 | `feat/simplefin-sync` | ✅ Merged |
 | `feat/budget-alerts` | ✅ Merged |
-| `feat/session-3` | ⬜ Not yet merged |
+| `feat/session-3` | ⬜ Not yet merged — merge after Session 5 complete |
 
-### Next Steps (before Session 5)
+### Session 5 Plan
 
-1. Merge `feat/session-3` → `main`
-2. Start Session 5 from updated `main` for Forecasting & Export
+Implementing transaction-based subscription detection. Plan saved at `.claude/plans/fluttering-conjuring-pearl.md`.
+
+Key deliverables:
+- `src/lib/subscriptions/` — normalize + detect + autoMatch pure logic
+- `src/adapters/subscriptions.ts` — dismissed subscriptions persistence
+- `src/app/api/v1/subscriptions/` — list, dismiss, matches routes
+- `src/app/subscriptions/page.tsx` + `src/components/SubscriptionsView.tsx`
+- Dashboard amber banner for auto-matched transactions
+- Unit + E2E tests
 
 ### Known Pre-Launch Gaps
 

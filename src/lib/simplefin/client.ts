@@ -28,18 +28,27 @@ export class SimpleFINClient {
   }
 
   async fetchAccounts(options: FetchAccountsOptions = {}): Promise<FetchAccountsResult> {
-    const url = new URL(`${this.url}/accounts`);
-    url.searchParams.set('version', '2');
+    const parsed = new URL(`${this.url}/accounts`);
+    const username = parsed.username;
+    const password = parsed.password;
+    parsed.username = '';
+    parsed.password = '';
+    parsed.searchParams.set('version', '2');
 
     if (options.balancesOnly) {
-      url.searchParams.set('balances-only', '1');
+      parsed.searchParams.set('balances-only', '1');
     } else if (options.startDate) {
-      url.searchParams.set('start-date', String(Math.floor(options.startDate.getTime() / 1000)));
+      parsed.searchParams.set('start-date', String(Math.floor(options.startDate.getTime() / 1000)));
+    }
+
+    const headers: Record<string, string> = {};
+    if (username || password) {
+      headers['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
     }
 
     let res: Response;
     try {
-      res = await fetch(url.toString());
+      res = await fetch(parsed.toString(), { headers });
     } catch (err) {
       throw new Error(`SimpleFIN network error: ${err instanceof Error ? err.message : String(err)}`);
     }
