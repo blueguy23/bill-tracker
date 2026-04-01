@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-03-29)
+## Feature Roadmap — Session Status (as of 2026-03-31)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -522,39 +522,32 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `02-payment-history` | Payment History | `feat/initial-setup` | ✅ Built |
 | `03-simplefin-core-sync` | SimpleFIN Core Sync | `feat/simplefin-sync` | ✅ Built |
 | `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built |
-| — | Credit Health Module | — | ⬜ Session 3 |
-| — | Discord Notifications | — | ⬜ Session 4 |
+| — | Credit Health Module | `feat/session-3` | ✅ Built |
+| — | Discord Notifications | `feat/session-3` | ✅ Built |
 | — | Forecasting & Export | — | ⬜ Session 5 |
 
 ### Test Coverage
 
-| Worktree | Unit Tests | E2E Tests |
-|----------|-----------|-----------|
-| `feat/initial-setup` | 26/26 ✅ | 1 skeleton — no assertions ⚠️ |
-| `feat/simplefin-sync` | 65/65 ✅ | 1 skeleton — no assertions ⚠️ |
-| `feat/budget-alerts` | 65/65 ✅ | 1 skeleton — no assertions ⚠️ |
-| **Total** | **156 passing** | **0 real E2E tests** |
+| Branch | Unit Tests | E2E Tests |
+|--------|-----------|-----------|
+| `feat/session-3` (current) | 158/158 ✅ | 440/440 ✅ (chromium, firefox, webkit, mobile-chrome) |
 
 ### Merge Status
 
-| Branch | Merged to master |
+| Branch | Merged to main |
 |--------|-----------------|
 | `feat/initial-setup` | ✅ Merged |
 | `feat/simplefin-sync` | ✅ Merged |
 | `feat/budget-alerts` | ✅ Merged |
+| `feat/session-3` | ⬜ Not yet merged |
 
-### Merge Order (IMPORTANT — read before Session 3)
+### Next Steps (before Session 5)
 
-`feat/initial-setup` is the foundation — all other branches build on it. **Base branch is `master`.**
-
-1. Merge `feat/initial-setup` → `master` (foundation — must go first)
-2. Merge `feat/simplefin-sync` → `master` (no budget deps)
-3. Rebase `feat/budget-alerts` onto `master`, then merge (budget depends on simplefin's `transactions` collection)
-4. Start Session 3 from the updated `master`
+1. Merge `feat/session-3` → `main`
+2. Start Session 5 from updated `main` for Forecasting & Export
 
 ### Known Pre-Launch Gaps
 
-- All three worktrees have `tests/e2e/home.spec.ts` with **no real assertions** — must be filled before production launch
 - Last audit: **none run yet** — run `/mdd audit` before launch
 
 ---
