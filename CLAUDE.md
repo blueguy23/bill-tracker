@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-04-01)
+## Feature Roadmap — Session Status (as of 2026-04-02)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -520,55 +520,58 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 |-----|---------|--------|--------|
 | `01-monthly-summary` | Monthly Summary | `feat/initial-setup` | ✅ Built |
 | `02-payment-history` | Payment History | `feat/initial-setup` | ✅ Built |
-| `03-simplefin-core-sync` | SimpleFIN Core Sync | `feat/simplefin-sync` | ✅ Built |
-| `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built |
-| — | Credit Health Module | `feat/session-3` | ✅ Built |
-| — | Discord Notifications | `feat/session-3` | ✅ Built |
-| — | Transaction Subscription Detection | `feat/session-3` | ✅ Built |
+| `03-simplefin-core-sync` | SimpleFIN Core Sync | `feat/simplefin-sync` | ✅ Built + Doc added |
+| `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built — doc missing |
+| `05-credit-health` | Credit Health Module | `feat/session-3` | ✅ Built |
+| `06-discord-notifications` | Discord Notifications | `feat/session-3` | ✅ Built |
+| — | Transaction Subscription Detection | `feat/session-3` | ✅ Built — doc missing |
+| `08-fico-advisor` | Credit Optimizer & Statement Alert | `feat/fico-advisor` | ✅ Built |
 
-### What Was Built — Session 3 (`feat/session-3`)
+### What Was Built — Audit Session (`feat/fico-advisor`, 2026-04-02)
 
-**Credit Health Module**
-- `/credit` page with FICO score gauge, utilization per card, payment history
-- `GET /api/v1/credit` — derives score components from synced account/transaction data
-- Score model: payment history 35%, utilization 30%, age 15%, mix 10%, inquiries 10%
+**MDD Audit — 6 findings fixed:**
+- **M1** — Removed dead `credit_utilization_alert` type (re-added when implemented)
+- **M2** — `runDailyDigest` now wraps webhook in try/catch — no more HTTP 500 on transient failures
+- **L1** — `SettingsView` now receives `dueSoonDays` from server component instead of reading wrong env var
+- **L2/L3** — CLAUDE.md credit endpoint path and score model description corrected
+- **L4** — `notifyTest` now has `isWebhookConfigured()` guard
 
-**Discord Notifications**
-- `src/lib/discord/` — embed builder + webhook client
-- `src/handlers/notifications.ts` — event dispatcher with 24h cooldown/dedup via `notificationLog` adapter
-- Triggered on sync: bill_due_soon (≤7 days), budget_exceeded, credit_utilization_alert
-- `src/adapters/notificationLog.ts` — `dismissedNotifications` collection, idempotent dedup
+**Critical sync bug fixed:**
+- **`src/adapters/accounts.ts`** — `upsertTransaction` was missing `upsert: true` — new transactions were silently dropped on every sync. Fixed. Followed by `POST /api/v1/sync/historical` to backfill 225 transactions.
 
-**Transaction Subscription Detection (Session 5)**
-- `src/lib/subscriptions/normalize.ts` — normalizeDescription, MERCHANT_MAP (30+ merchants), inferCategory
-- `src/lib/subscriptions/detect.ts` — detectSubscriptions: groups transactions by normalized key, computes day-gaps, classifies weekly/biweekly/monthly/quarterly intervals, confidence high/medium
-- `src/lib/subscriptions/autoMatch.ts` — findAutoMatches: compares transactions to unpaid recurring bills by amount ±$1, date ±5 days, description
-- `src/adapters/subscriptions.ts` — dismissedSubscriptions collection, idempotent dismiss
-- `src/handlers/subscriptions.ts` — handleListSubscriptions, handleDismissSubscription
-- Routes: `GET /api/v1/subscriptions`, `POST /api/v1/subscriptions/dismiss`, `GET /api/v1/subscriptions/matches`
-- `src/app/subscriptions/page.tsx` + `src/components/SubscriptionsView.tsx` — confidence badges, convert-to-bill, dismiss with optimistic UI
-- `src/components/MatchBanner.tsx` — dismissible amber banner on dashboard when auto-matches exist
-- Sidebar updated: Subscriptions nav item between Budget and Credit Health
+**Cron sync configured:**
+- Every 2 hours: `0 */2 * * *` via `scripts/cron-sync.ts` (hits DB directly, no server needed)
+- Cron auto-starts on WSL login via `~/.bashrc` + `/etc/sudoers.d/cron-start`
+- `POST /api/v1/sync/historical` route added for manual backfill
 
-**Settings Page**
-- `/settings` page (basic scaffold) — sidebar link is a real route, not disabled
+**Credit Optimizer & Statement Alert (`08-fico-advisor`):**
+- AZEO strategy advisor on `/credit` page — shows per-card paydown targets, anchor card, projected score
+- 30-day utilization trend chart (pure SVG, no dependencies), reconstructed from transaction history
+- Statement close alerts — Discord fires X days before close with exact paydown to hit 5% target
+- Utilization spike alerts — Discord fires after sync if any card > 70%
+- Settings page: per-card statement closing day + target utilization inputs
+- `POST /api/v1/credit/settings` + `GET /api/v1/credit/settings` + `GET /api/v1/credit/advisor`
+- `accountMeta` collection — stores statement closing day + target utilization per card
+- Both alerts use 24h cooldown, fire automatically after every sync
 
 ### SimpleFIN Live Connection — Known Fixes Applied
 
-These bugs were found and fixed during live SimpleFIN testing (2026-04-01) on `feat/session-3`:
+- **`src/lib/simplefin/client.ts`** — credentials sent as `Authorization: Basic` header
+- **`src/adapters/accounts.ts`** — `upsertAccount` and `upsertTransaction` both require `upsert: true` (4th arg). **Always verify this when adding new upsert calls.**
+- **`src/lib/simplefin/transform.ts`** — `inferOrgName()` + `inferAccountType()` fallbacks for when banks don't send type/org
 
-- **`src/lib/simplefin/client.ts`** — `fetch` rejects credentials in URL; fixed by stripping user:pass and sending as `Authorization: Basic` header
-- **`src/adapters/accounts.ts`** — `upsertAccount` was missing `upsert: true` (4th arg to `db.updateOne`); accounts were never inserted
-- **`src/lib/simplefin/transform.ts`** — `org` field not sent by SimpleFIN beta bridge; added `inferOrgName()` with bank name patterns + `inferAccountType()` now falls back to account name keywords
-- **`src/lib/simplefin/transform.ts`** — `inferAccountType` only checked `extra.type`; added name-based pattern fallback for when banks don't send type
+### SimpleFIN Quota
 
-When switching to a **live SimpleFIN connection**, verify whether `org.name` is now populated — if so, `inferOrgName` fallback can be simplified.
+- **24 requests/day** max. Exceeding causes warnings then disables access token.
+- Daily cron (every 2h) = 12 requests/day — safe headroom.
+- Historical import = 3 requests, runs once (`historicalImportDone` flag prevents re-runs).
+- Quota guard env: `SIMPLEFIN_QUOTA_GUARD=20` (blocks before hitting hard limit).
 
 ### Test Coverage
 
 | Branch | Unit Tests | E2E Tests |
 |--------|-----------|-----------|
-| `feat/session-3` (current) | 198/198 ✅ | 481/484 ✅ (3 pre-existing mobile-chrome flakes) |
+| `feat/fico-advisor` (current) | 225/225 ✅ | not re-run |
 
 ### Merge Status
 
@@ -577,19 +580,21 @@ When switching to a **live SimpleFIN connection**, verify whether `org.name` is 
 | `feat/initial-setup` | ✅ Merged |
 | `feat/simplefin-sync` | ✅ Merged |
 | `feat/budget-alerts` | ✅ Merged |
-| `feat/session-3` | ⬜ Not yet merged — ready to merge |
+| `feat/session-3` | ⬜ Not yet merged |
+| `feat/fico-advisor` | ⬜ Not yet merged (depends on session-3) |
 
 ### Next Session Ideas
 
-- **Merge `feat/session-3` to main** — all features complete, tests green
-- **FICO score improvement advisor** — track utilization trends over time, surface actionable alerts (pay before statement closes, keep oldest account open, etc.)
+- **Merge `feat/session-3` + `feat/fico-advisor` to main** — all features complete, tests green
 - **Manual transaction tagging** — let user categorize one-off transactions outside of auto-detection
 - **Export / reports** — monthly PDF/CSV export of bills, spending by category
-- **Push notifications** — browser push or email in addition to Discord
+- **MDD docs for 04-budget-alerts and 07-subscription-detection** — retroactive docs for undocumented features
 
 ### Known Pre-Launch Gaps
 
-- Last audit: **none run yet** — run `/mdd audit` before launch
+- Last audit: **2026-04-02** — all findings fixed
+- MDD docs missing for: `04-budget-alerts`, `07-subscription-detection`
+- E2E tests not re-run after `feat/fico-advisor` changes
 
 ---
 

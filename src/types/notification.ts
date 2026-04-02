@@ -6,6 +6,7 @@ export type NotificationEvent =
   | 'sync_completed'
   | 'sync_failed'
   | 'daily_digest'
+  | 'statement_close_alert'
   | 'credit_utilization_alert'
   | 'test';
 

@@ -13,7 +13,7 @@ export async function upsertTransaction(db: StrictDB, txn: Transaction): Promise
   const existing = await db.queryOne<Transaction>(TRANSACTIONS, { _id: txn._id });
   if (existing && !existing.pending) return false; // already settled, skip
 
-  await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: txn });
+  await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: txn }, true);
   return true;
 }
 
