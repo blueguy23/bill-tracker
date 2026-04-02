@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { SimpleFINClient } from '@/lib/simplefin/client';
 import { runDailySync, QuotaExceededError } from '@/handlers/sync';
-import { notifySyncCompleted, notifySyncFailed } from '@/handlers/notifications';
+import { notifySyncCompleted, notifySyncFailed, checkCreditAlerts } from '@/handlers/notifications';
 
 function getClient() {
   return new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
@@ -24,6 +24,7 @@ export async function POST(): Promise<Response> {
       transactionsImported: result.transactionsUpserted,
       warnings: result.warnings,
     });
+    void checkCreditAlerts(db);
     return NextResponse.json({ synced: true, ...result });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

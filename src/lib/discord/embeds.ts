@@ -7,6 +7,7 @@ import type {
   SyncFailedPayload,
   DigestPayload,
 } from '@/types/notification';
+import type { StatementAlertPayload, CreditUtilizationAlertPayload } from '@/types/creditAdvisor';
 
 const COLOR = {
   amber: 0xf59e0b,
@@ -131,6 +132,40 @@ export function buildTestEmbed(): DiscordEmbed {
     title: 'Test Notification',
     color: COLOR.purple,
     description: 'Your Discord webhook is configured correctly.',
+    timestamp: ts(),
+  };
+}
+
+export function buildStatementCloseEmbed(p: StatementAlertPayload): DiscordEmbed {
+  const closeDateStr = p.closeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const currentPct = `${Math.round(p.currentUtilization * 100)}%`;
+  const targetPct = `${Math.round(p.targetUtilization * 100)}%`;
+  const fields = [
+    { name: 'Closes In', value: `${p.daysUntilClose} day${p.daysUntilClose !== 1 ? 's' : ''} (${closeDateStr})`, inline: true },
+    { name: 'Current Balance', value: `${usd(p.currentBalance)} / ${usd(p.creditLimit)} (${currentPct})`, inline: true },
+    { name: `Pay to ${targetPct}`, value: `Pay ${usd(p.paydownToTarget)} → report ${usd(p.targetBalance)}`, inline: false },
+    { name: 'Pay to 0%', value: `Pay ${usd(p.currentBalance)} → report $0`, inline: false },
+  ];
+  if (p.isAnchorCard && p.totalCards > 1) {
+    fields.push({ name: 'AZEO Tip', value: 'This is your anchor card. Pay all other cards to $0 for best score.', inline: false });
+  }
+  return {
+    title: `Statement Closing Soon — ${p.accountName}`,
+    color: COLOR.amber,
+    fields,
+    timestamp: ts(),
+  };
+}
+
+export function buildCreditUtilizationAlertEmbed(p: CreditUtilizationAlertPayload): DiscordEmbed {
+  return {
+    title: `High Utilization — ${p.accountName}`,
+    color: COLOR.red,
+    fields: [
+      { name: 'Utilization', value: `${Math.round(p.utilization * 100)}%`, inline: true },
+      { name: 'Balance', value: `${usd(p.currentBalance)} / ${usd(p.creditLimit)}`, inline: true },
+      { name: 'Action', value: `Pay ${usd(p.paydownTo30Pct)} to bring below 30%`, inline: false },
+    ],
     timestamp: ts(),
   };
 }

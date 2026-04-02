@@ -1,12 +1,15 @@
 'use client';
 
 import type { CreditSummaryResponse } from '@/types/credit';
+import type { CreditAdvisorResponse } from '@/types/creditAdvisor';
 import { CreditHealthScore } from './CreditHealthScore';
 import { CreditAccountCard } from './CreditAccountCard';
 import { RecentPaymentsPanel } from './RecentPaymentsPanel';
+import { CreditAdvisorPanel } from './CreditAdvisorPanel';
 
 interface CreditViewProps {
   initialData: CreditSummaryResponse;
+  advisorData: CreditAdvisorResponse;
 }
 
 function formatUSD(n: number): string {
@@ -20,7 +23,7 @@ function utilizationColor(util: number | null): string {
   return 'text-red-400';
 }
 
-export function CreditView({ initialData }: CreditViewProps) {
+export function CreditView({ initialData, advisorData }: CreditViewProps) {
   const { accounts, overall, recentPayments, score } = initialData;
 
   if (accounts.length === 0) {
@@ -66,6 +69,9 @@ export function CreditView({ initialData }: CreditViewProps) {
 
       {/* Recent payments */}
       <RecentPaymentsPanel payments={recentPayments} />
+
+      {/* Advisor panel */}
+      <CreditAdvisorPanel data={advisorData} />
     </div>
   );
 }
