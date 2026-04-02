@@ -97,13 +97,18 @@ export async function runDailyDigest(db: StrictDB): Promise<DigestResult> {
     budgetExceeded: exceeded,
   });
 
-  await sendWebhook({ embeds: [embed] });
-  await insertNotificationLog(db, {
-    event: 'daily_digest',
-    key: DIGEST_KEY,
-    sentAt: new Date(),
-    payload: JSON.stringify(embed),
-  });
+  try {
+    await sendWebhook({ embeds: [embed] });
+    await insertNotificationLog(db, {
+      event: 'daily_digest',
+      key: DIGEST_KEY,
+      sentAt: new Date(),
+      payload: JSON.stringify(embed),
+    });
+  } catch (err) {
+    console.error('[digest] failed to send webhook:', err);
+    return { ...empty, reason: 'no_webhook' };
+  }
 
   return {
     sent: true,
