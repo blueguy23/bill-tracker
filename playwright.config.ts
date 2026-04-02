@@ -55,25 +55,16 @@ export default defineConfig({
     },
   ],
 
-  /* Start services on TEST ports before running E2E tests */
+  /* Single Next.js app serves all pages and API routes */
   webServer: [
     {
       command: 'pnpm dev:test:website',
-      port: 4000,
+      url: 'http://localhost:4000',
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-    },
-    {
-      command: 'pnpm dev:test:api',
-      port: 4010,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
-    },
-    {
-      command: 'pnpm dev:test:dashboard',
-      port: 4020,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      timeout: 60_000,
+      env: {
+        NEXT_PUBLIC_SITE_URL: 'http://localhost:4000',
+      },
     },
   ],
 });

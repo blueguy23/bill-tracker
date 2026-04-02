@@ -8,19 +8,50 @@ import type {
   SFINError,
 } from './types';
 
-export function inferAccountType(extra?: RawSFINAccount['extra']): AccountType {
+export function inferAccountType(extra?: RawSFINAccount['extra'], name?: string): AccountType {
   const t = extra?.type?.toLowerCase() ?? '';
   if (t === 'checking') return 'checking';
   if (t === 'savings') return 'savings';
   if (t === 'credit' || t === 'credit card') return 'credit';
   if (t === 'investment' || t === 'brokerage') return 'investment';
+
+  const n = name?.toLowerCase() ?? '';
+  if (/credit|visa|mastercard|amex|discover|freedom|sapphire|venture|quicksilver/.test(n)) return 'credit';
+  if (/checking|chequing/.test(n)) return 'checking';
+  if (/savings|save|share account|hsa/.test(n)) return 'savings';
+  if (/invest|brokerage|401k|ira|roth/.test(n)) return 'investment';
   return 'other';
+}
+
+const BANK_PATTERNS: [RegExp, string][] = [
+  [/chase/i, 'Chase'],
+  [/capital one|capitalone/i, 'Capital One'],
+  [/bank of america|bofa/i, 'Bank of America'],
+  [/wells fargo/i, 'Wells Fargo'],
+  [/citibank|citi /i, 'Citibank'],
+  [/american express|amex/i, 'American Express'],
+  [/discover/i, 'Discover'],
+  [/us bank|usbank/i, 'U.S. Bank'],
+  [/pnc/i, 'PNC'],
+  [/td bank/i, 'TD Bank'],
+  [/ally/i, 'Ally'],
+  [/navy federal/i, 'Navy Federal'],
+  [/usaa/i, 'USAA'],
+  [/synchrony/i, 'Synchrony'],
+];
+
+export function inferOrgName(rawOrgName: string | undefined, accountName: string): string {
+  if (rawOrgName) return rawOrgName;
+  for (const [pattern, bankName] of BANK_PATTERNS) {
+    if (pattern.test(accountName)) return bankName;
+  }
+  return 'Unknown';
 }
 
 export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): Account {
   return {
     _id: raw.id,
-    orgName: raw.org.name,
+    orgName: inferOrgName(raw.org?.name, raw.name),
     name: raw.name,
     currency: raw.currency,
     balance: parseFloat(raw.balance),
@@ -28,7 +59,7 @@ export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): A
       ? parseFloat(raw['available-balance'])
       : null,
     balanceDate: new Date(raw['balance-date'] * 1000),
-    accountType: inferAccountType(raw.extra),
+    accountType: inferAccountType(raw.extra, raw.name),
     lastSyncedAt: now,
   };
 }

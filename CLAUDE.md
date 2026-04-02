@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-03-29)
+## Feature Roadmap — Session Status (as of 2026-04-01)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -522,39 +522,73 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `02-payment-history` | Payment History | `feat/initial-setup` | ✅ Built |
 | `03-simplefin-core-sync` | SimpleFIN Core Sync | `feat/simplefin-sync` | ✅ Built |
 | `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built |
-| — | Credit Health Module | — | ⬜ Session 3 |
-| — | Discord Notifications | — | ⬜ Session 4 |
-| — | Forecasting & Export | — | ⬜ Session 5 |
+| — | Credit Health Module | `feat/session-3` | ✅ Built |
+| — | Discord Notifications | `feat/session-3` | ✅ Built |
+| — | Transaction Subscription Detection | `feat/session-3` | ✅ Built |
+
+### What Was Built — Session 3 (`feat/session-3`)
+
+**Credit Health Module**
+- `/credit` page with FICO score gauge, utilization per card, payment history
+- `GET /api/v1/credit` — derives score components from synced account/transaction data
+- Score model: payment history 35%, utilization 30%, age 15%, mix 10%, inquiries 10%
+
+**Discord Notifications**
+- `src/lib/discord/` — embed builder + webhook client
+- `src/handlers/notifications.ts` — event dispatcher with 24h cooldown/dedup via `notificationLog` adapter
+- Triggered on sync: bill_due_soon (≤7 days), budget_exceeded, credit_utilization_alert
+- `src/adapters/notificationLog.ts` — `dismissedNotifications` collection, idempotent dedup
+
+**Transaction Subscription Detection (Session 5)**
+- `src/lib/subscriptions/normalize.ts` — normalizeDescription, MERCHANT_MAP (30+ merchants), inferCategory
+- `src/lib/subscriptions/detect.ts` — detectSubscriptions: groups transactions by normalized key, computes day-gaps, classifies weekly/biweekly/monthly/quarterly intervals, confidence high/medium
+- `src/lib/subscriptions/autoMatch.ts` — findAutoMatches: compares transactions to unpaid recurring bills by amount ±$1, date ±5 days, description
+- `src/adapters/subscriptions.ts` — dismissedSubscriptions collection, idempotent dismiss
+- `src/handlers/subscriptions.ts` — handleListSubscriptions, handleDismissSubscription
+- Routes: `GET /api/v1/subscriptions`, `POST /api/v1/subscriptions/dismiss`, `GET /api/v1/subscriptions/matches`
+- `src/app/subscriptions/page.tsx` + `src/components/SubscriptionsView.tsx` — confidence badges, convert-to-bill, dismiss with optimistic UI
+- `src/components/MatchBanner.tsx` — dismissible amber banner on dashboard when auto-matches exist
+- Sidebar updated: Subscriptions nav item between Budget and Credit Health
+
+**Settings Page**
+- `/settings` page (basic scaffold) — sidebar link is a real route, not disabled
+
+### SimpleFIN Live Connection — Known Fixes Applied
+
+These bugs were found and fixed during live SimpleFIN testing (2026-04-01) on `feat/session-3`:
+
+- **`src/lib/simplefin/client.ts`** — `fetch` rejects credentials in URL; fixed by stripping user:pass and sending as `Authorization: Basic` header
+- **`src/adapters/accounts.ts`** — `upsertAccount` was missing `upsert: true` (4th arg to `db.updateOne`); accounts were never inserted
+- **`src/lib/simplefin/transform.ts`** — `org` field not sent by SimpleFIN beta bridge; added `inferOrgName()` with bank name patterns + `inferAccountType()` now falls back to account name keywords
+- **`src/lib/simplefin/transform.ts`** — `inferAccountType` only checked `extra.type`; added name-based pattern fallback for when banks don't send type
+
+When switching to a **live SimpleFIN connection**, verify whether `org.name` is now populated — if so, `inferOrgName` fallback can be simplified.
 
 ### Test Coverage
 
-| Worktree | Unit Tests | E2E Tests |
-|----------|-----------|-----------|
-| `feat/initial-setup` | 26/26 ✅ | 1 skeleton — no assertions ⚠️ |
-| `feat/simplefin-sync` | 65/65 ✅ | 1 skeleton — no assertions ⚠️ |
-| `feat/budget-alerts` | 65/65 ✅ | 1 skeleton — no assertions ⚠️ |
-| **Total** | **156 passing** | **0 real E2E tests** |
+| Branch | Unit Tests | E2E Tests |
+|--------|-----------|-----------|
+| `feat/session-3` (current) | 198/198 ✅ | 481/484 ✅ (3 pre-existing mobile-chrome flakes) |
 
 ### Merge Status
 
 | Branch | Merged to main |
-|--------|---------------|
-| `feat/initial-setup` | ❌ Not yet |
-| `feat/simplefin-sync` | ❌ Not yet |
-| `feat/budget-alerts` | ❌ Not yet |
+|--------|-----------------|
+| `feat/initial-setup` | ✅ Merged |
+| `feat/simplefin-sync` | ✅ Merged |
+| `feat/budget-alerts` | ✅ Merged |
+| `feat/session-3` | ⬜ Not yet merged — ready to merge |
 
-### Merge Order (IMPORTANT — read before Session 3)
+### Next Session Ideas
 
-`feat/initial-setup` is the foundation — all other branches build on it. **Base branch is `master`.**
-
-1. Merge `feat/initial-setup` → `master` (foundation — must go first)
-2. Merge `feat/simplefin-sync` → `master` (no budget deps)
-3. Rebase `feat/budget-alerts` onto `master`, then merge (budget depends on simplefin's `transactions` collection)
-4. Start Session 3 from the updated `master`
+- **Merge `feat/session-3` to main** — all features complete, tests green
+- **FICO score improvement advisor** — track utilization trends over time, surface actionable alerts (pay before statement closes, keep oldest account open, etc.)
+- **Manual transaction tagging** — let user categorize one-off transactions outside of auto-detection
+- **Export / reports** — monthly PDF/CSV export of bills, spending by category
+- **Push notifications** — browser push or email in addition to Discord
 
 ### Known Pre-Launch Gaps
 
-- All three worktrees have `tests/e2e/home.spec.ts` with **no real assertions** — must be filled before production launch
 - Last audit: **none run yet** — run `/mdd audit` before launch
 
 ---

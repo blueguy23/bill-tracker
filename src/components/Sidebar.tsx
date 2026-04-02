@@ -43,6 +43,25 @@ function IconPieChart() {
   );
 }
 
+function IconCreditCard() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="4" width="22" height="16" rx="2" />
+      <line x1="1" y1="10" x2="23" y2="10" />
+    </svg>
+  );
+}
+
+function IconRefreshCw() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" />
+      <polyline points="1 20 1 14 7 14" />
+      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -99,8 +118,10 @@ export function Sidebar() {
         <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
         <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
         <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
+        <NavItem href="/subscriptions" icon={<IconRefreshCw />} label="Subscriptions" active={pathname === '/subscriptions'} />
+        <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
-        <NavItem href="#" icon={<IconSettings />} label="Settings" disabled />
+        <NavItem href="/settings" icon={<IconSettings />} label="Settings" active={pathname === '/settings'} />
       </nav>
 
       <div className="p-4 border-t border-white/[0.06]">

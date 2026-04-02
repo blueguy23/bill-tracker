@@ -1,6 +1,8 @@
 import type { BillResponse, BillSummary } from '@/types/bill';
+import type { SuggestedMatch } from '@/types/subscription';
 import { SummaryCards } from '@/components/SummaryCards';
 import { BillsView } from '@/components/BillsView';
+import { MatchBanner } from '@/components/MatchBanner';
 
 async function fetchBills(): Promise<BillResponse[]> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
@@ -40,8 +42,20 @@ function computeSummary(bills: BillResponse[]): BillSummary {
   return { totalOwedThisMonth, totalPaid, overdueCount, autoPayTotal };
 }
 
+async function fetchSuggestedMatches(): Promise<SuggestedMatch[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/subscriptions/matches`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json() as { matches: SuggestedMatch[] };
+    return data.matches;
+  } catch {
+    return [];
+  }
+}
+
 export default async function DashboardPage() {
-  const bills = await fetchBills();
+  const [bills, matches] = await Promise.all([fetchBills(), fetchSuggestedMatches()]);
   const summary = computeSummary(bills);
 
   return (
@@ -52,6 +66,7 @@ export default async function DashboardPage() {
           <p className="text-sm text-zinc-500 mt-0.5">Your bills at a glance</p>
         </div>
       </div>
+      <MatchBanner count={matches.length} />
       <SummaryCards summary={summary} />
       <BillsView initialBills={bills} />
     </div>
