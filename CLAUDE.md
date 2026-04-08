@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-04-02)
+## Feature Roadmap — Session Status (as of 2026-04-07)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -526,6 +526,8 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `06-discord-notifications` | Discord Notifications | `feat/session-3` | ✅ Built |
 | — | Transaction Subscription Detection | `feat/session-3` | ✅ Built — doc missing |
 | `08-fico-advisor` | Credit Optimizer & Statement Alert | `feat/fico-advisor` | ✅ Built |
+| — | Sync Button + Startup Auto-Sync | `feat/sync-button` | ✅ Built |
+| — | Full Transaction History Page | `feat/sync-button` | ✅ Built |
 
 ### What Was Built — Audit Session (`feat/fico-advisor`, 2026-04-02)
 
@@ -567,11 +569,31 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 - Historical import = 3 requests, runs once (`historicalImportDone` flag prevents re-runs).
 - Quota guard env: `SIMPLEFIN_QUOTA_GUARD=20` (blocks before hitting hard limit).
 
+### What Was Built — Session 2026-04-07 (`feat/sync-button`)
+
+**Sync Button + Status Endpoint:**
+- Sidebar Sync Now button — `idle/syncing/done/error/quota` states with color feedback
+- `GET /api/v1/sync/status` — returns `lastSyncAt` (cross-day via `getLastSyncAt`), quota usage, next scheduled sync
+- Startup auto-sync in `instrumentation.ts` — triggers background sync if last sync >2h ago
+- Sync window widened from 3 days → 7 days (dedup prevents double-inserts)
+
+**Full Transaction History Page (`/transactions`):**
+- `GET /api/v1/transactions` — account filter, date range, limit, offset (pagination)
+- `listTransactions()` adapter — no 30-day cap, `hasMore` pagination pattern
+- `/transactions` page — defaults to This Month, all accounts combined
+- Account dropdown filter + date range tabs (This Month / Last Month / 3mo / 6mo / All Time)
+- Transfer/Zelle badge detection, red/green amounts, pending badges, Load More
+- Transactions nav item added to Sidebar
+
+**Tests:**
+- 8 new unit tests (adapter: pagination, filtering, offset, date range)
+- 84 new E2E tests — API shape + **data binding** (real DB values verified in UI) + filtering behavior across all 4 browsers
+
 ### Test Coverage
 
 | Branch | Unit Tests | E2E Tests |
 |--------|-----------|-----------|
-| `feat/fico-advisor` (current) | 225/225 ✅ | not re-run |
+| `feat/sync-button` (current) | 233/233 ✅ | 83 passed, 1 skipped (mobile account column) ✅ |
 
 ### Merge Status
 
@@ -582,6 +604,7 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `feat/budget-alerts` | ✅ Merged |
 | `feat/session-3` | ⬜ Not yet merged |
 | `feat/fico-advisor` | ⬜ Not yet merged (depends on session-3) |
+| `feat/sync-button` | ⬜ Not yet merged (depends on session-3 + fico-advisor) |
 
 ### What Was Fixed — Infra Session (`chore/lan-access`, 2026-04-03)
 
@@ -610,16 +633,20 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 
 ### Next Session Ideas
 
-- **Merge `feat/session-3` + `feat/fico-advisor` to main** — all features complete, tests green
-- **Manual transaction tagging** — let user categorize one-off transactions outside of auto-detection
-- **Export / reports** — monthly PDF/CSV export of bills, spending by category
-- **MDD docs for 04-budget-alerts and 07-subscription-detection** — retroactive docs for undocumented features
+- **Merge all pending branches to master** — session-3 → fico-advisor → sync-button (in order)
+- **Dashboard overhaul** — net worth widget, cash flow (income vs expenses), spending by category chart
+- **Auto-categorization** — tag transactions by description pattern, user can override
+- **Onboarding flow** — SimpleFIN setup wizard, empty state UX for new users
+- **Auth (Phase 5)** — NextAuth magic link, required before any public launch
+- **Manual transaction tagging** — let user categorize one-off transactions
+- **Export / reports** — monthly PDF/CSV export
+- **MDD docs for 04-budget-alerts and 07-subscription-detection** — retroactive docs
 
 ### Known Pre-Launch Gaps
 
 - Last audit: **2026-04-02** — all findings fixed
 - MDD docs missing for: `04-budget-alerts`, `07-subscription-detection`
-- E2E tests not re-run after `feat/fico-advisor` changes
+- No auth — single-user only until Phase 5 implemented
 
 ---
 
