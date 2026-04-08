@@ -18,6 +18,7 @@ export async function handleGetCreditSettings(db: StrictDB): Promise<NextRespons
         accountName: `${a.orgName} ${a.name}`.trim(),
         statementClosingDay: meta?.statementClosingDay ?? null,
         targetUtilization: meta?.targetUtilization ?? Number(process.env.CREDIT_TARGET_UTIL ?? 0.05),
+        manualCreditLimit: meta?.manualCreditLimit ?? null,
       };
     }),
   };
@@ -35,6 +36,7 @@ export async function handleSaveCreditSettings(
         _id: s.accountId,
         statementClosingDay: s.statementClosingDay,
         targetUtilization: s.targetUtilization,
+        manualCreditLimit: s.manualCreditLimit,
       }),
     ),
   );

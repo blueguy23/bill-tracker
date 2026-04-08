@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 
 function IconGrid() {
   return (
@@ -71,6 +72,18 @@ function IconSettings() {
   );
 }
 
+function formatLastSync(iso: string | null): string {
+  if (!iso) return 'Never synced';
+  const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const hours = Math.floor(diffMin / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+type SyncState = 'idle' | 'syncing' | 'done' | 'error' | 'quota';
+
 interface NavItemProps {
   href: string;
   icon: React.ReactNode;
@@ -100,6 +113,61 @@ function NavItem({ href, icon, label, active, disabled }: NavItemProps) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [syncState, setSyncState] = useState<SyncState>('idle');
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const fetchStatus = useCallback(() => {
+    fetch('/api/v1/sync/status')
+      .then((r) => r.json())
+      .then((data) => setLastSyncAt(data.lastSyncAt ?? null))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  async function handleSync() {
+    if (syncState === 'syncing') return;
+    setSyncState('syncing');
+    setErrorMsg(null);
+    try {
+      const r = await fetch('/api/v1/sync', { method: 'POST' });
+      if (r.ok) {
+        setSyncState('done');
+        setLastSyncAt(new Date().toISOString());
+        router.refresh();
+        setTimeout(() => setSyncState('idle'), 3000);
+      } else if (r.status === 429) {
+        setSyncState('quota');
+        setErrorMsg('Quota reached');
+        setTimeout(() => setSyncState('idle'), 5000);
+      } else {
+        setSyncState('error');
+        setErrorMsg('Sync failed');
+        setTimeout(() => setSyncState('idle'), 5000);
+      }
+    } catch {
+      setSyncState('error');
+      setErrorMsg('Network error');
+      setTimeout(() => setSyncState('idle'), 5000);
+    }
+  }
+
+  const syncLabel =
+    syncState === 'syncing' ? 'Syncing…' :
+    syncState === 'done'    ? 'Synced!' :
+    syncState === 'quota'   ? 'Quota reached' :
+    syncState === 'error'   ? (errorMsg ?? 'Error') :
+    'Sync Now';
+
+  const syncColor =
+    syncState === 'done'  ? 'text-green-400' :
+    syncState === 'error' || syncState === 'quota' ? 'text-red-400' :
+    syncState === 'syncing' ? 'text-blue-400' :
+    'text-zinc-400 hover:text-zinc-200';
 
   return (
     <aside className="w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950">
@@ -124,8 +192,18 @@ export function Sidebar() {
         <NavItem href="/settings" icon={<IconSettings />} label="Settings" active={pathname === '/settings'} />
       </nav>
 
-      <div className="p-4 border-t border-white/[0.06]">
-        <p className="text-xs text-zinc-600">Personal workspace</p>
+      <div className="p-3 border-t border-white/[0.06] space-y-1">
+        <button
+          onClick={handleSync}
+          disabled={syncState === 'syncing'}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${syncColor} hover:bg-white/[0.04] disabled:cursor-not-allowed`}
+        >
+          <span className={syncState === 'syncing' ? 'animate-spin' : ''}>
+            <IconRefreshCw />
+          </span>
+          <span>{syncLabel}</span>
+        </button>
+        <p className="px-3 text-[10px] text-zinc-600">{formatLastSync(lastSyncAt)}</p>
       </div>
     </aside>
   );

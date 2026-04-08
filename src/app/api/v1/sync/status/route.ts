@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
-import { getTodayLog } from '@/adapters/syncLog';
+import { getTodayLog, getLastSyncAt } from '@/adapters/syncLog';
 
 const QUOTA_LIMIT = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
@@ -24,12 +24,12 @@ function nextScheduledSync(cronExpr: string): string | null {
 export async function GET(): Promise<Response> {
   try {
     const db = await getDb();
-    const log = await getTodayLog(db);
+    const [log, lastSyncAt] = await Promise.all([getTodayLog(db), getLastSyncAt(db)]);
     return NextResponse.json({
       quotaUsed: log.requestCount,
       quotaLimit: QUOTA_LIMIT,
       quotaGuard: QUOTA_GUARD,
-      lastSyncAt: log.lastSyncAt?.toISOString() ?? null,
+      lastSyncAt: lastSyncAt?.toISOString() ?? null,
       lastSyncType: log.lastSyncType,
       historicalImportDone: log.historicalImportDone,
       nextScheduledSync: nextScheduledSync(process.env.CRON_PRIMARY ?? '0 3 * * *'),

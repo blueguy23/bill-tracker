@@ -129,7 +129,7 @@ export async function checkCreditAlerts(db: StrictDB): Promise<void> {
   const accountIds = accounts.map((a) => a._id);
   const metaList = await listAccountMeta(db, accountIds);
   const metaMap = new Map(metaList.map((m) => [m._id, m]));
-  const summaries = buildAccountSummaries(accounts);
+  const summaries = buildAccountSummaries(accounts, metaMap);
   const totalCards = summaries.filter((s) => s.hasLimitData).length;
   const alertDays = Number(process.env.CREDIT_ALERT_DAYS ?? 5);
   const now = new Date();

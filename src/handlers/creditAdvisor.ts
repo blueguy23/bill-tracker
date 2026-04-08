@@ -149,11 +149,12 @@ export function computeAZEO(
     : 0;
 
   // Recompute projected score using buildOverallStats on hypothetical summaries
+  const metaMapForProjection = new Map(metaList.map((m) => [m._id, m]));
   const summaries = buildAccountSummaries(sorted.map((a) => {
     const isAnchor = a._id === anchorAcct._id;
     const targetBal = isAnchor ? anchorTargetBalance : 0;
     return { ...a, balance: targetBal };
-  }));
+  }), metaMapForProjection);
   const projectedOverall = buildOverallStats(summaries);
   const projectedScore = computeHealthScore(projectedOverall, [], eligible.length);
 
@@ -184,7 +185,8 @@ export async function handleGetCreditAdvisor(db: StrictDB): Promise<NextResponse
 
   const trend = computeUtilizationTrend(accounts, transactions);
 
-  const summaries = buildAccountSummaries(accounts);
+  const metaMap = new Map(metaList.map((m) => [m._id, m]));
+  const summaries = buildAccountSummaries(accounts, metaMap);
   const overall = buildOverallStats(summaries);
   const currentScore = computeHealthScore(overall, [], accounts.length);
 

@@ -28,7 +28,7 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     orgName: 'Test Bank',
     name: 'Visa Platinum',
     currency: 'USD',
-    balance: 500,
+    balance: -500, // negative = amount owed (SimpleFIN convention for credit cards)
     availableBalance: 1500,
     balanceDate: new Date('2026-03-28'),
     accountType: 'credit',
@@ -41,8 +41,9 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
 
 describe('buildAccountSummaries', () => {
   it('computes creditLimit and utilization when availableBalance is present', () => {
-    const account = makeAccount({ balance: 500, availableBalance: 1500 });
-    const summary = buildAccountSummaries([account])[0]!;
+    // balance = -500 (owe $500), availableBalance = 1500 → limit = 500 + 1500 = 2000, util = 25%
+    const account = makeAccount({ balance: -500, availableBalance: 1500 });
+    const summary = buildAccountSummaries([account], new Map())[0]!;
 
     expect(summary.hasLimitData).toBe(true);
     expect(summary.creditLimit).toBe(2000);
@@ -51,7 +52,7 @@ describe('buildAccountSummaries', () => {
 
   it('sets hasLimitData false and nulls creditLimit/utilization when availableBalance is null', () => {
     const account = makeAccount({ availableBalance: null });
-    const summary = buildAccountSummaries([account])[0]!;
+    const summary = buildAccountSummaries([account], new Map())[0]!;
 
     expect(summary.hasLimitData).toBe(false);
     expect(summary.creditLimit).toBeNull();
@@ -60,7 +61,7 @@ describe('buildAccountSummaries', () => {
 
   it('returns 0 utilization for a paid-off card (balance=0, availableBalance=limit)', () => {
     const account = makeAccount({ balance: 0, availableBalance: 2000 });
-    const summary = buildAccountSummaries([account])[0]!;
+    const summary = buildAccountSummaries([account], new Map())[0]!;
 
     expect(summary.utilization).toBe(0);
     expect(summary.creditLimit).toBe(2000);
@@ -68,14 +69,14 @@ describe('buildAccountSummaries', () => {
 
   it('serializes balanceDate as ISO string', () => {
     const account = makeAccount({ balanceDate: new Date('2026-03-28T00:00:00.000Z') });
-    const summary = buildAccountSummaries([account])[0]!;
+    const summary = buildAccountSummaries([account], new Map())[0]!;
 
     expect(summary.balanceDate).toBe('2026-03-28T00:00:00.000Z');
   });
 
   it('maps account _id to summary id', () => {
     const account = makeAccount({ _id: 'abc-123' });
-    const summary = buildAccountSummaries([account])[0]!;
+    const summary = buildAccountSummaries([account], new Map())[0]!;
     expect(summary.id).toBe('abc-123');
   });
 });
@@ -86,7 +87,7 @@ describe('buildOverallStats', () => {
   function makeSummary(overrides: Partial<CreditAccountSummary> = {}): CreditAccountSummary {
     return {
       id: 'acct-1', orgName: 'Bank', name: 'Card',
-      balance: 500, creditLimit: 2000, availableBalance: 1500,
+      balance: -500, creditLimit: 2000, availableBalance: 1500, // balance negative = amount owed
       utilization: 0.25, hasLimitData: true,
       balanceDate: '2026-03-28T00:00:00.000Z',
       ...overrides,
@@ -95,12 +96,12 @@ describe('buildOverallStats', () => {
 
   it('sums balance and limit across accounts with limit data', () => {
     const summaries = [
-      makeSummary({ balance: 500, creditLimit: 2000 }),
-      makeSummary({ id: 'acct-2', balance: 300, creditLimit: 1000 }),
+      makeSummary({ balance: -500, creditLimit: 2000 }),
+      makeSummary({ id: 'acct-2', balance: -300, creditLimit: 1000 }),
     ];
     const stats = buildOverallStats(summaries);
 
-    expect(stats.totalBalance).toBe(800);
+    expect(stats.totalBalance).toBe(800); // amount owed: 500 + 300
     expect(stats.totalLimit).toBe(3000);
     expect(stats.accountsWithLimitData).toBe(2);
     expect(stats.utilization).toBeCloseTo(800 / 3000);
@@ -108,15 +109,15 @@ describe('buildOverallStats', () => {
 
   it('excludes accounts without limit data from totalLimit and utilization', () => {
     const summaries = [
-      makeSummary({ balance: 500, creditLimit: 2000 }),
-      makeSummary({ id: 'acct-2', balance: 300, creditLimit: null, hasLimitData: false, utilization: null }),
+      makeSummary({ balance: -500, creditLimit: 2000 }),
+      makeSummary({ id: 'acct-2', balance: -300, creditLimit: null, hasLimitData: false, utilization: null }),
     ];
     const stats = buildOverallStats(summaries);
 
-    expect(stats.totalBalance).toBe(800);
+    expect(stats.totalBalance).toBe(800); // both balances counted (owed)
     expect(stats.totalLimit).toBe(2000);
     expect(stats.accountsWithLimitData).toBe(1);
-    expect(stats.utilization).toBeCloseTo(800 / 2000);
+    expect(stats.utilization).toBeCloseTo(800 / 2000); // total owed across all cards / known limit
   });
 
   it('returns utilization null when no accounts have limit data', () => {
@@ -211,8 +212,9 @@ describe('handleGetCreditSummary', () => {
   it('returns 200 with correct top-level shape when accounts exist', async () => {
     const db = makeDb({
       queryMany: vi.fn()
-        .mockResolvedValueOnce([creditAccount])
-        .mockResolvedValueOnce([payment]),
+        .mockResolvedValueOnce([creditAccount]) // listCreditAccounts
+        .mockResolvedValueOnce([payment])        // listCreditTransactions (Promise.all[0])
+        .mockResolvedValueOnce([]),              // listAccountMeta (Promise.all[1])
     });
 
     const res = await handleGetCreditSummary(db);
@@ -240,7 +242,8 @@ describe('handleGetCreditSummary', () => {
     const db = makeDb({
       queryMany: vi.fn()
         .mockResolvedValueOnce([creditAccount])
-        .mockResolvedValueOnce([payment, charge]),
+        .mockResolvedValueOnce([payment, charge])
+        .mockResolvedValueOnce([]),
     });
 
     const res = await handleGetCreditSummary(db);
@@ -255,7 +258,8 @@ describe('handleGetCreditSummary', () => {
     const db = makeDb({
       queryMany: vi.fn()
         .mockResolvedValueOnce([creditAccount])
-        .mockResolvedValueOnce(manyPayments),
+        .mockResolvedValueOnce(manyPayments)
+        .mockResolvedValueOnce([]),
     });
 
     const res = await handleGetCreditSummary(db);

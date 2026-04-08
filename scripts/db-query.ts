@@ -28,7 +28,9 @@
  * Install: npm install tsx -D (if not already installed)
  */
 
+import 'dotenv/config';
 import { StrictDB } from 'strictdb';
+import { getDb } from '../src/adapters/db.js';
 
 // ---------------------------------------------------------------------------
 // Query registry — add new queries here
@@ -57,6 +59,8 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'example-count-docs': () => import('./queries/example-count-docs.js'),
 
   // --- Add your queries below this line ---
+  'recent-txns': () => import('./queries/recent-txns.js'),
+  'debug-credit': () => import('./queries/debug-credit.js'),
 };
 
 // ---------------------------------------------------------------------------
@@ -87,7 +91,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const db = await StrictDB.create({ uri: process.env.STRICTDB_URI! });
+  const db = await getDb();
 
   try {
     const mod = await loader();
@@ -99,7 +103,7 @@ async function main(): Promise<void> {
     console.error('\n  Query failed:', err);
     process.exit(1);
   } finally {
-    await db.close();
+    await db.close().catch(() => {});
   }
 }
 

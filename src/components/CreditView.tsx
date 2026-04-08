@@ -2,7 +2,6 @@
 
 import type { CreditSummaryResponse } from '@/types/credit';
 import type { CreditAdvisorResponse } from '@/types/creditAdvisor';
-import { CreditHealthScore } from './CreditHealthScore';
 import { CreditAccountCard } from './CreditAccountCard';
 import { RecentPaymentsPanel } from './RecentPaymentsPanel';
 import { CreditAdvisorPanel } from './CreditAdvisorPanel';
@@ -24,7 +23,7 @@ function utilizationColor(util: number | null): string {
 }
 
 export function CreditView({ initialData, advisorData }: CreditViewProps) {
-  const { accounts, overall, recentPayments, score } = initialData;
+  const { accounts, overall, recentPayments } = initialData;
 
   if (accounts.length === 0) {
     return (
@@ -43,16 +42,13 @@ export function CreditView({ initialData, advisorData }: CreditViewProps) {
 
   return (
     <div className="space-y-6">
-      {/* Score + Overall utilization */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CreditHealthScore score={score} />
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5 flex flex-col gap-1">
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Overall Utilization</p>
-          <p className={`text-4xl font-bold ${utilizationColor(overall.utilization)}`}>{utilPct}</p>
-          <p className="text-sm text-zinc-500">
-            {formatUSD(overall.totalBalance)} of {overall.accountsWithLimitData > 0 ? formatUSD(overall.totalLimit) : 'unknown limit'}
-          </p>
-        </div>
+      {/* Overall utilization */}
+      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5 flex flex-col gap-1">
+        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest">Overall Utilization</p>
+        <p className={`text-4xl font-bold ${utilizationColor(overall.utilization)}`}>{utilPct}</p>
+        <p className="text-sm text-zinc-500">
+          {formatUSD(overall.totalBalance)} of {overall.accountsWithLimitData > 0 ? formatUSD(overall.totalLimit) : 'unknown limit'}
+        </p>
       </div>
 
       {/* Account cards */}

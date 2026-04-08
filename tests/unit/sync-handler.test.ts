@@ -105,7 +105,7 @@ describe('syncLog — today record', () => {
 });
 
 describe('daily sync', () => {
-  it('should fetch transactions starting from ~3 days ago', async () => {
+  it('should fetch transactions starting from ~7 days ago', async () => {
     const db = makeMockDb();
     const client = makeMockClient();
     const before = Date.now();
@@ -113,9 +113,9 @@ describe('daily sync', () => {
     const after = Date.now();
     const calledWith = (client.fetchAccounts as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { startDate: Date };
     const diff = after - calledWith.startDate.getTime();
-    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
-    expect(diff).toBeGreaterThanOrEqual(threeDaysMs - 60_000);
-    expect(diff).toBeLessThanOrEqual(threeDaysMs + 60_000);
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    expect(diff).toBeGreaterThanOrEqual(sevenDaysMs - 60_000);
+    expect(diff).toBeLessThanOrEqual(sevenDaysMs + 60_000);
   });
 
   it('should upsert accounts on every sync', async () => {

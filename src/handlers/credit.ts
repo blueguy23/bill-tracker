@@ -7,15 +7,29 @@ import type {
   CreditSummaryResponse,
   OverallCreditStats,
 } from '@/types/credit';
+import type { AccountMeta } from '@/types/creditAdvisor';
 import { listCreditAccounts, listCreditTransactions } from '@/adapters/credit';
+import { listAccountMeta } from '@/adapters/accountMeta';
 
-export function buildAccountSummaries(accounts: Account[]): CreditAccountSummary[] {
+export function buildAccountSummaries(
+  accounts: Account[],
+  metaMap: Map<string, AccountMeta>,
+): CreditAccountSummary[] {
   return accounts.map((a) => {
-    const hasLimitData = a.availableBalance !== null;
-    const creditLimit = hasLimitData ? a.balance + (a.availableBalance as number) : null;
-    const utilization = hasLimitData && creditLimit !== null && creditLimit > 0
-      ? a.balance / creditLimit
-      : hasLimitData ? 0
+    const meta = metaMap.get(a._id);
+    // SimpleFIN credit card balance is negative (amount owed). availableBalance is
+    // the remaining credit available (positive). 0 means the bank didn't send data —
+    // not that the card is maxed — so require > 0 before trusting it.
+    const hasAvailableBalance = a.availableBalance !== null && a.availableBalance > 0;
+    // creditLimit = money owed + remaining credit = -balance + availableBalance
+    // Fall back to manually entered limit when SimpleFIN doesn't provide one.
+    const creditLimit = hasAvailableBalance
+      ? -a.balance + (a.availableBalance as number)
+      : (meta?.manualCreditLimit ?? null);
+    const hasLimitData = creditLimit !== null && creditLimit > 0;
+    const amountOwed = Math.abs(a.balance); // balance is negative for credit cards
+    const utilization = hasLimitData && creditLimit > 0
+      ? amountOwed / creditLimit
       : null;
     return {
       id: a._id,
@@ -40,7 +54,8 @@ export function buildOverallStats(summaries: CreditAccountSummary[]): OverallCre
   let accountsWithLimitData = 0;
 
   for (const s of summaries) {
-    totalBalance += s.balance;
+    // balance is negative for credit cards; totalBalance stores amount owed (positive)
+    totalBalance += Math.abs(s.balance);
     if (s.hasLimitData && s.creditLimit !== null) {
       totalLimit += s.creditLimit;
       accountsWithLimitData++;
@@ -98,9 +113,13 @@ export async function handleGetCreditSummary(db: StrictDB): Promise<NextResponse
   const accounts = await listCreditAccounts(db);
   const accountIds = accounts.map((a) => a._id);
 
-  const transactions = await listCreditTransactions(db, accountIds);
+  const [transactions, metaList] = await Promise.all([
+    listCreditTransactions(db, accountIds),
+    listAccountMeta(db, accountIds),
+  ]);
+  const metaMap = new Map(metaList.map((m) => [m._id, m]));
 
-  const summaries = buildAccountSummaries(accounts);
+  const summaries = buildAccountSummaries(accounts, metaMap);
   const overall = buildOverallStats(summaries);
 
   const accountMap = new Map(accounts.map((a) => [a._id, { name: a.name, orgName: a.orgName }]));

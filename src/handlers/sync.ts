@@ -59,7 +59,10 @@ export async function runDailySync(
     throw new QuotaExceededError(log.requestCount, DAILY_QUOTA);
   }
 
-  const startDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  // 7-day window — wide enough to catch gaps when the service runs
+  // intermittently, without burning extra quota (still 1 API call).
+  // upsertTransaction deduplication prevents double-inserts.
+  const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const { accountsUpdated, transactionsUpserted, warnings } = await syncFetch(db, client, startDate, syncType);
 
   return {

@@ -35,7 +35,7 @@ function makeTxn(overrides: Partial<Transaction> = {}): Transaction {
 }
 
 function makeMeta(overrides: Partial<AccountMeta> = {}): AccountMeta {
-  return { _id: 'acct-1', statementClosingDay: null, targetUtilization: 0.05, ...overrides };
+  return { _id: 'acct-1', statementClosingDay: null, targetUtilization: 0.05, manualCreditLimit: null, ...overrides };
 }
 
 // ── computeUtilizationTrend ───────────────────────────────────────────────────

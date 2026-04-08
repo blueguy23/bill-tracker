@@ -583,6 +583,31 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `feat/session-3` | ⬜ Not yet merged |
 | `feat/fico-advisor` | ⬜ Not yet merged (depends on session-3) |
 
+### What Was Fixed — Infra Session (`chore/lan-access`, 2026-04-03)
+
+**Cron was silently failing since deployment:**
+- **Root cause** — system cron runs with a bare `PATH`; `npx` lives under nvm (`~/.nvm/versions/node/v24.14.1/bin/`) which is never loaded by cron
+- **Fix** — updated crontab entry to use the full absolute path for npx: `/home/garci/.nvm/versions/node/v24.14.1/bin/npx tsx scripts/cron-sync.ts`
+- **Rule** — ALWAYS use full absolute paths in crontab entries. Never rely on `npx`, `node`, or `tsx` by name — cron won't find them.
+
+**`dotenv` package was missing:**
+- `scripts/cron-sync.ts` imports `dotenv/config` but the package was never installed
+- Fixed with `pnpm add dotenv`
+
+**`db-query.ts` runner was broken:**
+- Used `StrictDB.create({ uri: process.env.STRICTDB_URI! })` directly, bypassing the `MONGODB_URI` bridge in `src/adapters/db.ts`
+- Fixed to use `getDb()` from `src/adapters/db.ts` + added `import 'dotenv/config'` at top
+- Added `recent-txns` query (`scripts/queries/recent-txns.ts`) for checking latest DB transactions
+
+**Dev server LAN access (phone):**
+- Added `-H 0.0.0.0` to all `dev` scripts in `package.json` so the server binds to all interfaces
+- Windows firewall rule required: `New-NetFirewallRule -DisplayName "Next.js Dev" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow`
+
+**SimpleFIN transaction gap (March 29 – present):**
+- Not a code bug — SimpleFIN Bridge hadn't pulled fresh data from the bank
+- Our DB is current with everything SimpleFIN has provided (through March 28)
+- Cron will auto-pick up new transactions within 2 hours once SimpleFIN refreshes
+
 ### Next Session Ideas
 
 - **Merge `feat/session-3` + `feat/fico-advisor` to main** — all features complete, tests green

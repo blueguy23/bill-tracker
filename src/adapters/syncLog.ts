@@ -38,6 +38,15 @@ export async function incrementQuota(
   );
 }
 
+export async function getLastSyncAt(db: StrictDB): Promise<Date | null> {
+  const logs = await db.queryMany<SyncLog>(
+    COLLECTION,
+    { lastSyncAt: { $ne: null } },
+    { sort: { lastSyncAt: -1 }, limit: 1 },
+  );
+  return logs[0]?.lastSyncAt ?? null;
+}
+
 export async function markHistoricalDone(db: StrictDB): Promise<void> {
   const date = todayUTC();
   await db.updateOne<SyncLog>(COLLECTION, { date }, { $set: { historicalImportDone: true } });

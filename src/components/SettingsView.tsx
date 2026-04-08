@@ -60,6 +60,7 @@ export function SettingsView({ initialConfigured, dueSoonDays }: SettingsViewPro
             accountId: s.accountId,
             statementClosingDay: s.statementClosingDay,
             targetUtilization: s.targetUtilization,
+            manualCreditLimit: s.manualCreditLimit,
           })),
         }),
       });
@@ -150,6 +151,19 @@ export function SettingsView({ initialConfigured, dueSoonDays }: SettingsViewPro
                       value={Math.round(s.targetUtilization * 100)}
                       onChange={(e) => updateSetting(s.accountId, 'targetUtilization', Number(e.target.value) / 100)}
                       className="w-16 px-2 py-1 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg
+                        focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Credit Limit</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100}
+                      placeholder="e.g. 5000"
+                      value={s.manualCreditLimit ?? ''}
+                      onChange={(e) => updateSetting(s.accountId, 'manualCreditLimit', e.target.value ? Number(e.target.value) : null)}
+                      className="w-24 px-2 py-1 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg
                         focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
                     />
                   </div>

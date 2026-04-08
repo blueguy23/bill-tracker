@@ -1,7 +1,8 @@
 export interface AccountMeta {
-  _id: string;                      // matches accounts._id
+  _id: string;                        // matches accounts._id
   statementClosingDay: number | null; // 1–31, null = not configured
-  targetUtilization: number;        // 0–1, default from env
+  targetUtilization: number;          // 0–1, default from env
+  manualCreditLimit: number | null;   // manually entered limit (used when SimpleFIN doesn't provide one)
 }
 
 export interface UtilizationDataPoint {
@@ -48,6 +49,7 @@ export interface CreditSettingsEntry {
   accountName: string;
   statementClosingDay: number | null;
   targetUtilization: number;
+  manualCreditLimit: number | null;
 }
 
 export interface CreditSettingsResponse {
@@ -59,6 +61,7 @@ export interface SaveCreditSettingsDto {
     accountId: string;
     statementClosingDay: number | null;
     targetUtilization: number;
+    manualCreditLimit: number | null;
   }>;
 }
 
