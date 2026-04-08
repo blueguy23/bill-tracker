@@ -63,6 +63,19 @@ function IconRefreshCw() {
   );
 }
 
+function IconList() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
 function IconSettings() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -185,6 +198,7 @@ export function Sidebar() {
         <NavItem href="/" icon={<IconGrid />} label="Dashboard" active={pathname === '/'} />
         <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
         <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
+        <NavItem href="/transactions" icon={<IconList />} label="Transactions" active={pathname === '/transactions'} />
         <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
         <NavItem href="/subscriptions" icon={<IconRefreshCw />} label="Subscriptions" active={pathname === '/subscriptions'} />
         <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />

@@ -21,12 +21,40 @@ export async function listAccounts(db: StrictDB): Promise<Account[]> {
   return db.queryMany<Account>(ACCOUNTS, {}, { sort: { orgName: 1 }, limit: 200 });
 }
 
+export interface ListTransactionsOpts {
+  accountId?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listTransactions(
+  db: StrictDB,
+  opts: ListTransactionsOpts = {},
+): Promise<{ transactions: Transaction[]; hasMore: boolean }> {
+  const { accountId, startDate, endDate, limit = 100, offset = 0 } = opts;
+  const filter: Record<string, unknown> = {};
+  if (accountId) filter.accountId = accountId;
+  if (startDate || endDate) {
+    filter.posted = {
+      ...(startDate ? { $gte: startDate } : {}),
+      ...(endDate ? { $lte: endDate } : {}),
+    };
+  }
+  const rows = await db.queryMany<Transaction>(TRANSACTIONS, filter, {
+    sort: { posted: -1 },
+    limit: limit + 1,
+    skip: offset,
+  });
+  const hasMore = rows.length > limit;
+  return { transactions: hasMore ? rows.slice(0, limit) : rows, hasMore };
+}
+
 export async function listRecentTransactions(db: StrictDB, accountId?: string): Promise<Transaction[]> {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const filter = accountId
-    ? { accountId, posted: { $gte: thirtyDaysAgo } }
-    : { posted: { $gte: thirtyDaysAgo } };
-  return db.queryMany<Transaction>(TRANSACTIONS, filter, { sort: { posted: -1 }, limit: 500 });
+  const { transactions } = await listTransactions(db, { accountId, startDate: thirtyDaysAgo, limit: 500 });
+  return transactions;
 }
 
 export async function listTransactionsForDetection(
