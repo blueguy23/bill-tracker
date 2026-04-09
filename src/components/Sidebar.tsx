@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+
+// ── Mobile sidebar context ────────────────────────────────────────────────────
+const SidebarContext = createContext<{ open: () => void }>({ open: () => {} });
+export function useSidebarOpen() { return useContext(SidebarContext); }
 
 function IconGrid() {
   return (
@@ -124,7 +128,12 @@ function NavItem({ href, icon, label, active, disabled }: NavItemProps) {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [syncState, setSyncState] = useState<SyncState>('idle');
@@ -183,7 +192,20 @@ export function Sidebar() {
     'text-zinc-400 hover:text-zinc-200';
 
   return (
-    <aside className="w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950">
+    <>
+      {/* Mobile backdrop */}
+      {onClose && (
+        <div
+          className={`fixed inset-0 z-40 bg-black/60 sm:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onClick={onClose}
+        />
+      )}
+      <aside className={`
+        w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950
+        sm:relative sm:translate-x-0 sm:opacity-100
+        ${onClose ? 'fixed inset-y-0 left-0 z-50 transition-transform duration-200 sm:static' : ''}
+        ${onClose && !isOpen ? '-translate-x-full sm:translate-x-0' : 'translate-x-0'}
+      `}>
       <div className="px-4 py-5 border-b border-white/[0.06]">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
@@ -220,5 +242,6 @@ export function Sidebar() {
         <p className="px-3 text-[10px] text-zinc-600">{formatLastSync(lastSyncAt)}</p>
       </div>
     </aside>
+    </>
   );
 }

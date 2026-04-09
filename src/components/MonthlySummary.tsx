@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { BillCategory, BillResponse } from '@/types/bill';
 import { BILL_CATEGORIES } from '@/types/bill';
 import { CategoryBadge } from './CategoryBadge';
+import { SpendingSection } from './SpendingSection';
+import type { SummaryResponse } from '@/app/api/v1/summary/route';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -116,6 +118,18 @@ interface MonthlySummaryProps {
 
 export function MonthlySummary({ bills }: MonthlySummaryProps) {
   const [selectedMonth, setSelectedMonth] = useState(() => toMonthString(new Date()));
+  const [spendData, setSpendData] = useState<SummaryResponse | null>(null);
+  const [spendLoading, setSpendLoading] = useState(false);
+
+  useEffect(() => {
+    setSpendLoading(true);
+    setSpendData(null);
+    fetch(`/api/v1/summary?month=${selectedMonth}`)
+      .then((r) => r.ok ? r.json() as Promise<SummaryResponse> : null)
+      .then((data) => { if (data) setSpendData(data); })
+      .catch(() => {})
+      .finally(() => setSpendLoading(false));
+  }, [selectedMonth]);
 
   const now = toMonthString(new Date());
   const maxMonth = addMonths(now, 12);
@@ -163,6 +177,21 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
             Today
           </button>
         )}
+      </div>
+
+      {/* Actual spending from transactions */}
+      {spendLoading && (
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-8 text-center">
+          <p className="text-zinc-600 text-sm">Loading spending data…</p>
+        </div>
+      )}
+      {spendData && !spendLoading && <SpendingSection data={spendData} />}
+
+      <div className="border-t border-white/[0.06] pt-6">
+        <div className="flex items-center gap-3 mb-4">
+          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Bills</h3>
+          <span className="text-xs text-zinc-600">manually tracked</span>
+        </div>
       </div>
 
       {/* Stat cards */}

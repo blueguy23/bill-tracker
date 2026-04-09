@@ -1,12 +1,15 @@
 import type { BillResponse, BillSummary } from '@/types/bill';
 import type { SuggestedMatch } from '@/types/subscription';
+import type { Account } from '@/lib/simplefin/types';
 import { SummaryCards } from '@/components/SummaryCards';
 import { BillsView } from '@/components/BillsView';
 import { MatchBanner } from '@/components/MatchBanner';
+import { NetWorthCard } from '@/components/NetWorthCard';
+
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
 async function fetchBills(): Promise<BillResponse[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/v1/bills`, { cache: 'no-store' });
+  const res = await fetch(`${BASE}/api/v1/bills`, { cache: 'no-store' });
   if (!res.ok) {
     console.error(`[fetchBills] API returned ${res.status} ${res.statusText}`);
     return [];
@@ -43,9 +46,8 @@ function computeSummary(bills: BillResponse[]): BillSummary {
 }
 
 async function fetchSuggestedMatches(): Promise<SuggestedMatch[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
   try {
-    const res = await fetch(`${baseUrl}/api/v1/subscriptions/matches`, { cache: 'no-store' });
+    const res = await fetch(`${BASE}/api/v1/subscriptions/matches`, { cache: 'no-store' });
     if (!res.ok) return [];
     const data = await res.json() as { matches: SuggestedMatch[] };
     return data.matches;
@@ -54,8 +56,23 @@ async function fetchSuggestedMatches(): Promise<SuggestedMatch[]> {
   }
 }
 
+async function fetchBalances(): Promise<Account[]> {
+  try {
+    const res = await fetch(`${BASE}/api/v1/accounts/balances`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json() as { accounts: Account[] };
+    return data.accounts;
+  } catch {
+    return [];
+  }
+}
+
 export default async function DashboardPage() {
-  const [bills, matches] = await Promise.all([fetchBills(), fetchSuggestedMatches()]);
+  const [bills, matches, accounts] = await Promise.all([
+    fetchBills(),
+    fetchSuggestedMatches(),
+    fetchBalances(),
+  ]);
   const summary = computeSummary(bills);
 
   return (
@@ -68,6 +85,7 @@ export default async function DashboardPage() {
       </div>
       <MatchBanner count={matches.length} />
       <SummaryCards summary={summary} />
+      <NetWorthCard accounts={accounts} />
       <BillsView initialBills={bills} />
     </div>
   );

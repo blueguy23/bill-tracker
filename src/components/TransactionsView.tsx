@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -66,8 +66,29 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const [loadingMore, setLoadingMore] = useState(false);
   const [accountFilter, setAccountFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
+  const [search, setSearch] = useState('');
+  const [hideTransfers, setHideTransfers] = useState(false);
 
   const accountMap = new Map(accounts.map((a) => [a._id, a]));
+
+  const displayed = useMemo(() => {
+    const q = search.toLowerCase();
+    return transactions.filter((t) => {
+      if (hideTransfers && isTransfer(t.description)) return false;
+      if (q && !t.description.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [transactions, search, hideTransfers]);
+
+  const summary = useMemo(() => {
+    let totalIn = 0;
+    let totalOut = 0;
+    for (const t of displayed) {
+      if (t.amount > 0) totalIn += t.amount;
+      else totalOut += Math.abs(t.amount);
+    }
+    return { totalIn, totalOut, net: totalIn - totalOut };
+  }, [displayed]);
 
   const fetchTransactions = useCallback(async (
     account: string,
@@ -113,8 +134,22 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
 
   return (
     <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Search transactions…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-zinc-900 border border-white/[0.08] rounded-lg pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500/50"
+        />
+      </div>
+
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <select
           value={accountFilter}
           onChange={(e) => handleFilterChange(e.target.value, dateRange)}
@@ -143,14 +178,38 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             </button>
           ))}
         </div>
+
+        <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
+          <input
+            type="checkbox"
+            checked={hideTransfers}
+            onChange={(e) => setHideTransfers(e.target.checked)}
+            className="rounded border-white/[0.2] bg-zinc-800 accent-blue-500"
+          />
+          Hide Transfers
+        </label>
       </div>
+
+      {/* Summary bar */}
+      {!loading && displayed.length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-zinc-500 border-t border-white/[0.06] pt-3">
+          <span>In: <span className="text-emerald-400 font-medium">{USD.format(summary.totalIn)}</span></span>
+          <span>Out: <span className="text-red-400 font-medium">{USD.format(summary.totalOut)}</span></span>
+          <span>Net: <span className={`font-medium ${summary.net >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>
+            {summary.net >= 0 ? '+' : ''}{USD.format(summary.net)}
+          </span></span>
+          <span className="ml-auto">{displayed.length} transaction{displayed.length !== 1 ? 's' : ''}</span>
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-white/[0.06] overflow-hidden">
         {loading ? (
           <div className="py-16 text-center text-zinc-600 text-sm">Loading…</div>
-        ) : transactions.length === 0 ? (
-          <div className="py-16 text-center text-zinc-600 text-sm">No transactions found</div>
+        ) : displayed.length === 0 ? (
+          <div className="py-16 text-center text-zinc-600 text-sm">
+            {search || hideTransfers ? 'No matching transactions' : 'No transactions found'}
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
@@ -162,7 +221,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.03]">
-              {transactions.map((txn) => {
+              {displayed.map((txn) => {
                 const acct = accountMap.get(txn.accountId);
                 const transfer = isTransfer(txn.description);
                 return (
@@ -224,8 +283,8 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
         </div>
       )}
 
-      {!hasMore && transactions.length > 0 && !loading && (
-        <p className="text-center text-xs text-zinc-700">{transactions.length} transactions</p>
+      {!hasMore && displayed.length > 0 && !loading && (
+        <p className="text-center text-xs text-zinc-700">{transactions.length} loaded · {displayed.length} shown</p>
       )}
     </div>
   );
