@@ -44,17 +44,17 @@ export function SetBudgetModal({ category, currentAmount, onClose, onSave }: Pro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-depth-900 border border-teal-900/50 rounded-2xl w-full max-w-sm p-6 space-y-5 shadow-2xl">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-sm p-6 space-y-5 shadow-2xl">
         <div>
           <h2 className="text-base font-semibold text-white capitalize">
             {currentAmount !== null ? 'Edit' : 'Set'} budget — {category}
           </h2>
-          <p className="text-sm text-sky-700 mt-0.5">Monthly spending limit for this category</p>
+          <p className="text-sm text-zinc-500 mt-0.5">Monthly spending limit for this category</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="budget-amount" className="block text-xs font-medium text-sky-500 mb-1.5">
+            <label htmlFor="budget-amount" className="block text-xs font-medium text-zinc-400 mb-1.5">
               Monthly Amount ($)
             </label>
             <input
@@ -64,7 +64,7 @@ export function SetBudgetModal({ category, currentAmount, onClose, onSave }: Pro
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-depth-800 border border-teal-900/50 rounded-lg px-3 py-2.5 text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="e.g. 200"
               autoFocus
             />
@@ -75,14 +75,14 @@ export function SetBudgetModal({ category, currentAmount, onClose, onSave }: Pro
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-sky-500 bg-depth-800 hover:bg-depth-700 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-400 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-teal-500 hover:bg-teal-400 disabled:opacity-50 rounded-lg transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg transition-colors"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>

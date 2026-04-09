@@ -3,19 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  html { background: #020d1a; }
-  body {
-    background: linear-gradient(135deg, #020d1a 0%, #030f1e 40%, #021218 70%, #020d1a 100%);
-    background-size: 400% 400%;
-    animation: ocean-drift 20s ease infinite;
-  }
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #0a2440; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #0e3155; }
-}
-
-@layer utilities {
-  .glow-ocean { box-shadow: 0 0 0 1px rgba(20,184,166,0.15), 0 4px 24px rgba(14,165,233,0.07); }
-  .glow-logo { box-shadow: 0 0 12px rgba(20,184,166,0.4); }
+  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
 }

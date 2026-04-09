@@ -49,7 +49,7 @@ export default async function BudgetPage() {
       <div className="flex items-end justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">Budget</h1>
-          <p className="text-sm text-sky-700 mt-0.5">
+          <p className="text-sm text-zinc-500 mt-0.5">
             {month ? `${month} — spending by category` : 'Monthly spending by category'}
           </p>
         </div>

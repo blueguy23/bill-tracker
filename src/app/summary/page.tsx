@@ -30,7 +30,7 @@ export default async function SummaryPage() {
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       <div className="pt-2">
         <h1 className="text-xl font-bold text-white">Monthly Summary</h1>
-        <p className="text-sm text-sky-700 mt-0.5">Spending breakdown by month</p>
+        <p className="text-sm text-zinc-500 mt-0.5">Spending breakdown by month</p>
       </div>
       <MonthlySummary bills={bills} />
     </div>

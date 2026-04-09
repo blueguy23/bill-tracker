@@ -50,7 +50,7 @@ export default async function SubscriptionsPage() {
       <div className="flex items-end justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">Detected Subscriptions</h1>
-          <p className="text-sm text-sky-700 mt-0.5">
+          <p className="text-sm text-zinc-500 mt-0.5">
             {count === 0
               ? 'No recurring subscriptions detected from your transactions'
               : `${count} recurring pattern${count !== 1 ? 's' : ''} detected from your transactions`}

@@ -53,14 +53,14 @@ export function BudgetView({ initialData }: Props) {
     <>
       {/* Summary header */}
       {hasBudgets ? (
-        <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-5 space-y-3">
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5 space-y-3">
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
             <div>
-              <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider mb-1">Total Budgeted</p>
-              <p className="text-2xl font-bold text-white">{USD.format(totalBudgeted)}<span className="text-sm text-sky-700 font-normal">/mo</span></p>
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Total Budgeted</p>
+              <p className="text-2xl font-bold text-white">{USD.format(totalBudgeted)}<span className="text-sm text-zinc-500 font-normal">/mo</span></p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider mb-1">Total Spent</p>
+              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Total Spent</p>
               <p className="text-2xl font-bold text-white">{USD.format(totalSpent)}</p>
             </div>
             {overBudgetCount > 0 && (
@@ -70,19 +70,19 @@ export function BudgetView({ initialData }: Props) {
             )}
           </div>
           <div className="space-y-1">
-            <div className="flex justify-between text-xs text-sky-700">
+            <div className="flex justify-between text-xs text-zinc-500">
               <span>{pct}% used</span>
               <span>{USD.format(Math.max(0, totalBudgeted - totalSpent))} remaining</span>
             </div>
-            <div className="h-2 w-full bg-depth-800 rounded-full overflow-hidden">
+            <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
             </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-5 text-center space-y-1">
-          <p className="text-sm font-medium text-sky-300">No budgets set yet</p>
-          <p className="text-xs text-sky-700">Click <span className="text-white font-medium">Set budget</span> on any category card below to get started.</p>
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5 text-center space-y-1">
+          <p className="text-sm font-medium text-zinc-300">No budgets set yet</p>
+          <p className="text-xs text-zinc-500">Click <span className="text-white font-medium">Set budget</span> on any category card below to get started.</p>
         </div>
       )}
 

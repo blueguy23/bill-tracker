@@ -41,7 +41,7 @@ function formatDueDate(dueDate: string | number): string {
 const DUE_BADGE: Record<DueDateStatus, string> = {
   overdue:  'text-[11px] font-semibold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full',
   soon:     'text-[11px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full',
-  upcoming: 'text-[11px] font-medium text-sky-900 bg-depth-800 px-2 py-0.5 rounded-full',
+  upcoming: 'text-[11px] font-medium text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full',
 };
 
 const DUE_LABEL: Record<DueDateStatus, string> = {
@@ -62,21 +62,21 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
 
   if (bills.length === 0) {
     return (
-      <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-16 text-center">
-        <p className="text-sky-700 text-sm">No bills yet</p>
-        <p className="text-sky-900 text-xs mt-1">Click &ldquo;Add Bill&rdquo; to get started</p>
+      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-16 text-center">
+        <p className="text-zinc-500 text-sm">No bills yet</p>
+        <p className="text-zinc-600 text-xs mt-1">Click &ldquo;Add Bill&rdquo; to get started</p>
       </div>
     );
   }
 
   return (
     <>
-    <div className="rounded-xl border border-teal-900/40 bg-depth-900 overflow-hidden">
+    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
       <table className="min-w-full" data-testid="bills-table">
         <thead>
-          <tr className="border-b border-teal-900/40">
+          <tr className="border-b border-white/[0.06]">
             {['Name', 'Amount', 'Due Date', 'Category', 'Status', ''].map((h) => (
-              <th key={h} className={`px-5 py-3.5 text-[11px] font-semibold text-sky-700 uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>
+              <th key={h} className={`px-5 py-3.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>
                 {h}
               </th>
             ))}
@@ -89,10 +89,10 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
               <tr key={bill._id} className="group hover:bg-white/[0.02] transition-colors">
 
                 <td className="px-5 py-4">
-                  <p className="font-medium text-white text-sm">{bill.name}</p>
+                  <p className="font-medium text-zinc-100 text-sm">{bill.name}</p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {bill.isAutoPay && <span className="text-[11px] font-medium text-cyan-400">AutoPay</span>}
-                    {bill.isRecurring && <span className="text-[11px] text-sky-900 capitalize">{bill.recurrenceInterval}</span>}
+                    {bill.isAutoPay && <span className="text-[11px] font-medium text-blue-400">AutoPay</span>}
+                    {bill.isRecurring && <span className="text-[11px] text-zinc-600 capitalize">{bill.recurrenceInterval}</span>}
                   </div>
                 </td>
 
@@ -101,7 +101,7 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
                 </td>
 
                 <td className="px-5 py-4" suppressHydrationWarning>
-                  <p className="text-sm text-sky-300">{formatDueDate(bill.dueDate)}</p>
+                  <p className="text-sm text-zinc-300">{formatDueDate(bill.dueDate)}</p>
                   {!bill.isPaid && (
                     <span className={`mt-1 inline-block ${DUE_BADGE[status]}`}>
                       {DUE_LABEL[status]}
@@ -119,7 +119,7 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                       bill.isPaid
                         ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        : 'bg-depth-800 text-sky-500 hover:bg-depth-700 hover:text-sky-100'
+                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
                     }`}
                     data-testid={`toggle-paid-${bill._id}`}
                   >
@@ -132,21 +132,21 @@ export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTablePr
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => setHistoryBill({ id: bill._id, name: bill.name })}
-                      className="text-xs font-medium text-sky-700 hover:text-sky-300 transition-colors"
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
                       data-testid={`history-${bill._id}`}
                     >
                       History
                     </button>
                     <button
                       onClick={() => onEdit(bill)}
-                      className="text-xs font-medium text-sky-500 hover:text-white transition-colors"
+                      className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
                       data-testid={`edit-${bill._id}`}
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => { if (window.confirm(`Delete "${bill.name}"?`)) onDelete(bill._id); }}
-                      className="text-xs font-medium text-sky-900 hover:text-red-400 transition-colors"
+                      className="text-xs font-medium text-zinc-600 hover:text-red-400 transition-colors"
                       data-testid={`delete-${bill._id}`}
                     >
                       Delete

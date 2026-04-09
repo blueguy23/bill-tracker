@@ -17,7 +17,7 @@ export default async function SettingsPage() {
     <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
       <div className="pt-2">
         <h1 className="text-xl font-bold text-white">Settings</h1>
-        <p className="text-sm text-sky-700 mt-0.5">App configuration and integrations</p>
+        <p className="text-sm text-zinc-500 mt-0.5">App configuration and integrations</p>
       </div>
       <SettingsView initialConfigured={configured} dueSoonDays={dueSoonDays} unknownCount={unknownCount} />
     </div>

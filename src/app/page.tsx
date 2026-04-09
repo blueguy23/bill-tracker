@@ -77,7 +77,7 @@ export default async function DashboardPage() {
       <div className="flex items-end justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">Dashboard</h1>
-          <p className="text-sm text-sky-700 mt-0.5">Your bills at a glance</p>
+          <p className="text-sm text-zinc-500 mt-0.5">Your bills at a glance</p>
         </div>
       </div>
       <OnboardingBanner

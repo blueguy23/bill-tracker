@@ -91,18 +91,18 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
     }
   }
 
-  const label = 'block text-xs font-semibold text-sky-500 uppercase tracking-wider mb-1.5';
-  const input = 'w-full bg-depth-800 border border-teal-900/50 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-blue-500 transition-colors';
+  const label = 'block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5';
+  const input = 'w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" data-testid="bill-modal">
-      <div className="bg-depth-900 border border-teal-900/50 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-teal-900/40">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
           <h2 className="text-base font-semibold text-white">
             {mode === 'create' ? 'Add Bill' : 'Edit Bill'}
           </h2>
-          <button onClick={onClose} className="text-sky-700 hover:text-sky-100 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06]">
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </div>
@@ -127,19 +127,19 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
             <div>
               <label className={label}>Category</label>
               <select className={input} value={form.category} onChange={(e) => set('category', e.target.value)}>
-                {BILL_CATEGORIES.map((c) => <option key={c} value={c} className="bg-depth-800 capitalize">{c}</option>)}
+                {BILL_CATEGORIES.map((c) => <option key={c} value={c} className="bg-zinc-800 capitalize">{c}</option>)}
               </select>
             </div>
           </div>
 
           <div className="flex gap-5 pt-1">
             {([['isRecurring', 'Recurring'], ['isAutoPay', 'AutoPay'], ['isPaid', 'Paid']] as [keyof FormState, string][]).map(([key, lbl]) => (
-              <label key={key} className="flex items-center gap-2 text-sm text-sky-300 cursor-pointer select-none">
+              <label key={key} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={form[key] as boolean}
                   onChange={(e) => set(key, e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-600 bg-depth-800 text-blue-600 focus:ring-teal-500 focus:ring-offset-0"
+                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
                 />
                 {lbl}
               </label>
@@ -155,7 +155,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
               <div>
                 <label className={label}>Recurrence</label>
                 <select className={input} value={form.recurrenceInterval} onChange={(e) => set('recurrenceInterval', e.target.value)}>
-                  {RECURRENCE_INTERVALS.map((r) => <option key={r} value={r} className="bg-depth-800 capitalize">{r}</option>)}
+                  {RECURRENCE_INTERVALS.map((r) => <option key={r} value={r} className="bg-zinc-800 capitalize">{r}</option>)}
                 </select>
               </div>
             </div>
@@ -177,10 +177,10 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-sky-500 bg-depth-800 border border-teal-900/50 rounded-lg hover:text-sky-100 hover:bg-depth-700 transition-colors">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-400 bg-zinc-800 border border-white/[0.08] rounded-lg hover:text-zinc-200 hover:bg-zinc-700 transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={isSaving} className="px-4 py-2 text-sm font-semibold text-white bg-teal-500 rounded-lg hover:bg-teal-400 disabled:opacity-50 transition-colors" data-testid="save-bill-btn">
+            <button type="submit" disabled={isSaving} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors" data-testid="save-bill-btn">
               {isSaving ? 'Saving…' : 'Save'}
             </button>
           </div>

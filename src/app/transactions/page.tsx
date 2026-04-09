@@ -33,7 +33,7 @@ export default async function TransactionsPage() {
       <div className="flex items-end justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">Transactions</h1>
-          <p className="text-sm text-sky-700 mt-0.5">{monthLabel} — all accounts</p>
+          <p className="text-sm text-zinc-500 mt-0.5">{monthLabel} — all accounts</p>
         </div>
       </div>
       <TransactionsView

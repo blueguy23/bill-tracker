@@ -101,13 +101,13 @@ interface StatCardProps {
 
 function StatCard({ label, value, fromColor, dotColor, subtext }: StatCardProps) {
   return (
-    <div className={`rounded-xl p-5 border border-teal-900/40 bg-gradient-to-br ${fromColor} to-zinc-900`}>
+    <div className={`rounded-xl p-5 border border-white/[0.06] bg-gradient-to-br ${fromColor} to-zinc-900`}>
       <div className="flex items-center gap-2 mb-4">
         <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-        <p className="text-xs font-semibold text-sky-500 uppercase tracking-wider">{label}</p>
+        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{label}</p>
       </div>
       <p className="text-[1.75rem] font-bold text-white leading-none tracking-tight">{value}</p>
-      {subtext && <p className="mt-2 text-xs text-sky-900">{subtext}</p>}
+      {subtext && <p className="mt-2 text-xs text-zinc-600">{subtext}</p>}
     </div>
   );
 }
@@ -153,7 +153,7 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
         <button
           onClick={() => setSelectedMonth(addMonths(selectedMonth, -1))}
           disabled={selectedMonth <= minMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-lg bg-depth-800 text-sky-500 hover:text-white hover:bg-depth-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Previous month"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
@@ -164,7 +164,7 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
         <button
           onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
           disabled={selectedMonth >= maxMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-lg bg-depth-800 text-sky-500 hover:text-white hover:bg-depth-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Next month"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
@@ -172,7 +172,7 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
         {selectedMonth !== now && (
           <button
             onClick={() => setSelectedMonth(now)}
-            className="text-xs text-sky-700 hover:text-sky-300 transition-colors ml-1"
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors ml-1"
           >
             Today
           </button>
@@ -181,16 +181,16 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
 
       {/* Actual spending from transactions */}
       {spendLoading && (
-        <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-8 text-center">
-          <p className="text-sky-900 text-sm">Loading spending data…</p>
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-8 text-center">
+          <p className="text-zinc-600 text-sm">Loading spending data…</p>
         </div>
       )}
       {spendData && !spendLoading && <SpendingSection data={spendData} />}
 
-      <div className="border-t border-teal-900/40 pt-6">
+      <div className="border-t border-white/[0.06] pt-6">
         <div className="flex items-center gap-3 mb-4">
-          <h3 className="text-xs font-semibold text-sky-700 uppercase tracking-wider">Bills</h3>
-          <span className="text-xs text-sky-900">manually tracked</span>
+          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Bills</h3>
+          <span className="text-xs text-zinc-600">manually tracked</span>
         </div>
       </div>
 
@@ -219,15 +219,15 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
 
       {/* Category breakdown */}
       {hasBills ? (
-        <div className="rounded-xl border border-teal-900/40 bg-depth-900 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-teal-900/40">
-            <h3 className="text-xs font-semibold text-sky-700 uppercase tracking-wider">By Category</h3>
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/[0.06]">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">By Category</h3>
           </div>
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-teal-900/25">
+              <tr className="border-b border-white/[0.04]">
                 {['Category', 'Bills', 'Total', 'Paid', 'Unpaid'].map((h) => (
-                  <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-sky-700 uppercase tracking-wider ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
+                  <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -235,7 +235,7 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
               {stats.categoryBreakdown.map((row) => (
                 <tr key={row.category} className="hover:bg-white/[0.02] transition-colors">
                   <td className="px-5 py-3.5"><CategoryBadge category={row.category} /></td>
-                  <td className="px-5 py-3.5 text-right text-sm text-sky-500 tabular-nums">{row.count}</td>
+                  <td className="px-5 py-3.5 text-right text-sm text-zinc-400 tabular-nums">{row.count}</td>
                   <td className="px-5 py-3.5 text-right text-sm font-medium text-white tabular-nums">{USD.format(row.total)}</td>
                   <td className="px-5 py-3.5 text-right text-sm text-emerald-400 tabular-nums">{USD.format(row.paid)}</td>
                   <td className="px-5 py-3.5 text-right text-sm text-red-400 tabular-nums">{USD.format(row.unpaid)}</td>
@@ -245,9 +245,9 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
           </table>
         </div>
       ) : (
-        <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-16 text-center">
-          <p className="text-sky-700 text-sm">No bills for this month</p>
-          <p className="text-sky-900 text-xs mt-1">Recurring bills will always appear here</p>
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-16 text-center">
+          <p className="text-zinc-500 text-sm">No bills for this month</p>
+          <p className="text-zinc-600 text-xs mt-1">Recurring bills will always appear here</p>
         </div>
       )}
     </div>

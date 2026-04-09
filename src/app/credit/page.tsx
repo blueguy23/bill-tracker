@@ -33,7 +33,7 @@ export default async function CreditPage() {
       <div className="flex items-end justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">Credit Health</h1>
-          <p className="text-sm text-sky-700 mt-0.5">Credit utilization and payment activity</p>
+          <p className="text-sm text-zinc-500 mt-0.5">Credit utilization and payment activity</p>
         </div>
       </div>
       <CreditView initialData={summary} advisorData={advisor} />
