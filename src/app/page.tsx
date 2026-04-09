@@ -5,6 +5,7 @@ import { SummaryCards } from '@/components/SummaryCards';
 import { BillsView } from '@/components/BillsView';
 import { MatchBanner } from '@/components/MatchBanner';
 import { NetWorthCard } from '@/components/NetWorthCard';
+import { OnboardingBanner } from '@/components/OnboardingBanner';
 
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
 
@@ -83,6 +84,10 @@ export default async function DashboardPage() {
           <p className="text-sm text-zinc-500 mt-0.5">Your bills at a glance</p>
         </div>
       </div>
+      <OnboardingBanner
+        simplefinConfigured={Boolean(process.env.SIMPLEFIN_ACCESS_URL || process.env.SIMPLEFIN_URL)}
+        accountCount={accounts.length}
+      />
       <MatchBanner count={matches.length} />
       <SummaryCards summary={summary} />
       <NetWorthCard accounts={accounts} />

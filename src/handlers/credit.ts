@@ -33,7 +33,7 @@ export function buildAccountSummaries(
       : null;
     return {
       id: a._id,
-      orgName: a.orgName,
+      orgName: meta?.customOrgName ?? a.orgName,
       name: a.name,
       balance: a.balance,
       creditLimit,
@@ -122,7 +122,7 @@ export async function handleGetCreditSummary(db: StrictDB): Promise<NextResponse
   const summaries = buildAccountSummaries(accounts, metaMap);
   const overall = buildOverallStats(summaries);
 
-  const accountMap = new Map(accounts.map((a) => [a._id, { name: a.name, orgName: a.orgName }]));
+  const accountMap = new Map(accounts.map((a) => [a._id, { name: a.name, orgName: metaMap.get(a._id)?.customOrgName ?? a.orgName }]));
   const recentPayments = buildRecentPayments(transactions, accountMap);
 
   const score = computeHealthScore(overall, recentPayments, accounts.length);
