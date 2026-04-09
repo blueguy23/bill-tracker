@@ -26,21 +26,21 @@ export function CreditAccountCard({ account }: CreditAccountCardProps) {
     : null;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-5 flex flex-col gap-3">
+    <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-5 flex flex-col gap-3">
       <div>
-        <p className="text-[11px] text-zinc-500 font-medium">{account.orgName}</p>
+        <p className="text-[11px] text-sky-700 font-medium">{account.orgName}</p>
         <p className="text-sm font-semibold text-white mt-0.5">{account.name}</p>
       </div>
 
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-xs text-zinc-500">Balance</p>
+          <p className="text-xs text-sky-700">Balance</p>
           <p className="text-xl font-bold text-white">{formatUSD(account.balance)}</p>
         </div>
         {account.hasLimitData && account.creditLimit !== null && (
           <div className="text-right">
-            <p className="text-xs text-zinc-500">Limit</p>
-            <p className="text-sm text-zinc-400">{formatUSD(account.creditLimit)}</p>
+            <p className="text-xs text-sky-700">Limit</p>
+            <p className="text-sm text-sky-500">{formatUSD(account.creditLimit)}</p>
           </div>
         )}
       </div>
@@ -48,10 +48,10 @@ export function CreditAccountCard({ account }: CreditAccountCardProps) {
       {account.hasLimitData && account.utilization !== null ? (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-500">Utilization</p>
+            <p className="text-xs text-sky-700">Utilization</p>
             <p className={`text-xs font-semibold ${text}`}>{utilizationPct}</p>
           </div>
-          <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-depth-800 overflow-hidden">
             <div
               className={`h-full rounded-full ${bar}`}
               style={{ width: `${Math.min(100, Math.round((account.utilization) * 100))}%` }}
@@ -59,7 +59,7 @@ export function CreditAccountCard({ account }: CreditAccountCardProps) {
           </div>
         </div>
       ) : (
-        <span className="self-start text-[11px] font-medium text-zinc-500 bg-zinc-800 rounded-full px-2.5 py-1">
+        <span className="self-start text-[11px] font-medium text-sky-700 bg-depth-800 rounded-full px-2.5 py-1">
           No limit data
         </span>
       )}

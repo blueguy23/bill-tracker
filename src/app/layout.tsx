@@ -21,8 +21,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="bg-zinc-950">
-      <body suppressHydrationWarning className="bg-zinc-950 text-zinc-100 antialiased">
+    <html lang="en" className="bg-depth-950">
+      <body suppressHydrationWarning className="bg-depth-950 text-white antialiased">
         <AppShell>{children}</AppShell>
         {process.env.NEXT_PUBLIC_RYBBIT_SITE_ID && (
           <Script

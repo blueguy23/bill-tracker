@@ -16,13 +16,13 @@ interface CardProps {
 
 function Card({ label, value, fromColor, dotColor, subtext }: CardProps) {
   return (
-    <div className={`rounded-xl p-5 border border-white/[0.06] bg-gradient-to-br ${fromColor} to-zinc-900`}>
+    <div className={`rounded-xl p-5 border border-teal-900/40 bg-gradient-to-br ${fromColor} to-zinc-900`}>
       <div className="flex items-center gap-2 mb-4">
         <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{label}</p>
+        <p className="text-xs font-semibold text-sky-500 uppercase tracking-wider">{label}</p>
       </div>
       <p className="text-[1.75rem] font-bold text-white leading-none tracking-tight">{value}</p>
-      {subtext && <p className="mt-2 text-xs text-zinc-600">{subtext}</p>}
+      {subtext && <p className="mt-2 text-xs text-sky-900">{subtext}</p>}
     </div>
   );
 }

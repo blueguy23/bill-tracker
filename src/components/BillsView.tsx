@@ -78,13 +78,13 @@ export function BillsView({ initialBills }: BillsViewProps) {
       <div className="flex items-end justify-between mb-4">
         <div>
           <h2 className="text-base font-semibold text-white">All Bills</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-sky-700 mt-0.5">
             {initialBills.length === 0 ? 'No bills' : `${initialBills.length} bill${initialBills.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-white bg-teal-500 rounded-lg hover:bg-teal-400 transition-colors"
           data-testid="add-bill-btn"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

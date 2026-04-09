@@ -121,7 +121,7 @@ function NavItem({ href, icon, label, active, disabled }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`${base} ${active ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'}`}
+      className={`${base} ${active ? 'bg-teal-500/[0.12] text-teal-100 border-l-2 border-teal-500 pl-2.5' : 'text-sky-600 hover:text-sky-200 hover:bg-teal-950/40'}`}
     >
       {icon}<span>{label}</span>
     </Link>
@@ -139,6 +139,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [hasUnknownAccounts, setHasUnknownAccounts] = useState(false);
 
   const fetchStatus = useCallback(() => {
     fetch('/api/v1/sync/status')
@@ -149,7 +150,17 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   useEffect(() => {
     fetchStatus();
+    fetch('/api/v1/accounts')
+      .then((r) => r.json() as Promise<{ accounts: { orgName: string }[] }>)
+      .then((d) => setHasUnknownAccounts((d.accounts ?? []).some((a) => a.orgName === 'Unknown')))
+      .catch(() => {});
   }, [fetchStatus]);
+
+  const PREFETCH_ROUTES = ['/', '/recurring', '/summary', '/transactions', '/budget', '/subscriptions', '/credit', '/settings'];
+  useEffect(() => {
+    PREFETCH_ROUTES.forEach((route) => router.prefetch(route));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   async function handleSync() {
     if (syncState === 'syncing') return;
@@ -188,8 +199,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const syncColor =
     syncState === 'done'  ? 'text-green-400' :
     syncState === 'error' || syncState === 'quota' ? 'text-red-400' :
-    syncState === 'syncing' ? 'text-blue-400' :
-    'text-zinc-400 hover:text-zinc-200';
+    syncState === 'syncing' ? 'text-cyan-400' :
+    'text-sky-500 hover:text-sky-100';
 
   return (
     <>
@@ -201,14 +212,14 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         />
       )}
       <aside className={`
-        w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950
+        w-56 shrink-0 flex flex-col min-h-screen border-r border-teal-900/40 bg-depth-950
         sm:relative sm:translate-x-0 sm:opacity-100
         ${onClose ? 'fixed inset-y-0 left-0 z-50 transition-transform duration-200 sm:static' : ''}
         ${onClose && !isOpen ? '-translate-x-full sm:translate-x-0' : 'translate-x-0'}
       `}>
-      <div className="px-4 py-5 border-b border-white/[0.06]">
+      <div className="px-4 py-5 border-b border-teal-900/40">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-md bg-teal-600 glow-logo flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-bold leading-none">B</span>
           </div>
           <span className="text-sm font-semibold text-white">Bill Tracker</span>
@@ -216,7 +227,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5">
-        <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Overview</p>
+        <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold text-sky-900 uppercase tracking-widest">Overview</p>
         <NavItem href="/" icon={<IconGrid />} label="Dashboard" active={pathname === '/'} />
         <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
         <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
@@ -224,22 +235,31 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
         <NavItem href="/subscriptions" icon={<IconRefreshCw />} label="Subscriptions" active={pathname === '/subscriptions'} />
         <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />
-        <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
-        <NavItem href="/settings" icon={<IconSettings />} label="Settings" active={pathname === '/settings'} />
+        <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-sky-900 uppercase tracking-widest">Account</p>
+        <Link
+          href="/settings"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${pathname === '/settings' ? 'bg-teal-500/[0.12] text-teal-100 border-l-2 border-teal-500 pl-2.5' : 'text-sky-600 hover:text-sky-200 hover:bg-teal-950/40'}`}
+        >
+          <IconSettings />
+          <span className="flex-1">Settings</span>
+          {hasUnknownAccounts && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Some accounts show as Unknown" />
+          )}
+        </Link>
       </nav>
 
-      <div className="p-3 border-t border-white/[0.06] space-y-1">
+      <div className="p-3 border-t border-teal-900/40 space-y-1">
         <button
           onClick={handleSync}
           disabled={syncState === 'syncing'}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${syncColor} hover:bg-white/[0.04] disabled:cursor-not-allowed`}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${syncColor} hover:bg-teal-950/40 disabled:cursor-not-allowed`}
         >
           <span className={syncState === 'syncing' ? 'animate-spin' : ''}>
             <IconRefreshCw />
           </span>
           <span>{syncLabel}</span>
         </button>
-        <p className="px-3 text-[10px] text-zinc-600">{formatLastSync(lastSyncAt)}</p>
+        <p className="px-3 text-[10px] text-sky-900">{formatLastSync(lastSyncAt)}</p>
       </div>
     </aside>
     </>

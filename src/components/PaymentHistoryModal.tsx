@@ -45,16 +45,16 @@ export function PaymentHistoryModal({ billId, billName, isOpen, onClose }: Payme
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+      <div className="bg-depth-900 border border-teal-900/50 rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
 
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-teal-900/40 shrink-0">
           <div>
             <h2 className="text-base font-semibold text-white">Payment History</h2>
-            <p className="text-xs text-zinc-500 mt-0.5">{billName}</p>
+            <p className="text-xs text-sky-700 mt-0.5">{billName}</p>
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-200 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06]"
+            className="text-sky-700 hover:text-sky-100 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
@@ -64,7 +64,7 @@ export function PaymentHistoryModal({ billId, billName, isOpen, onClose }: Payme
           {isLoading && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-12 rounded-lg bg-zinc-800 animate-pulse" />
+                <div key={i} className="h-12 rounded-lg bg-depth-800 animate-pulse" />
               ))}
             </div>
           )}
@@ -75,8 +75,8 @@ export function PaymentHistoryModal({ billId, billName, isOpen, onClose }: Payme
 
           {!isLoading && !error && payments.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-zinc-500 text-sm">No payment history yet</p>
-              <p className="text-zinc-600 text-xs mt-1">Mark this bill as paid to start tracking</p>
+              <p className="text-sky-700 text-sm">No payment history yet</p>
+              <p className="text-sky-900 text-xs mt-1">Mark this bill as paid to start tracking</p>
             </div>
           )}
 
@@ -84,7 +84,7 @@ export function PaymentHistoryModal({ billId, billName, isOpen, onClose }: Payme
             <ul className="divide-y divide-white/[0.04]">
               {payments.map((p) => (
                 <li key={p._id} className="flex items-center justify-between py-3.5">
-                  <span className="text-sm text-zinc-300" suppressHydrationWarning>{formatDate(p.paidAt)}</span>
+                  <span className="text-sm text-sky-300" suppressHydrationWarning>{formatDate(p.paidAt)}</span>
                   <span className="text-sm font-semibold text-emerald-400 tabular-nums">{USD.format(p.amount)}</span>
                 </li>
               ))}
@@ -93,8 +93,8 @@ export function PaymentHistoryModal({ billId, billName, isOpen, onClose }: Payme
         </div>
 
         {!isLoading && !error && payments.length > 0 && (
-          <div className="px-6 py-3 border-t border-white/[0.06] shrink-0">
-            <p className="text-xs text-zinc-600">{payments.length} payment{payments.length !== 1 ? 's' : ''} recorded</p>
+          <div className="px-6 py-3 border-t border-teal-900/40 shrink-0">
+            <p className="text-xs text-sky-900">{payments.length} payment{payments.length !== 1 ? 's' : ''} recorded</p>
           </div>
         )}
       </div>

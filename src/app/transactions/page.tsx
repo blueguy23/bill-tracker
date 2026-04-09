@@ -1,31 +1,31 @@
 import type { Metadata } from 'next';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 import { TransactionsView } from '@/components/TransactionsView';
+import { getDb } from '@/adapters/db';
+import { listTransactions, listAccounts } from '@/adapters/accounts';
+import { listAccountMeta } from '@/adapters/accountMeta';
 
 export const metadata: Metadata = { title: 'Transactions' };
 
-interface TransactionsResponse {
-  transactions: Transaction[];
-  accounts: Account[];
-  hasMore: boolean;
-}
-
-async function fetchTransactions(): Promise<TransactionsResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const res = await fetch(`${baseUrl}/api/v1/transactions?startDate=${startDate}&limit=100`, { cache: 'no-store' });
-  if (!res.ok) {
-    console.error(`[fetchTransactions] API returned ${res.status}`);
-    return { transactions: [], accounts: [], hasMore: false };
-  }
-  return res.json() as Promise<TransactionsResponse>;
-}
-
 export default async function TransactionsPage() {
-  const { transactions, accounts, hasMore } = await fetchTransactions();
-
+  const db = await getDb();
   const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [{ transactions, hasMore }, allAccounts, metaList] = await Promise.all([
+    listTransactions(db, { startDate, limit: 100 }),
+    listAccounts(db),
+    listAccounts(db).then((accts) =>
+      accts.length > 0 ? listAccountMeta(db, accts.map((a) => a._id)) : [],
+    ),
+  ]);
+
+  const metaMap = new Map(metaList.map((m) => [m._id, m]));
+  const accounts: Account[] = allAccounts.map((a) => {
+    const meta = metaMap.get(a._id);
+    return meta?.customOrgName ? { ...a, orgName: meta.customOrgName } : a;
+  });
+
   const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
@@ -33,11 +33,11 @@ export default async function TransactionsPage() {
       <div className="flex items-end justify-between pt-2">
         <div>
           <h1 className="text-xl font-bold text-white">Transactions</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">{monthLabel} — all accounts</p>
+          <p className="text-sm text-sky-700 mt-0.5">{monthLabel} — all accounts</p>
         </div>
       </div>
       <TransactionsView
-        initialTransactions={transactions}
+        initialTransactions={transactions as Transaction[]}
         initialHasMore={hasMore}
         accounts={accounts}
       />

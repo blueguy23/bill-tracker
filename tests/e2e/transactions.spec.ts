@@ -52,7 +52,7 @@ test.describe('Transactions API (GET /api/v1/transactions)', () => {
       return;
     }
 
-    const targetAccount = allBody.accounts[0];
+    const targetAccount = allBody.accounts[0]!;
     const filtered = await request.get(`/api/v1/transactions?accountId=${targetAccount._id}`);
     expect(filtered.status()).toBe(200);
 
@@ -174,7 +174,7 @@ test.describe('Transactions Page (/transactions)', () => {
       await expect(page.locator('table')).toBeVisible();
 
       // The first transaction's description from the API must appear in the table
-      const firstDesc = apiBody.transactions[0].description;
+      const firstDesc = apiBody.transactions[0]!.description;
       await expect(page.locator('table').getByText(firstDesc, { exact: false })).toBeVisible();
     });
 
@@ -335,7 +335,7 @@ test.describe('Transactions Page (/transactions)', () => {
       await page.locator('button', { hasText: 'All Time' }).click();
       await allTimeRes;
 
-      const targetAccount = apiBody.accounts[0];
+      const targetAccount = apiBody.accounts[0]!;
       const select = page.locator('select');
       const accountRes = page.waitForResponse((r) => r.url().includes('/api/v1/transactions') && r.status() === 200);
       await select.selectOption(targetAccount._id);
@@ -347,7 +347,7 @@ test.describe('Transactions Page (/transactions)', () => {
 
       if (filteredBody.transactions.length > 0) {
         // First transaction description should be visible
-        const desc = filteredBody.transactions[0].description;
+        const desc = filteredBody.transactions[0]!.description;
         await expect(page.locator('table').getByText(desc, { exact: false })).toBeVisible();
       } else {
         await expect(page.locator('text=No transactions found')).toBeVisible();

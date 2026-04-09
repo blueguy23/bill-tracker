@@ -34,7 +34,7 @@ function ConfidenceBadge({ confidence }: { confidence: string }) {
   const styles: Record<string, string> = {
     high: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
     medium: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
-    low: 'bg-zinc-700/50 text-zinc-400 border border-zinc-600/30',
+    low: 'bg-depth-700/50 text-sky-500 border border-zinc-600/30',
   };
   const style = styles[confidence] ?? styles['low']!;
   return (
@@ -46,7 +46,7 @@ function ConfidenceBadge({ confidence }: { confidence: string }) {
 
 function CategoryBadge({ category }: { category: string }) {
   return (
-    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-700/50 text-zinc-400 border border-zinc-600/30">
+    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-depth-700/50 text-sky-500 border border-zinc-600/30">
       {category.charAt(0).toUpperCase() + category.slice(1)}
     </span>
   );
@@ -71,7 +71,7 @@ interface CardProps {
 
 function SubscriptionCard({ sub, isConverting, isDismissing, onConvert, onDismiss }: CardProps) {
   return (
-    <div className="bg-zinc-900 border border-white/[0.08] rounded-xl p-5 space-y-4">
+    <div className="bg-depth-900 border border-teal-900/50 rounded-xl p-5 space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -86,27 +86,27 @@ function SubscriptionCard({ sub, isConverting, isDismissing, onConvert, onDismis
       {/* Amount + interval */}
       <div className="flex items-center gap-4">
         <span className="text-xl font-bold text-white">{usd(sub.amount)}</span>
-        <span className="text-sm text-zinc-400">{INTERVAL_LABELS[sub.interval] ?? sub.interval}</span>
-        <span className="text-sm text-zinc-500">Charged {sub.occurrences}×</span>
+        <span className="text-sm text-sky-500">{INTERVAL_LABELS[sub.interval] ?? sub.interval}</span>
+        <span className="text-sm text-sky-700">Charged {sub.occurrences}×</span>
         {sub.amountVariance && (
           <span className="text-xs text-amber-400">Amount varies</span>
         )}
       </div>
 
       {/* Next estimated */}
-      <p className="text-xs text-zinc-500">
-        Next est. <span className="text-zinc-400">{fmtDate(sub.nextEstimated)}</span>
-        {' · '}Last charged <span className="text-zinc-400">{fmtDate(sub.lastCharged)}</span>
+      <p className="text-xs text-sky-700">
+        Next est. <span className="text-sky-500">{fmtDate(sub.nextEstimated)}</span>
+        {' · '}Last charged <span className="text-sky-500">{fmtDate(sub.lastCharged)}</span>
       </p>
 
       {/* Raw descriptions collapsible */}
-      <details className="text-xs text-zinc-600">
-        <summary className="cursor-pointer hover:text-zinc-400 transition-colors">
+      <details className="text-xs text-sky-900">
+        <summary className="cursor-pointer hover:text-sky-500 transition-colors">
           Raw bank description{sub.rawDescriptions.length > 1 ? 's' : ''}
         </summary>
         <div className="mt-1 space-y-0.5 pl-2">
           {sub.rawDescriptions.map((d) => (
-            <p key={d} className="text-zinc-500 font-mono">{d}</p>
+            <p key={d} className="text-sky-700 font-mono">{d}</p>
           ))}
         </div>
       </details>
@@ -116,7 +116,7 @@ function SubscriptionCard({ sub, isConverting, isDismissing, onConvert, onDismis
         <button
           onClick={() => onConvert(sub)}
           disabled={isConverting || isDismissing}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-2 bg-teal-500 hover:bg-teal-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           {isConverting ? <Spinner /> : null}
           Add as Bill
@@ -124,7 +124,7 @@ function SubscriptionCard({ sub, isConverting, isDismissing, onConvert, onDismis
         <button
           onClick={() => onDismiss(sub.id)}
           disabled={isConverting || isDismissing}
-          className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-400 hover:text-zinc-200 text-sm font-medium px-4 py-2 rounded-lg border border-white/[0.08] transition-colors"
+          className="flex items-center gap-2 bg-depth-800 hover:bg-depth-700 disabled:opacity-50 disabled:cursor-not-allowed text-sky-500 hover:text-sky-100 text-sm font-medium px-4 py-2 rounded-lg border border-teal-900/50 transition-colors"
         >
           {isDismissing ? <Spinner /> : null}
           Dismiss
@@ -209,9 +209,9 @@ export function SubscriptionsView({ initialSubscriptions }: Props) {
 
   if (subscriptions.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-white/[0.08] rounded-xl p-12 text-center space-y-2">
-        <p className="text-zinc-400 font-medium">No recurring subscriptions detected</p>
-        <p className="text-zinc-600 text-sm mt-1">
+      <div className="bg-depth-900 border border-teal-900/50 rounded-xl p-12 text-center space-y-2">
+        <p className="text-sky-500 font-medium">No recurring subscriptions detected</p>
+        <p className="text-sky-900 text-sm mt-1">
           Subscription detection scans your last 90 days of transactions for recurring charges.
           Sync more transaction history to detect patterns.
         </p>
@@ -222,19 +222,19 @@ export function SubscriptionsView({ initialSubscriptions }: Props) {
   return (
     <div className="space-y-4">
       {/* Cost summary */}
-      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-4 flex flex-wrap gap-x-8 gap-y-2 items-center">
+      <div className="rounded-xl border border-teal-900/40 bg-depth-900 p-4 flex flex-wrap gap-x-8 gap-y-2 items-center">
         <div>
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Monthly Total</p>
-          <p className="text-xl font-bold text-white">{usd(totalMonthly)}<span className="text-sm text-zinc-500 font-normal">/mo</span></p>
+          <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider">Monthly Total</p>
+          <p className="text-xl font-bold text-white">{usd(totalMonthly)}<span className="text-sm text-sky-700 font-normal">/mo</span></p>
         </div>
         <div>
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Annual Total</p>
+          <p className="text-xs font-semibold text-sky-700 uppercase tracking-wider">Annual Total</p>
           <p className="text-xl font-bold text-white">{usd(totalAnnual)}/yr</p>
         </div>
         <div className="ml-auto flex gap-3 text-xs">
           {byConfidence.high > 0 && <span className="text-emerald-400 font-medium">{byConfidence.high} high</span>}
           {byConfidence.medium > 0 && <span className="text-amber-400 font-medium">{byConfidence.medium} medium</span>}
-          {byConfidence.low > 0 && <span className="text-zinc-400 font-medium">{byConfidence.low} low</span>}
+          {byConfidence.low > 0 && <span className="text-sky-500 font-medium">{byConfidence.low} low</span>}
         </div>
       </div>
 

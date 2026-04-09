@@ -16,15 +16,15 @@ function formatUSD(n: number): string {
 
 export function RecentPaymentsPanel({ payments }: RecentPaymentsPanelProps) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.06]">
+    <div className="rounded-xl border border-teal-900/40 bg-depth-900 overflow-hidden">
+      <div className="px-5 py-4 border-b border-teal-900/40">
         <p className="text-sm font-semibold text-white">Recent Payments</p>
-        <p className="text-xs text-zinc-500 mt-0.5">Last 30 days</p>
+        <p className="text-xs text-sky-700 mt-0.5">Last 30 days</p>
       </div>
 
       {payments.length === 0 ? (
         <div className="px-5 py-8 text-center">
-          <p className="text-sm text-zinc-500">No payments in the last 30 days</p>
+          <p className="text-sm text-sky-700">No payments in the last 30 days</p>
         </div>
       ) : (
         <ul className="divide-y divide-white/[0.04]">
@@ -32,7 +32,7 @@ export function RecentPaymentsPanel({ payments }: RecentPaymentsPanelProps) {
             <li key={p.id} className="px-5 py-3 flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-sm text-white truncate">{p.description}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">
+                <p className="text-xs text-sky-700 mt-0.5">
                   {p.orgName} · {p.accountName} · {formatDate(p.posted)}
                 </p>
               </div>
