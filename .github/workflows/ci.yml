@@ -44,9 +44,7 @@ jobs:
       - name: E2E tests
         run: pnpm test:e2e
         env:
-          STRICTDB_URI: ${{ secrets.STRICTDB_URI }}
-          SIMPLEFIN_URL: ${{ secrets.SIMPLEFIN_URL }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          STRICTDB_URI: mongodb://localhost:27017/bill-tracker
           NODE_ENV: test
 
       - name: Print E2E failures
