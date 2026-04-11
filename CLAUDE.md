@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-04-08)
+## Feature Roadmap — Session Status (as of 2026-04-10)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -631,15 +631,15 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 
 ### Merge Status
 
-| Branch | Merged to main |
+| Branch | Merged to master |
 |--------|-----------------|
 | `feat/initial-setup` | ✅ Merged |
 | `feat/simplefin-sync` | ✅ Merged |
 | `feat/budget-alerts` | ✅ Merged |
-| `feat/session-3` | ⬜ Not yet merged |
-| `feat/fico-advisor` | ⬜ Not yet merged (depends on session-3) |
-| `feat/sync-button` | ⬜ Not yet merged (depends on session-3 + fico-advisor) |
-| `feat/page-revamp` | ⬜ Not yet merged (depends on sync-button) |
+| `feat/session-3` | ✅ Merged (via master squash) |
+| `feat/fico-advisor` | ✅ Merged (via master squash) |
+| `feat/sync-button` | ✅ Merged (via master squash) |
+| `feat/page-revamp` | ✅ Merged 2026-04-10 |
 
 ### What Was Fixed — Infra Session (`chore/lan-access`, 2026-04-03)
 
@@ -666,9 +666,28 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 - Our DB is current with everything SimpleFIN has provided (through March 28)
 - Cron will auto-pick up new transactions within 2 hours once SimpleFIN refreshes
 
+### What Was Built — CI/CD Session (`feat/page-revamp`, 2026-04-10)
+
+**CI/CD Pipeline:**
+- GitHub Actions workflow at `.github/workflows/ci.yml` — runs on every push/PR to `master`
+- Self-hosted runner on local WSL2 machine (`~/actions-runner/`) — avoids GitHub IP allowlist issues
+- Pipeline: type check → unit tests → E2E tests (Chromium only in CI) → failure summary
+- E2E uses local MongoDB (`mongodb://localhost:27017/bill-tracker`) — no Atlas needed for CI
+- Failure summary step parses `test-results/results.json` and prints only failed test names + errors
+- Stale results cleared before each run to prevent false negatives
+- Playwright only installs if `/home/garci/.cache/ms-playwright` doesn't exist — no redundant installs
+- `gh` CLI installed system-wide — use `gh run watch` to monitor CI from terminal
+- MongoDB Atlas account created (free tier) — available for future production deployment
+- Repo is now **public** on GitHub (branch protection requires paid plan for private repos)
+
+**Runner notes:**
+- Runner binary: `~/actions-runner/run.sh` — must be running for CI to pick up jobs
+- Runner is repo-scoped to `blueguy23/bill-tracker` (account-level runners require Team plan)
+- **TODO next session:** configure runner as a systemd/WSL background service so it auto-starts
+
 ### Next Session Ideas
 
-- **Merge all pending branches to main** — session-3 → fico-advisor → sync-button → page-revamp (in order)
+- **Runner auto-start** — configure as background service so `run.sh` starts automatically with WSL
 - **UI polish** — user rejected Ocean UI; if doing another theme pass, get explicit approval on direction first (show mockup or color palette before implementing)
 - **Dashboard overhaul** — net worth widget, cash flow (income vs expenses), spending by category chart
 - **Auto-categorization** — tag transactions by description pattern, user can override
@@ -683,7 +702,7 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 - Last audit: **2026-04-02** — all findings fixed
 - MDD docs missing for: `04-budget-alerts`, `07-subscription-detection`
 - No auth — single-user only until Phase 5 implemented
-- 4 branches unmerged to main (see Merge Status table above)
+- Runner must be manually started (`~/actions-runner/run.sh`) until auto-start is configured
 
 ---
 
