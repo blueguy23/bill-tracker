@@ -3,6 +3,7 @@ export interface AccountMeta {
   statementClosingDay: number | null; // 1–31, null = not configured
   targetUtilization: number;          // 0–1, default from env
   manualCreditLimit: number | null;   // manually entered limit (used when SimpleFIN doesn't provide one)
+  customOrgName?: string | null;      // user-set display name overriding inferOrgName()
 }
 
 export interface UtilizationDataPoint {

@@ -1,16 +1,30 @@
-import type { BillResponse } from '@/types/bill';
+import type { BillResponse, Bill } from '@/types/bill';
 import { MonthlySummary } from '@/components/MonthlySummary';
+import { getDb } from '@/adapters/db';
+import { listBills } from '@/adapters/bills';
 
-async function fetchBills(): Promise<BillResponse[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/v1/bills`, { cache: 'no-store' });
-  if (!res.ok) return [];
-  const data = await res.json() as { bills: BillResponse[] };
-  return data.bills;
+function serializeBill(bill: Bill): BillResponse {
+  return {
+    _id: bill._id,
+    name: bill.name,
+    amount: bill.amount,
+    dueDate: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : bill.dueDate,
+    category: bill.category,
+    isPaid: bill.isPaid,
+    isAutoPay: bill.isAutoPay,
+    isRecurring: bill.isRecurring,
+    recurrenceInterval: bill.recurrenceInterval,
+    url: bill.url,
+    notes: bill.notes,
+    createdAt: bill.createdAt instanceof Date ? bill.createdAt.toISOString() : String(bill.createdAt),
+    updatedAt: bill.updatedAt instanceof Date ? bill.updatedAt.toISOString() : String(bill.updatedAt),
+  };
 }
 
 export default async function SummaryPage() {
-  const bills = await fetchBills();
+  const db = await getDb();
+  const rawBills = await listBills(db);
+  const bills: BillResponse[] = rawBills.map(serializeBill);
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">

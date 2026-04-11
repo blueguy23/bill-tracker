@@ -510,7 +510,7 @@ Don't just fix bugs — fix the rules that allowed the bug. Every mistake is a m
 
 ---
 
-## Feature Roadmap — Session Status (as of 2026-04-07)
+## Feature Roadmap — Session Status (as of 2026-04-08)
 
 Each session runs in an isolated git worktree. **Do NOT start a new session without reading this table first.**
 
@@ -528,6 +528,8 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `08-fico-advisor` | Credit Optimizer & Statement Alert | `feat/fico-advisor` | ✅ Built |
 | — | Sync Button + Startup Auto-Sync | `feat/sync-button` | ✅ Built |
 | — | Full Transaction History Page | `feat/sync-button` | ✅ Built |
+| — | Loading Skeletons + Route Prefetch + Direct DB | `feat/page-revamp` | ✅ Built |
+| — | Unknown Account Alerts (Sidebar + Settings) | `feat/page-revamp` | ✅ Built |
 
 ### What Was Built — Audit Session (`feat/fico-advisor`, 2026-04-02)
 
@@ -589,11 +591,43 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 - 8 new unit tests (adapter: pagination, filtering, offset, date range)
 - 84 new E2E tests — API shape + **data binding** (real DB values verified in UI) + filtering behavior across all 4 browsers
 
+### What Was Built — Session 2026-04-08 (`feat/page-revamp`)
+
+**Performance — eliminated tab lag and double-click bug:**
+- Root cause: two issues compounding — Next.js dev lazy compilation (600–900ms first visit, unavoidable in dev) + self-referential HTTP fetches from server pages to their own API routes (adds 500–1000ms)
+- Fix 1: All server pages (`/`, `/budget`, `/credit`, `/subscriptions`, `/summary`, `/transactions`, `/recurring`, `/settings`) now call adapters/handlers directly with `getDb()` — no more HTTP round-trip
+- Fix 2: `loading.tsx` skeletons added to ALL routes — skeleton renders instantly on click, content streams in
+- Fix 3: Sidebar prefetches all 8 routes on mount via `router.prefetch()` — pre-compiles routes before first visit
+- Note: First-click lag in **dev mode** is normal (Next.js lazy compilation). In **production** (`pnpm build && pnpm start`) all routes are pre-compiled and navigation is instant.
+
+**Unknown Account Alerts:**
+- `inferOrgName()` returns 'Unknown' when bank doesn't send org name and no BANK_PATTERNS match
+- Sidebar: amber dot appears next to Settings nav item when any account `orgName === 'Unknown'`
+- Settings page: amber banner with inline "Sync Now" button when `unknownCount > 0`
+- `settings/page.tsx` is async — passes `unknownCount` to `SettingsView` as prop
+- Both checks use `GET /api/v1/accounts` — no new endpoint needed
+
+**Ocean UI Theme — built then reverted:**
+- User did not like the look — reverted in same session
+- Do NOT re-apply: depth-*/ocean-* color tokens, teal borders, sky-* text classes, animated gradient body
+- Keep: zinc/blue/white palette (the original)
+
+**Files changed:**
+- `src/app/loading.tsx` — new root-level skeleton
+- `src/app/settings/loading.tsx` — new settings skeleton
+- All other `*/loading.tsx` — standardized skeleton pattern
+- All `src/app/*/page.tsx` — direct DB calls replacing fetch()
+- `src/components/Sidebar.tsx` — route prefetch + amber dot for unknown accounts
+- `src/components/SettingsView.tsx` — amber banner + `unknownCount` prop
+- `src/app/settings/page.tsx` — async, passes unknownCount
+- `tests/e2e/transactions.spec.ts` — non-null assertions on guarded array access (TS strict)
+
 ### Test Coverage
 
 | Branch | Unit Tests | E2E Tests |
 |--------|-----------|-----------|
-| `feat/sync-button` (current) | 233/233 ✅ | 83 passed, 1 skipped (mobile account column) ✅ |
+| `feat/sync-button` | 233/233 ✅ | 83 passed, 1 skipped (mobile account column) ✅ |
+| `feat/page-revamp` (current) | 233/233 ✅ | 83 passed, 1 skipped ✅ |
 
 ### Merge Status
 
@@ -605,6 +639,7 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `feat/session-3` | ⬜ Not yet merged |
 | `feat/fico-advisor` | ⬜ Not yet merged (depends on session-3) |
 | `feat/sync-button` | ⬜ Not yet merged (depends on session-3 + fico-advisor) |
+| `feat/page-revamp` | ⬜ Not yet merged (depends on sync-button) |
 
 ### What Was Fixed — Infra Session (`chore/lan-access`, 2026-04-03)
 
@@ -633,10 +668,11 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 
 ### Next Session Ideas
 
-- **Merge all pending branches to master** — session-3 → fico-advisor → sync-button (in order)
+- **Merge all pending branches to main** — session-3 → fico-advisor → sync-button → page-revamp (in order)
+- **UI polish** — user rejected Ocean UI; if doing another theme pass, get explicit approval on direction first (show mockup or color palette before implementing)
 - **Dashboard overhaul** — net worth widget, cash flow (income vs expenses), spending by category chart
 - **Auto-categorization** — tag transactions by description pattern, user can override
-- **Onboarding flow** — SimpleFIN setup wizard, empty state UX for new users
+- **Onboarding flow** — SimpleFIN setup wizard, empty state UX for new users (`OnboardingBanner` component exists, may need expansion)
 - **Auth (Phase 5)** — NextAuth magic link, required before any public launch
 - **Manual transaction tagging** — let user categorize one-off transactions
 - **Export / reports** — monthly PDF/CSV export
@@ -647,6 +683,7 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 - Last audit: **2026-04-02** — all findings fixed
 - MDD docs missing for: `04-budget-alerts`, `07-subscription-detection`
 - No auth — single-user only until Phase 5 implemented
+- 4 branches unmerged to main (see Merge Status table above)
 
 ---
 

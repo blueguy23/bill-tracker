@@ -1,17 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
-import { getTodayLog } from '@/adapters/syncLog';
-import { listAccounts, listRecentTransactions } from '@/adapters/accounts';
+import { listAccounts } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
 
 export async function GET(): Promise<Response> {
   try {
     const db = await getDb();
-    const [accounts, transactions, log] = await Promise.all([
-      listAccounts(db),
-      listRecentTransactions(db),
-      getTodayLog(db),
-    ]);
+    const accounts = await listAccounts(db);
 
     // Apply customOrgName overrides
     const accountIds = accounts.map((a) => a._id);
@@ -22,14 +17,10 @@ export async function GET(): Promise<Response> {
       return meta?.customOrgName ? { ...a, orgName: meta.customOrgName } : a;
     });
 
-    return NextResponse.json({
-      accounts: accountsWithNames,
-      transactions,
-      lastSyncAt: log.lastSyncAt?.toISOString() ?? null,
-      simplefinConfigured: Boolean(process.env.SIMPLEFIN_URL),
-    });
+    const totalBalance = accountsWithNames.reduce((sum, a) => sum + a.balance, 0);
+    return NextResponse.json({ accounts: accountsWithNames, totalBalance });
   } catch (err) {
-    console.error('[GET /api/v1/accounts]', err);
+    console.error('[GET /api/v1/accounts/balances]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

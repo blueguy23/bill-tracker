@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+
+// ── Mobile sidebar context ────────────────────────────────────────────────────
+const SidebarContext = createContext<{ open: () => void }>({ open: () => {} });
+export function useSidebarOpen() { return useContext(SidebarContext); }
 
 function IconGrid() {
   return (
@@ -124,12 +128,18 @@ function NavItem({ href, icon, label, active, disabled }: NavItemProps) {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [hasUnknownAccounts, setHasUnknownAccounts] = useState(false);
 
   const fetchStatus = useCallback(() => {
     fetch('/api/v1/sync/status')
@@ -140,7 +150,17 @@ export function Sidebar() {
 
   useEffect(() => {
     fetchStatus();
+    fetch('/api/v1/accounts')
+      .then((r) => r.json() as Promise<{ accounts: { orgName: string }[] }>)
+      .then((d) => setHasUnknownAccounts((d.accounts ?? []).some((a) => a.orgName === 'Unknown')))
+      .catch(() => {});
   }, [fetchStatus]);
+
+  const PREFETCH_ROUTES = ['/', '/recurring', '/summary', '/transactions', '/budget', '/subscriptions', '/credit', '/settings'];
+  useEffect(() => {
+    PREFETCH_ROUTES.forEach((route) => router.prefetch(route));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
 
   async function handleSync() {
     if (syncState === 'syncing') return;
@@ -179,11 +199,24 @@ export function Sidebar() {
   const syncColor =
     syncState === 'done'  ? 'text-green-400' :
     syncState === 'error' || syncState === 'quota' ? 'text-red-400' :
-    syncState === 'syncing' ? 'text-blue-400' :
+    syncState === 'syncing' ? 'text-cyan-400' :
     'text-zinc-400 hover:text-zinc-200';
 
   return (
-    <aside className="w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950">
+    <>
+      {/* Mobile backdrop */}
+      {onClose && (
+        <div
+          className={`fixed inset-0 z-40 bg-black/60 sm:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onClick={onClose}
+        />
+      )}
+      <aside className={`
+        w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950
+        sm:relative sm:translate-x-0 sm:opacity-100
+        ${onClose ? 'fixed inset-y-0 left-0 z-50 transition-transform duration-200 sm:static' : ''}
+        ${onClose && !isOpen ? '-translate-x-full sm:translate-x-0' : 'translate-x-0'}
+      `}>
       <div className="px-4 py-5 border-b border-white/[0.06]">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
@@ -203,7 +236,16 @@ export function Sidebar() {
         <NavItem href="/subscriptions" icon={<IconRefreshCw />} label="Subscriptions" active={pathname === '/subscriptions'} />
         <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />
         <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
-        <NavItem href="/settings" icon={<IconSettings />} label="Settings" active={pathname === '/settings'} />
+        <Link
+          href="/settings"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${pathname === '/settings' ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'}`}
+        >
+          <IconSettings />
+          <span className="flex-1">Settings</span>
+          {hasUnknownAccounts && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Some accounts show as Unknown" />
+          )}
+        </Link>
       </nav>
 
       <div className="p-3 border-t border-white/[0.06] space-y-1">
@@ -220,5 +262,6 @@ export function Sidebar() {
         <p className="px-3 text-[10px] text-zinc-600">{formatLastSync(lastSyncAt)}</p>
       </div>
     </aside>
+    </>
   );
 }

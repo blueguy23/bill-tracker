@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
@@ -30,11 +30,48 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
+      - name: Check Playwright cache
+        id: playwright-cache
+        run: test -d /home/garci/.cache/ms-playwright && echo "cache-hit=true" >> $GITHUB_OUTPUT || echo "cache-hit=false" >> $GITHUB_OUTPUT
+
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install chromium
+
+      - name: Clear previous test results
+        run: rm -rf test-results playwright-report
 
       - name: E2E tests
         run: pnpm test:e2e
+        env:
+          STRICTDB_URI: mongodb://localhost:27017/bill-tracker
+          NODE_ENV: test
+
+      - name: Print E2E failures
+        if: failure()
+        run: |
+          if [ -f test-results/results.json ]; then
+            node -e "
+              const r = require('./test-results/results.json');
+              const specs = [];
+              function collect(suites) {
+                for (const s of suites || []) {
+                  for (const spec of s.specs || []) specs.push(spec);
+                  collect(s.suites);
+                }
+              }
+              collect(r.suites);
+              const failed = specs.filter(s => s.tests.some(t => t.status === 'unexpected' || t.results?.some(r => r.status === 'failed' || r.status === 'timedOut')));
+              if (failed.length === 0) { console.log('No failures found in report'); process.exit(0); }
+              console.log('\n=== FAILED TESTS (' + failed.length + ') ===\n');
+              failed.forEach(s => {
+                console.log('FAILED:', s.title);
+                s.tests.forEach(t => t.results?.forEach(r => { if (r.error) console.log('  ', r.error.message?.split('\n')[0]); }));
+              });
+            "
+          else
+            echo "No results.json found — server likely failed to start"
+          fi
 
       - name: Upload test results
         if: failure()

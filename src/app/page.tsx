@@ -1,34 +1,44 @@
-import type { BillResponse, BillSummary } from '@/types/bill';
+import type { BillResponse, BillSummary, Bill } from '@/types/bill';
 import type { SuggestedMatch } from '@/types/subscription';
+import type { Account } from '@/lib/simplefin/types';
 import { SummaryCards } from '@/components/SummaryCards';
 import { BillsView } from '@/components/BillsView';
 import { MatchBanner } from '@/components/MatchBanner';
+import { NetWorthCard } from '@/components/NetWorthCard';
+import { OnboardingBanner } from '@/components/OnboardingBanner';
+import { getDb } from '@/adapters/db';
+import { listBills } from '@/adapters/bills';
+import { listAccounts, listRecentTransactions } from '@/adapters/accounts';
+import { listAccountMeta } from '@/adapters/accountMeta';
+import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 
-async function fetchBills(): Promise<BillResponse[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/v1/bills`, { cache: 'no-store' });
-  if (!res.ok) {
-    console.error(`[fetchBills] API returned ${res.status} ${res.statusText}`);
-    return [];
-  }
-  const data = await res.json() as { bills: BillResponse[] };
-  return data.bills;
+function serializeBill(bill: Bill): BillResponse {
+  return {
+    _id: bill._id,
+    name: bill.name,
+    amount: bill.amount,
+    dueDate: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : bill.dueDate,
+    category: bill.category,
+    isPaid: bill.isPaid,
+    isAutoPay: bill.isAutoPay,
+    isRecurring: bill.isRecurring,
+    recurrenceInterval: bill.recurrenceInterval,
+    url: bill.url,
+    notes: bill.notes,
+    createdAt: bill.createdAt instanceof Date ? bill.createdAt.toISOString() : String(bill.createdAt),
+    updatedAt: bill.updatedAt instanceof Date ? bill.updatedAt.toISOString() : String(bill.updatedAt),
+  };
 }
 
 function computeSummary(bills: BillResponse[]): BillSummary {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-
-  let totalOwedThisMonth = 0;
-  let totalPaid = 0;
-  let overdueCount = 0;
-  let autoPayTotal = 0;
+  let totalOwedThisMonth = 0, totalPaid = 0, overdueCount = 0, autoPayTotal = 0;
 
   for (const bill of bills) {
     if (bill.isAutoPay) autoPayTotal += bill.amount;
     if (bill.isPaid) { totalPaid += bill.amount; continue; }
-
     if (bill.isRecurring) {
       totalOwedThisMonth += bill.amount;
       if (typeof bill.dueDate === 'number' && bill.dueDate < now.getDate()) overdueCount++;
@@ -38,24 +48,28 @@ function computeSummary(bills: BillResponse[]): BillSummary {
       if (due < now) overdueCount++;
     }
   }
-
   return { totalOwedThisMonth, totalPaid, overdueCount, autoPayTotal };
 }
 
-async function fetchSuggestedMatches(): Promise<SuggestedMatch[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-  try {
-    const res = await fetch(`${baseUrl}/api/v1/subscriptions/matches`, { cache: 'no-store' });
-    if (!res.ok) return [];
-    const data = await res.json() as { matches: SuggestedMatch[] };
-    return data.matches;
-  } catch {
-    return [];
-  }
-}
-
 export default async function DashboardPage() {
-  const [bills, matches] = await Promise.all([fetchBills(), fetchSuggestedMatches()]);
+  const db = await getDb();
+
+  const [rawBills, allAccounts, recentTransactions] = await Promise.all([
+    listBills(db),
+    listAccounts(db),
+    listRecentTransactions(db),
+  ]);
+
+  // Apply customOrgName overrides
+  const metaList = allAccounts.length > 0 ? await listAccountMeta(db, allAccounts.map((a) => a._id)) : [];
+  const metaMap = new Map(metaList.map((m) => [m._id, m]));
+  const accounts: Account[] = allAccounts.map((a) => {
+    const meta = metaMap.get(a._id);
+    return meta?.customOrgName ? { ...a, orgName: meta.customOrgName } : a;
+  });
+
+  const bills = rawBills.map(serializeBill);
+  const matches: SuggestedMatch[] = findAutoMatches(recentTransactions, rawBills);
   const summary = computeSummary(bills);
 
   return (
@@ -66,8 +80,13 @@ export default async function DashboardPage() {
           <p className="text-sm text-zinc-500 mt-0.5">Your bills at a glance</p>
         </div>
       </div>
+      <OnboardingBanner
+        simplefinConfigured={Boolean(process.env.SIMPLEFIN_ACCESS_URL || process.env.SIMPLEFIN_URL)}
+        accountCount={accounts.length}
+      />
       <MatchBanner count={matches.length} />
       <SummaryCards summary={summary} />
+      <NetWorthCard accounts={accounts} />
       <BillsView initialBills={bills} />
     </div>
   );

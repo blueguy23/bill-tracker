@@ -191,12 +191,29 @@ export function SubscriptionsView({ initialSubscriptions }: Props) {
     }
   }
 
+  // Monthly equivalent cost per subscription
+  function monthlyAmount(sub: DetectedSubscriptionResponse): number {
+    if (sub.interval === 'weekly') return sub.amount * 4;
+    if (sub.interval === 'biweekly') return sub.amount * 2;
+    if (sub.interval === 'quarterly') return sub.amount / 3;
+    return sub.amount; // monthly
+  }
+
+  const totalMonthly = subscriptions.reduce((sum, s) => sum + monthlyAmount(s), 0);
+  const totalAnnual = totalMonthly * 12;
+  const byConfidence = {
+    high: subscriptions.filter((s) => s.confidence === 'high').length,
+    medium: subscriptions.filter((s) => s.confidence === 'medium').length,
+    low: subscriptions.filter((s) => s.confidence === 'low').length,
+  };
+
   if (subscriptions.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-white/[0.08] rounded-xl p-12 text-center">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-xl p-12 text-center space-y-2">
         <p className="text-zinc-400 font-medium">No recurring subscriptions detected</p>
         <p className="text-zinc-600 text-sm mt-1">
-          Sync more transaction history to detect recurring charges automatically.
+          Subscription detection scans your last 90 days of transactions for recurring charges.
+          Sync more transaction history to detect patterns.
         </p>
       </div>
     );
@@ -204,6 +221,23 @@ export function SubscriptionsView({ initialSubscriptions }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Cost summary */}
+      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-4 flex flex-wrap gap-x-8 gap-y-2 items-center">
+        <div>
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Monthly Total</p>
+          <p className="text-xl font-bold text-white">{usd(totalMonthly)}<span className="text-sm text-zinc-500 font-normal">/mo</span></p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Annual Total</p>
+          <p className="text-xl font-bold text-white">{usd(totalAnnual)}/yr</p>
+        </div>
+        <div className="ml-auto flex gap-3 text-xs">
+          {byConfidence.high > 0 && <span className="text-emerald-400 font-medium">{byConfidence.high} high</span>}
+          {byConfidence.medium > 0 && <span className="text-amber-400 font-medium">{byConfidence.medium} medium</span>}
+          {byConfidence.low > 0 && <span className="text-zinc-400 font-medium">{byConfidence.low} low</span>}
+        </div>
+      </div>
+
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg p-3">
           {error}

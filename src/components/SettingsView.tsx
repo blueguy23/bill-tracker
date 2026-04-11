@@ -2,27 +2,60 @@
 
 import { useState, useEffect } from 'react';
 import type { CreditSettingsEntry } from '@/types/creditAdvisor';
+import type { Account } from '@/lib/simplefin/types';
 
 interface SettingsViewProps {
   initialConfigured: boolean;
   dueSoonDays: number;
+  unknownCount?: number;
 }
 
 type TestStatus = 'idle' | 'loading' | 'success' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
-export function SettingsView({ initialConfigured, dueSoonDays }: SettingsViewProps) {
+export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 }: SettingsViewProps) {
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testMessage, setTestMessage] = useState('');
   const [creditSettings, setCreditSettings] = useState<CreditSettingsEntry[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accountNames, setAccountNames] = useState<Record<string, string>>({});
+  const [nameSaveStatus, setNameSaveStatus] = useState<SaveStatus>('idle');
 
   useEffect(() => {
     fetch('/api/v1/credit/settings')
       .then((r) => r.json() as Promise<{ settings: CreditSettingsEntry[] }>)
       .then((d) => setCreditSettings(d.settings ?? []))
       .catch(() => { /* no credit accounts configured yet */ });
+
+    fetch('/api/v1/accounts')
+      .then((r) => r.json() as Promise<{ accounts: Account[] }>)
+      .then((d) => {
+        setAccounts(d.accounts ?? []);
+        const names: Record<string, string> = {};
+        for (const a of d.accounts ?? []) names[a._id] = a.orgName;
+        setAccountNames(names);
+      })
+      .catch(() => {});
   }, []);
+
+  async function handleSaveAccountNames() {
+    setNameSaveStatus('saving');
+    try {
+      await Promise.all(
+        accounts.map((a) =>
+          fetch(`/api/v1/accounts/${a._id}/meta`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customOrgName: accountNames[a._id] ?? null }),
+          }),
+        ),
+      );
+      setNameSaveStatus('saved');
+    } catch {
+      setNameSaveStatus('error');
+    }
+  }
 
   function updateSetting(accountId: string, field: keyof CreditSettingsEntry, value: unknown) {
     setCreditSettings((prev) =>
@@ -70,8 +103,42 @@ export function SettingsView({ initialConfigured, dueSoonDays }: SettingsViewPro
     }
   }
 
+  const [syncingFromBanner, setSyncingFromBanner] = useState(false);
+
+  async function handleBannerSync() {
+    setSyncingFromBanner(true);
+    try {
+      await fetch('/api/v1/sync', { method: 'POST' });
+    } finally {
+      setSyncingFromBanner(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Unknown accounts warning */}
+      {unknownCount > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4 flex items-start gap-3">
+          <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-300">
+              {unknownCount} account{unknownCount !== 1 ? 's' : ''} couldn&apos;t be identified
+            </p>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Their names show as &ldquo;Unknown&rdquo;. This happens when SimpleFIN doesn&apos;t send institution data.
+              Try syncing again, or rename them below in the Account Names section.
+            </p>
+          </div>
+          <button
+            onClick={handleBannerSync}
+            disabled={syncingFromBanner}
+            className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
+          >
+            {syncingFromBanner ? 'Syncing…' : 'Sync Now'}
+          </button>
+        </div>
+      )}
+
       {/* Discord Notifications */}
       <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
         <div className="px-5 py-4 border-b border-white/[0.06]">
@@ -183,6 +250,45 @@ export function SettingsView({ initialConfigured, dueSoonDays }: SettingsViewPro
             </button>
             {saveStatus === 'saved' && <p className="text-xs text-emerald-400">Saved</p>}
             {saveStatus === 'error' && <p className="text-xs text-red-400">Failed to save</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Account Names */}
+      {accounts.length > 0 && (
+        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/[0.06]">
+            <p className="text-sm font-semibold text-white">Account Names</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Override the bank name shown in the app. Helpful when SimpleFIN returns "Unknown" or an abbreviation.
+            </p>
+          </div>
+          <ul className="divide-y divide-white/[0.04]">
+            {accounts.map((a) => (
+              <li key={a._id} className="px-5 py-3.5 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-zinc-500 truncate">{a.name}</p>
+                </div>
+                <input
+                  type="text"
+                  value={accountNames[a._id] ?? ''}
+                  onChange={(e) => setAccountNames((prev) => ({ ...prev, [a._id]: e.target.value }))}
+                  placeholder="Bank name"
+                  className="w-48 px-3 py-1.5 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </li>
+            ))}
+          </ul>
+          <div className="px-5 py-4 border-t border-white/[0.06] flex items-center gap-3">
+            <button
+              onClick={handleSaveAccountNames}
+              disabled={nameSaveStatus === 'saving'}
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {nameSaveStatus === 'saving' ? 'Saving…' : 'Save Names'}
+            </button>
+            {nameSaveStatus === 'saved' && <p className="text-xs text-emerald-400">Saved — reload to see changes</p>}
+            {nameSaveStatus === 'error' && <p className="text-xs text-red-400">Failed to save</p>}
           </div>
         </div>
       )}

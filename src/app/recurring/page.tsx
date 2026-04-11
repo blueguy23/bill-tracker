@@ -1,5 +1,6 @@
 import type { BillResponse } from '@/types/bill';
 import { BillsView } from '@/components/BillsView';
+import { RecurringStats } from '@/components/RecurringStats';
 
 async function fetchBills(): Promise<BillResponse[]> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
@@ -22,6 +23,7 @@ export default async function RecurringPage() {
           </p>
         </div>
       </div>
+      <RecurringStats bills={bills} />
       <BillsView initialBills={bills} />
     </div>
   );
