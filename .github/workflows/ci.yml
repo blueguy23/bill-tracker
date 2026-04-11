@@ -38,6 +38,9 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm exec playwright install chromium
 
+      - name: Clear previous test results
+        run: rm -rf test-results playwright-report
+
       - name: E2E tests
         run: pnpm test:e2e
         env:
@@ -52,14 +55,21 @@ jobs:
           if [ -f test-results/results.json ]; then
             node -e "
               const r = require('./test-results/results.json');
-              const failed = r.suites.flatMap(s => s.specs).filter(s => s.tests.some(t => t.status === 'failed' || t.status === 'unexpected'));
-              if (failed.length === 0) { console.log('No test failures found in report'); process.exit(0); }
-              console.log('\n=== FAILED TESTS ===\n');
+              const specs = [];
+              function collect(suites) {
+                for (const s of suites || []) {
+                  for (const spec of s.specs || []) specs.push(spec);
+                  collect(s.suites);
+                }
+              }
+              collect(r.suites);
+              const failed = specs.filter(s => s.tests.some(t => t.status === 'unexpected' || t.results?.some(r => r.status === 'failed' || r.status === 'timedOut')));
+              if (failed.length === 0) { console.log('No failures found in report'); process.exit(0); }
+              console.log('\n=== FAILED TESTS (' + failed.length + ') ===\n');
               failed.forEach(s => {
                 console.log('FAILED:', s.title);
-                s.tests.forEach(t => t.results.forEach(r => { if (r.error) console.log(' ', r.error.message?.split('\n')[0]); }));
+                s.tests.forEach(t => t.results?.forEach(r => { if (r.error) console.log('  ', r.error.message?.split('\n')[0]); }));
               });
-              console.log('\nTotal failed:', failed.length);
             "
           else
             echo "No results.json found — server likely failed to start"
