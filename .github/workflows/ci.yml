@@ -30,8 +30,13 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
+      - name: Check Playwright cache
+        id: playwright-cache
+        run: test -d /home/garci/.cache/ms-playwright && echo "cache-hit=true" >> $GITHUB_OUTPUT || echo "cache-hit=false" >> $GITHUB_OUTPUT
+
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install chromium
 
       - name: E2E tests
         run: pnpm test:e2e
@@ -40,6 +45,25 @@ jobs:
           SIMPLEFIN_URL: ${{ secrets.SIMPLEFIN_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           NODE_ENV: test
+
+      - name: Print E2E failures
+        if: failure()
+        run: |
+          if [ -f test-results/results.json ]; then
+            node -e "
+              const r = require('./test-results/results.json');
+              const failed = r.suites.flatMap(s => s.specs).filter(s => s.tests.some(t => t.status === 'failed' || t.status === 'unexpected'));
+              if (failed.length === 0) { console.log('No test failures found in report'); process.exit(0); }
+              console.log('\n=== FAILED TESTS ===\n');
+              failed.forEach(s => {
+                console.log('FAILED:', s.title);
+                s.tests.forEach(t => t.results.forEach(r => { if (r.error) console.log(' ', r.error.message?.split('\n')[0]); }));
+              });
+              console.log('\nTotal failed:', failed.length);
+            "
+          else
+            echo "No results.json found — server likely failed to start"
+          fi
 
       - name: Upload test results
         if: failure()
