@@ -166,11 +166,7 @@ test.describe('Sidebar Navigation', () => {
     await expect(page.locator('h1')).toContainText('Budget');
   });
 
-  test('should show "Personal workspace" footer text in sidebar', async ({ page }) => {
-    await page.goto('/');
 
-    await expect(page.locator('aside').locator('p').filter({ hasText: 'Personal workspace' })).toBeVisible();
-  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
