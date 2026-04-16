@@ -25,6 +25,13 @@ export async function upsertCategoryRule(
   }
 }
 
+export async function deleteCategoryRule(db: StrictDB, id: string): Promise<boolean> {
+  const existing = await db.queryOne<CategoryRule>(COLLECTION, { _id: id });
+  if (!existing) return false;
+  await db.deleteOne(COLLECTION, { _id: id });
+  return true;
+}
+
 export async function setTransactionCategory(
   db: StrictDB,
   transactionId: string,

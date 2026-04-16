@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import { SettingsView } from '@/components/SettingsView';
+import { CategoryRulesView } from '@/components/CategoryRulesView';
 import { getDb } from '@/adapters/db';
 import { listAccounts } from '@/adapters/accounts';
+import { listCategoryRules } from '@/adapters/categoryRules';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -10,7 +12,10 @@ export default async function SettingsPage() {
   const dueSoonDays = Number(process.env.BILL_DUE_SOON_DAYS ?? 3);
 
   const db = await getDb();
-  const accounts = await listAccounts(db);
+  const [accounts, categoryRules] = await Promise.all([
+    listAccounts(db),
+    listCategoryRules(db),
+  ]);
   const unknownCount = accounts.filter((a) => a.orgName === 'Unknown').length;
 
   return (
@@ -20,6 +25,8 @@ export default async function SettingsPage() {
         <p className="text-sm text-zinc-500 mt-0.5">App configuration and integrations</p>
       </div>
       <SettingsView initialConfigured={configured} dueSoonDays={dueSoonDays} unknownCount={unknownCount} />
+      <hr className="border-white/[0.06]" />
+      <CategoryRulesView initialRules={categoryRules} />
     </div>
   );
 }
