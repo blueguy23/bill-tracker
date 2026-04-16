@@ -10,6 +10,7 @@ import { getDb } from '@/adapters/db';
 import { listBills } from '@/adapters/bills';
 import { listAccounts, listRecentTransactions } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
+import { listBudgets } from '@/adapters/budgets';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 
 function serializeBill(bill: Bill): BillResponse {
@@ -54,10 +55,11 @@ function computeSummary(bills: BillResponse[]): BillSummary {
 export default async function DashboardPage() {
   const db = await getDb();
 
-  const [rawBills, allAccounts, recentTransactions] = await Promise.all([
+  const [rawBills, allAccounts, recentTransactions, budgets] = await Promise.all([
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
+    listBudgets(db),
   ]);
 
   // Apply customOrgName overrides
@@ -83,6 +85,8 @@ export default async function DashboardPage() {
       <OnboardingBanner
         simplefinConfigured={Boolean(process.env.SIMPLEFIN_ACCESS_URL || process.env.SIMPLEFIN_URL)}
         accountCount={accounts.length}
+        billCount={rawBills.length}
+        hasBudget={budgets.length > 0}
       />
       <MatchBanner count={matches.length} />
       <SummaryCards summary={summary} />

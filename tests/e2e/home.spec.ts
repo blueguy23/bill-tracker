@@ -198,3 +198,35 @@ test.describe('Health API (/api/v1/health)', () => {
     expect(ts).toBeLessThanOrEqual(after + 1000);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Onboarding Status API — GET /api/v1/onboarding
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Onboarding Status API (/api/v1/onboarding)', () => {
+  test('returns 200 with expected shape', async ({ request }) => {
+    const res = await request.get('/api/v1/onboarding');
+    expect(res.status()).toBe(200);
+
+    const body = await res.json() as {
+      simplefinConfigured: boolean;
+      accountCount: number;
+      billCount: number;
+      hasBudget: boolean;
+      currentStep: number;
+    };
+    expect(typeof body.simplefinConfigured).toBe('boolean');
+    expect(typeof body.accountCount).toBe('number');
+    expect(typeof body.billCount).toBe('number');
+    expect(typeof body.hasBudget).toBe('boolean');
+    expect([1, 2, 3, 4, 5]).toContain(body.currentStep);
+  });
+
+  test('currentStep is at least 2 when SimpleFIN is configured', async ({ request }) => {
+    const res = await request.get('/api/v1/onboarding');
+    const body = await res.json() as { simplefinConfigured: boolean; currentStep: number };
+    if (body.simplefinConfigured) {
+      expect(body.currentStep).toBeGreaterThanOrEqual(2);
+    }
+  });
+});
