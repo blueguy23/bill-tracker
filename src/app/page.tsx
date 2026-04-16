@@ -1,14 +1,17 @@
-import type { BillResponse, BillSummary, Bill } from '@/types/bill';
+import type { BillResponse, BillSummary, Bill, BillCategory } from '@/types/bill';
 import type { SuggestedMatch } from '@/types/subscription';
 import type { Account } from '@/lib/simplefin/types';
 import { SummaryCards } from '@/components/SummaryCards';
 import { BillsView } from '@/components/BillsView';
 import { MatchBanner } from '@/components/MatchBanner';
 import { NetWorthCard } from '@/components/NetWorthCard';
+import { CashFlowCard } from '@/components/CashFlowCard';
+import { SpendingChart } from '@/components/SpendingChart';
+import type { SpendingByCategory } from '@/components/SpendingChart';
 import { OnboardingBanner } from '@/components/OnboardingBanner';
 import { getDb } from '@/adapters/db';
 import { listBills } from '@/adapters/bills';
-import { listAccounts, listRecentTransactions } from '@/adapters/accounts';
+import { listAccounts, listRecentTransactions, getCashFlowThisMonth } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 
@@ -51,13 +54,24 @@ function computeSummary(bills: BillResponse[]): BillSummary {
   return { totalOwedThisMonth, totalPaid, overdueCount, autoPayTotal };
 }
 
+function computeSpendingByCategory(bills: BillResponse[]): SpendingByCategory[] {
+  const totals = new Map<BillCategory, number>();
+  for (const bill of bills) {
+    if (bill.isRecurring) {
+      totals.set(bill.category, (totals.get(bill.category) ?? 0) + bill.amount);
+    }
+  }
+  return Array.from(totals.entries()).map(([category, amount]) => ({ category, amount }));
+}
+
 export default async function DashboardPage() {
   const db = await getDb();
 
-  const [rawBills, allAccounts, recentTransactions] = await Promise.all([
+  const [rawBills, allAccounts, recentTransactions, cashFlow] = await Promise.all([
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
+    getCashFlowThisMonth(db),
   ]);
 
   // Apply customOrgName overrides
@@ -71,6 +85,7 @@ export default async function DashboardPage() {
   const bills = rawBills.map(serializeBill);
   const matches: SuggestedMatch[] = findAutoMatches(recentTransactions, rawBills);
   const summary = computeSummary(bills);
+  const spendingByCategory = computeSpendingByCategory(bills);
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
@@ -86,6 +101,10 @@ export default async function DashboardPage() {
       />
       <MatchBanner count={matches.length} />
       <SummaryCards summary={summary} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <CashFlowCard cashFlow={cashFlow} />
+        <SpendingChart data={spendingByCategory} />
+      </div>
       <NetWorthCard accounts={accounts} />
       <BillsView initialBills={bills} />
     </div>
