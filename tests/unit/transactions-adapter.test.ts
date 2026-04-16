@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { listTransactions, listRecentTransactions } from '@/adapters/accounts';
+import { listTransactions, listRecentTransactions, getCashFlowThisMonth } from '@/adapters/accounts';
 import type { StrictDB } from 'strictdb';
 import type { Transaction } from '@/lib/simplefin/types';
 
@@ -105,5 +105,69 @@ describe('listRecentTransactions', () => {
       expect.objectContaining({ accountId: 'acc-99' }),
       expect.any(Object),
     );
+  });
+});
+
+describe('getCashFlowThisMonth', () => {
+  it('sums income (positive) and expenses (negative) separately', async () => {
+    const txns = [
+      makeTxn({ _id: 't1', amount: 2000, pending: false }),   // income
+      makeTxn({ _id: 't2', amount: -500, pending: false }),   // expense
+      makeTxn({ _id: 't3', amount: -150.5, pending: false }), // expense
+      makeTxn({ _id: 't4', amount: 300, pending: false }),    // income
+    ];
+    const db = makeMockDb(txns);
+    const result = await getCashFlowThisMonth(db);
+
+    expect(result.income).toBeCloseTo(2300);
+    expect(result.expenses).toBeCloseTo(650.5);
+    expect(result.net).toBeCloseTo(1649.5);
+  });
+
+  it('excludes pending transactions', async () => {
+    const txns = [
+      makeTxn({ _id: 't1', amount: -100, pending: false }),
+      makeTxn({ _id: 't2', amount: -200, pending: true }), // should be excluded
+    ];
+    const db = makeMockDb(txns);
+    const result = await getCashFlowThisMonth(db);
+
+    expect(result.expenses).toBeCloseTo(100);
+  });
+
+  it('returns zeros when no transactions exist', async () => {
+    const db = makeMockDb([]);
+    const result = await getCashFlowThisMonth(db);
+
+    expect(result.income).toBe(0);
+    expect(result.expenses).toBe(0);
+    expect(result.net).toBe(0);
+  });
+
+  it('queries transactions within current month date range', async () => {
+    const db = makeMockDb([]);
+    await getCashFlowThisMonth(db);
+
+    expect(db.queryMany).toHaveBeenCalledWith(
+      'transactions',
+      expect.objectContaining({
+        posted: expect.objectContaining({
+          $gte: expect.any(Date),
+          $lte: expect.any(Date),
+        }),
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('returns negative net when expenses exceed income', async () => {
+    const txns = [
+      makeTxn({ _id: 't1', amount: 100, pending: false }),
+      makeTxn({ _id: 't2', amount: -500, pending: false }),
+    ];
+    const db = makeMockDb(txns);
+    const result = await getCashFlowThisMonth(db);
+
+    expect(result.net).toBeCloseTo(-400);
   });
 });

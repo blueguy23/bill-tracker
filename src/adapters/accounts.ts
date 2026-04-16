@@ -57,6 +57,34 @@ export async function listRecentTransactions(db: StrictDB, accountId?: string): 
   return transactions;
 }
 
+export interface CashFlow {
+  income: number;
+  expenses: number;
+  net: number;
+}
+
+export async function getCashFlowThisMonth(db: StrictDB): Promise<CashFlow> {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  const { transactions } = await listTransactions(db, {
+    startDate: startOfMonth,
+    endDate: endOfMonth,
+    limit: 2000,
+  });
+
+  let income = 0;
+  let expenses = 0;
+  for (const txn of transactions) {
+    if (txn.pending) continue;
+    if (txn.amount > 0) income += txn.amount;
+    else expenses += Math.abs(txn.amount);
+  }
+
+  return { income, expenses, net: income - expenses };
+}
+
 export async function listTransactionsForDetection(
   db: StrictDB,
   days = 90,

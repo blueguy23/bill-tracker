@@ -170,6 +170,84 @@ test.describe('Sidebar Navigation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Cash Flow Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Cash Flow Card', () => {
+  test('should render the cash flow card with heading', async ({ page }) => {
+    await page.goto('/');
+
+    const card = page.locator('[data-testid="cash-flow-card"]');
+    await expect(card).toBeVisible();
+    await expect(card.locator('h3')).toContainText('Cash Flow');
+    await expect(card.locator('span').filter({ hasText: 'This month' })).toBeVisible();
+  });
+
+  test('should show income, expenses, and net labels', async ({ page }) => {
+    await page.goto('/');
+
+    const card = page.locator('[data-testid="cash-flow-card"]');
+    await expect(card.locator('p').filter({ hasText: /INCOME/i })).toBeVisible();
+    await expect(card.locator('p').filter({ hasText: /EXPENSES/i })).toBeVisible();
+    await expect(card.locator('p').filter({ hasText: /NET/i })).toBeVisible();
+  });
+
+  test('should display income as a USD currency value', async ({ page }) => {
+    await page.goto('/');
+
+    const income = page.locator('[data-testid="cash-flow-income"]');
+    await expect(income).toBeVisible();
+    await expect(income).toContainText('$');
+  });
+
+  test('should display expenses as a USD currency value', async ({ page }) => {
+    await page.goto('/');
+
+    const expenses = page.locator('[data-testid="cash-flow-expenses"]');
+    await expect(expenses).toBeVisible();
+    await expect(expenses).toContainText('$');
+  });
+
+  test('should display net as a USD currency value', async ({ page }) => {
+    await page.goto('/');
+
+    const net = page.locator('[data-testid="cash-flow-net"]');
+    await expect(net).toBeVisible();
+    await expect(net).toContainText('$');
+  });
+
+  test('should render the income/expense split bar', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.locator('[data-testid="cash-flow-bar"]')).toBeVisible();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Spending Chart
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Spending Chart', () => {
+  test('should render the spending chart with heading', async ({ page }) => {
+    await page.goto('/');
+
+    const chart = page.locator('[data-testid="spending-chart"]');
+    await expect(chart).toBeVisible();
+    await expect(chart.locator('h3')).toContainText('Spending by Category');
+  });
+
+  test('should show "Monthly bills" label or empty state', async ({ page }) => {
+    await page.goto('/');
+
+    const chart = page.locator('[data-testid="spending-chart"]');
+    const subtitle = chart.locator('span').filter({ hasText: 'Monthly bills' });
+    const emptyState = chart.locator('p').filter({ hasText: 'No bill data yet' });
+    const either = subtitle.or(emptyState);
+    await expect(either.first()).toBeVisible();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Health API — verified here as a smoke test for the full stack
 // ─────────────────────────────────────────────────────────────────────────────
 
