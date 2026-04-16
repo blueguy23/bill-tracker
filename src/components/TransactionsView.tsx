@@ -2,10 +2,68 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import type { Account, Transaction } from '@/lib/simplefin/types';
+import { CATEGORY_LABELS, CATEGORY_COLORS, TRANSACTION_CATEGORIES } from '@/lib/categorization/types';
+import type { TransactionCategory } from '@/lib/categorization/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+interface CategoryBadgeProps {
+  txnId: string;
+  category: TransactionCategory | undefined;
+  onChanged: (txnId: string, category: TransactionCategory) => void;
+}
+
+function CategoryBadge({ txnId, category, onChanged }: CategoryBadgeProps) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const colors = category ? CATEGORY_COLORS[category] : CATEGORY_COLORS.other;
+  const label = category ? CATEGORY_LABELS[category] : 'Uncategorized';
+
+  async function pick(next: TransactionCategory) {
+    setOpen(false);
+    if (next === category) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/v1/transactions/${txnId}/category`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: next }),
+      });
+      onChanged(txnId, next);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={saving}
+        data-testid={`category-badge-${txnId}`}
+        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-opacity ${colors.bg} ${colors.text} ${saving ? 'opacity-50' : 'hover:opacity-80 cursor-pointer'}`}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="absolute z-10 left-0 top-5 w-44 rounded-lg border border-white/[0.1] bg-zinc-900 shadow-xl py-1">
+          {TRANSACTION_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => void pick(cat)}
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] transition-colors ${cat === category ? 'text-white font-semibold' : 'text-zinc-400'}`}
+            >
+              {CATEGORY_LABELS[cat]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function formatDate(d: Date | string): string {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -68,6 +126,12 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
   const [search, setSearch] = useState('');
   const [hideTransfers, setHideTransfers] = useState(false);
+
+  const handleCategoryChanged = useCallback((txnId: string, category: TransactionCategory) => {
+    setTransactions((prev) =>
+      prev.map((t) => (t._id === txnId ? { ...t, category, categorySource: 'user' } : t)),
+    );
+  }, []);
 
   const accountMap = new Map(accounts.map((a) => [a._id, a]));
 
@@ -230,7 +294,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
                       {formatDate(txn.posted)}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-zinc-200">{txn.description}</span>
                         {transfer && (
                           <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 shrink-0">
@@ -242,6 +306,11 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
                             Pending
                           </span>
                         )}
+                        <CategoryBadge
+                          txnId={txn._id}
+                          category={txn.category}
+                          onChanged={handleCategoryChanged}
+                        />
                       </div>
                       {txn.memo && (
                         <p className="text-xs text-zinc-600 mt-0.5">{txn.memo}</p>

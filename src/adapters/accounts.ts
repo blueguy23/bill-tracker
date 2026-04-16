@@ -1,5 +1,7 @@
 import type { StrictDB } from 'strictdb';
 import type { Account, Transaction } from '@/lib/simplefin/types';
+import { categorize } from '@/lib/categorization/engine';
+import { listCategoryRules } from '@/adapters/categoryRules';
 
 const ACCOUNTS = 'accounts';
 const TRANSACTIONS = 'transactions';
@@ -13,7 +15,13 @@ export async function upsertTransaction(db: StrictDB, txn: Transaction): Promise
   const existing = await db.queryOne<Transaction>(TRANSACTIONS, { _id: txn._id });
   if (existing && !existing.pending) return false; // already settled, skip
 
-  await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: txn }, true);
+  // Auto-categorize only if the user hasn't manually set a category
+  const preserveCategory = existing?.categorySource === 'user';
+  const toSave: Transaction = preserveCategory
+    ? { ...txn, category: existing.category, categorySource: 'user' }
+    : { ...txn, category: categorize(txn.description, txn.memo, await listCategoryRules(db)), categorySource: 'auto' };
+
+  await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: toSave }, true);
   return true;
 }
 

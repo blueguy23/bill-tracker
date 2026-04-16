@@ -76,6 +76,8 @@ export interface Transaction {
   memo: string | null;
   pending: boolean;
   importedAt: Date;
+  category?: import('@/lib/categorization/types').TransactionCategory;
+  categorySource?: 'auto' | 'user';
 }
 
 export interface SyncLog {
