@@ -83,7 +83,7 @@ export default async function DashboardPage() {
         </div>
       </div>
       <OnboardingBanner
-        simplefinConfigured={Boolean(process.env.SIMPLEFIN_ACCESS_URL || process.env.SIMPLEFIN_URL)}
+        simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)}
         accountCount={accounts.length}
         billCount={rawBills.length}
         hasBudget={budgets.length > 0}

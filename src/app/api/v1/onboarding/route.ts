@@ -14,9 +14,10 @@ export interface OnboardingStatus {
 }
 
 export async function GET(): Promise<NextResponse<OnboardingStatus>> {
-  const simplefinConfigured = Boolean(
-    process.env.SIMPLEFIN_ACCESS_URL || process.env.SIMPLEFIN_URL,
-  );
+  // Canonical env var is SIMPLEFIN_URL — the resolved access URL used by the sync client.
+  // SIMPLEFIN_ACCESS_URL is the one-time claim URL (not yet resolved), so checking it here
+  // would give a false positive. Match the sync route's check.
+  const simplefinConfigured = Boolean(process.env.SIMPLEFIN_URL);
 
   const db = await getDb();
   const [accounts, bills, budgets] = await Promise.all([
