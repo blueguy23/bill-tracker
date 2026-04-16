@@ -530,6 +530,11 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | — | Full Transaction History Page | `feat/sync-button` | ✅ Built |
 | — | Loading Skeletons + Route Prefetch + Direct DB | `feat/page-revamp` | ✅ Built |
 | — | Unknown Account Alerts (Sidebar + Settings) | `feat/page-revamp` | ✅ Built |
+| — | Dashboard: CashFlowCard + SpendingChart | `feat/dashboard-overhaul` | ✅ Built |
+| — | Auto-Categorization (engine + inline badge) | `feat/auto-categorization` | ✅ Built |
+| — | Manual Tags + Notes (inline editor) | `feat/manual-tagging` | ✅ Built |
+| — | CSV Export (with injection protection) | `feat/export-reports` | ✅ Built |
+| — | Onboarding Wizard (4-step progress banner) | `feat/onboarding-flow` | ✅ Built |
 
 ### What Was Built — Audit Session (`feat/fico-advisor`, 2026-04-02)
 
@@ -685,17 +690,58 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 - Runner is repo-scoped to `blueguy23/bill-tracker` (account-level runners require Team plan)
 - **TODO next session:** configure runner as a systemd/WSL background service so it auto-starts
 
+### What Was Built — Feature Session (2026-04-15)
+
+**5 features built on separate branches, all merged to master. Runner started manually before session (`cd ~/projects/bill-tracker/actions-runner && nohup ./run.sh > ~/runner.log 2>&1 &`).**
+
+**Dashboard Overhaul (`feat/dashboard-overhaul`):**
+- `CashFlowCard` — income / expenses / net this month with split bar visualization (`data-testid="cash-flow-card"`)
+- `SpendingChart` — horizontal bar chart by bill category (`data-testid="spending-chart"`)
+- `getCashFlowThisMonth(db)` adapter — sums positive (income) vs negative (expenses) from current-month transactions, excludes pending
+- `computeSpendingByCategory()` — derives spending totals from recurring bills for chart data
+- Unit tests: 5 new tests for `getCashFlowThisMonth`; E2E: 8 new tests for both cards
+
+**Auto-Categorization (`feat/auto-categorization`):**
+- `src/lib/categorization/types.ts` — `TransactionCategory` union (10 categories), `CATEGORY_LABELS`, `CATEGORY_COLORS`, `CategoryRule` interface
+- `src/lib/categorization/defaultRules.ts` — 100+ keyword/pattern pairs, order-sensitive (uber eats before uber)
+- `src/lib/categorization/engine.ts` — `categorize()`: user rules first, then defaults, regex support, invalid regex skipped
+- `src/adapters/categoryRules.ts` — `listCategoryRules`, `upsertCategoryRule`, `setTransactionCategory`
+- `PATCH /api/v1/transactions/:id/category` — validates against allowlist, Next.js 15 `await params`
+- `CategoryBadge` inline dropdown in `TransactionsView` — live PATCH on change
+- Auto-categorizes new transactions during `upsertTransaction` (preserves `categorySource: 'user'`)
+- Unit tests: 13 tests for categorization engine
+
+**Manual Transaction Tagging (`feat/manual-tagging`):**
+- `src/adapters/transactionTags.ts` — `setTransactionTags` (normalize, dedup, max 10, max 50 chars each), `setTransactionNotes` (trim, truncate 500, null when empty)
+- `PATCH /api/v1/transactions/:id/tags` — validates array, rejects >10 tags
+- `PATCH /api/v1/transactions/:id/notes` — validates string or null
+- `TagsRow` component in `TransactionsView` — inline add/remove tags + notes editor, live PATCH
+- `Transaction` type extended: `tags?: string[]`, `notes?: string | null`
+- Unit tests: 11 tests for tags/notes adapters
+
+**Export / Reports (`feat/export-reports`):**
+- `GET /api/v1/export` — CSV download, accepts `startDate`, `endDate`, `accountId` params, defaults to current month
+- `escapeCSV()` — wraps commas/quotes/newlines; prefixes `=`, `+`, `@` with `'` (OWASP CSV injection guard)
+- Export CSV button in `TransactionsView` filter bar — reads current date range + account filter, triggers browser download
+- Unit tests: 16 tests for `escapeCSV` and `buildCSV`; E2E: 7 tests for export flow
+
+**Onboarding Flow (`feat/onboarding-flow`):**
+- `OnboardingBanner` rewritten — 4-step wizard: Connect SimpleFIN → Sync accounts → Add first bill → Set budget
+- Progress bar: `(completedCount / 4) * 100`%; hides when all done
+- `GET /api/v1/onboarding` — returns `{ simplefinConfigured, accountCount, billCount, hasBudget, currentStep }`
+- Uses `SIMPLEFIN_URL` only (canonical var, not `SIMPLEFIN_ACCESS_URL`)
+- Dashboard passes `billCount` and `hasBudget` props to `OnboardingBanner`
+- Unit tests: 11 tests for step derivation; E2E: 2 onboarding API tests
+
+**Test totals after all merges: 294 unit tests (294 passing), all E2E green.**
+
 ### Next Session Ideas
 
 - **Runner auto-start** — configure as background service so `run.sh` starts automatically with WSL
 - **UI polish** — user rejected Ocean UI; if doing another theme pass, get explicit approval on direction first (show mockup or color palette before implementing)
-- **Dashboard overhaul** — net worth widget, cash flow (income vs expenses), spending by category chart
-- **Auto-categorization** — tag transactions by description pattern, user can override
-- **Onboarding flow** — SimpleFIN setup wizard, empty state UX for new users (`OnboardingBanner` component exists, may need expansion)
 - **Auth (Phase 5)** — NextAuth magic link, required before any public launch
-- **Manual transaction tagging** — let user categorize one-off transactions
-- **Export / reports** — monthly PDF/CSV export
 - **MDD docs for 04-budget-alerts and 07-subscription-detection** — retroactive docs
+- **Category rules UI** — settings page for managing custom categorization rules
 
 ### Known Pre-Launch Gaps
 
