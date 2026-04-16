@@ -1,11 +1,135 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+// ── Tags & Notes inline editor ────────────────────────────────────────────────
+
+interface TagsRowProps {
+  txnId: string;
+  tags: string[] | undefined;
+  notes: string | null | undefined;
+  onTagsChanged: (txnId: string, tags: string[]) => void;
+  onNotesChanged: (txnId: string, notes: string | null) => void;
+}
+
+function TagsRow({ txnId, tags = [], notes, onTagsChanged, onNotesChanged }: TagsRowProps) {
+  const [addingTag, setAddingTag] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesInput, setNotesInput] = useState(notes ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function submitTag() {
+    const val = tagInput.trim().toLowerCase();
+    if (!val || tags.includes(val)) { setAddingTag(false); setTagInput(''); return; }
+    const next = [...tags, val];
+    setAddingTag(false);
+    setTagInput('');
+    await fetch(`/api/v1/transactions/${txnId}/tags`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: next }),
+    });
+    onTagsChanged(txnId, next);
+  }
+
+  async function removeTag(tag: string) {
+    const next = tags.filter((t) => t !== tag);
+    await fetch(`/api/v1/transactions/${txnId}/tags`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: next }),
+    });
+    onTagsChanged(txnId, next);
+  }
+
+  async function saveNotes() {
+    setEditingNotes(false);
+    await fetch(`/api/v1/transactions/${txnId}/notes`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: notesInput || null }),
+    });
+    onNotesChanged(txnId, notesInput || null);
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1" data-testid={`tags-row-${txnId}`}>
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className="group inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] transition-colors"
+          data-testid={`tag-${txnId}-${tag}`}
+        >
+          #{tag}
+          <button
+            onClick={() => void removeTag(tag)}
+            className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-opacity leading-none"
+            aria-label={`Remove tag ${tag}`}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+
+      {addingTag ? (
+        <input
+          ref={inputRef}
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submitTag();
+            if (e.key === 'Escape') { setAddingTag(false); setTagInput(''); }
+          }}
+          onBlur={() => void submitTag()}
+          autoFocus
+          placeholder="tag name"
+          maxLength={50}
+          className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-20"
+        />
+      ) : tags.length < 10 && (
+        <button
+          onClick={() => setAddingTag(true)}
+          data-testid={`add-tag-btn-${txnId}`}
+          className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08] transition-colors"
+        >
+          + tag
+        </button>
+      )}
+
+      {/* Notes toggle */}
+      {editingNotes ? (
+        <input
+          value={notesInput}
+          onChange={(e) => setNotesInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void saveNotes();
+            if (e.key === 'Escape') { setEditingNotes(false); setNotesInput(notes ?? ''); }
+          }}
+          onBlur={() => void saveNotes()}
+          autoFocus
+          placeholder="add a note…"
+          maxLength={500}
+          className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-40"
+          data-testid={`notes-input-${txnId}`}
+        />
+      ) : (
+        <button
+          onClick={() => { setNotesInput(notes ?? ''); setEditingNotes(true); }}
+          data-testid={`notes-btn-${txnId}`}
+          className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${notes ? 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]' : 'bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08]'}`}
+        >
+          {notes ? `"${notes.slice(0, 20)}${notes.length > 20 ? '…' : ''}"` : '+ note'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function formatDate(d: Date | string): string {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -68,6 +192,14 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
   const [search, setSearch] = useState('');
   const [hideTransfers, setHideTransfers] = useState(false);
+
+  const handleTagsChanged = useCallback((txnId: string, tags: string[]) => {
+    setTransactions((prev) => prev.map((t) => (t._id === txnId ? { ...t, tags } : t)));
+  }, []);
+
+  const handleNotesChanged = useCallback((txnId: string, notes: string | null) => {
+    setTransactions((prev) => prev.map((t) => (t._id === txnId ? { ...t, notes } : t)));
+  }, []);
 
   const accountMap = new Map(accounts.map((a) => [a._id, a]));
 
@@ -246,6 +378,13 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
                       {txn.memo && (
                         <p className="text-xs text-zinc-600 mt-0.5">{txn.memo}</p>
                       )}
+                      <TagsRow
+                        txnId={txn._id}
+                        tags={txn.tags}
+                        notes={txn.notes}
+                        onTagsChanged={handleTagsChanged}
+                        onNotesChanged={handleNotesChanged}
+                      />
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       {acct ? (

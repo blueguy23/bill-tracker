@@ -76,6 +76,8 @@ export interface Transaction {
   memo: string | null;
   pending: boolean;
   importedAt: Date;
+  tags?: string[];
+  notes?: string | null;
 }
 
 export interface SyncLog {
