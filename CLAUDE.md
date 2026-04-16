@@ -545,6 +545,9 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | — | Manual Tags + Notes (inline editor) | `feat/manual-tagging` | ✅ Built |
 | — | CSV Export (with injection protection) | `feat/export-reports` | ✅ Built |
 | — | Onboarding Wizard (4-step progress banner) | `feat/onboarding-flow` | ✅ Built |
+| — | Auth — NextAuth credentials + middleware | `feat/auth` | ✅ Built |
+| — | Category Rules UI (Settings page) | `feat/category-rules-ui` | ✅ Built |
+| — | UI Polish — dashboard layout + transactions | `feat/ui-polish` | ✅ Built |
 
 ### What Was Built — Audit Session (`feat/fico-advisor`, 2026-04-02)
 
@@ -745,19 +748,47 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 
 **Test totals after all merges: 294 unit tests (294 passing), all E2E green.**
 
+### What Was Built — Session 2026-04-16
+
+**Auth (`feat/auth`):**
+- NextAuth v5 credentials provider — password from `AUTH_PASSWORD` env var, `timingSafeEqual` comparison
+- `src/auth.ts` — NextAuth config, 30-day JWT session
+- `src/middleware.ts` — redirects unauthenticated requests to `/login`
+- `src/app/login/page.tsx` — dark zinc login form, server action, error state
+- Fixed `src/app/recurring/page.tsx` — was still using internal `fetch()` which middleware blocked; converted to direct DB call
+- Unit tests: 10 tests for password comparison logic; E2E: 5 auth flow tests
+- **Requires in `.env`:** `AUTH_SECRET` (run `npx auth secret`) + `AUTH_PASSWORD` (your chosen password)
+
+**Category Rules UI (`feat/category-rules-ui`):**
+- `CategoryRulesView` component in Settings page — add/delete custom categorization rules
+- `GET/POST /api/v1/category-rules` + `DELETE /api/v1/category-rules/[id]`
+- `deleteCategoryRule()` added to `src/adapters/categoryRules.ts`
+- Unit tests: 6 adapter tests; E2E: 5 UI tests
+
+**MDD Docs:**
+- `04-budget-alerts.md` and `07-subscription-detection.md` written to `.mdd/docs/`
+- All MDD docs now complete
+
+**UI Polish (`feat/ui-polish`):**
+- Dashboard: 3-column grid (CashFlow / SpendingChart / NetWorth) on desktop, was 2-col + full-width
+- `SummaryCards`: removed gradient backgrounds, clean flat zinc cards with colored accent bar
+- `NetWorthCard`: header style unified with other cards, type pill moved under balance
+- `TransactionsView`: `TagsRow` hidden by default — `+ tag` only appears on row hover; rows with existing tags/notes still show immediately
+- **Note:** user may want to revisit dashboard layout — consider using Claude Artifacts (claude.ai web) to mock up visually before implementing changes in code
+
+**Test totals after session: 310 unit tests (310 passing), all E2E green.**
+
 ### Next Session Ideas
 
+- **Dashboard design** — user wasn't sure about the new 3-col layout. Use Claude Artifacts on claude.ai to mock up visually first, then implement. Do NOT redesign without a visual sign-off.
 - **Runner auto-start** — configure as background service so `run.sh` starts automatically with WSL
-- **UI polish** — user rejected Ocean UI; if doing another theme pass, get explicit approval on direction first (show mockup or color palette before implementing)
-- **Auth (Phase 5)** — NextAuth magic link, required before any public launch
-- **MDD docs for 04-budget-alerts and 07-subscription-detection** — retroactive docs
-- **Category rules UI** — settings page for managing custom categorization rules
+- **Production deployment** — MongoDB Atlas (free tier) is set up; Dokploy config in `.env.example`
 
 ### Known Pre-Launch Gaps
 
 - Last audit: **2026-04-02** — all findings fixed
 - MDD docs: all complete
-- No auth — single-user only until Phase 5 implemented
+- Auth: implemented (NextAuth credentials). Requires `AUTH_SECRET` + `AUTH_PASSWORD` in `.env`
 - Runner must be manually started — correct path: `cd ~/projects/bill-tracker/actions-runner && nohup ./run.sh > ~/runner.log 2>&1 &`
 
 ---
