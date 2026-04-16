@@ -409,3 +409,56 @@ test.describe('Transactions Page (/transactions)', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Export CSV — GET /api/v1/export + UI button
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Export CSV', () => {
+  test.describe('GET /api/v1/export API', () => {
+    test('returns 200 with CSV content-type', async ({ request }) => {
+      const res = await request.get('/api/v1/export');
+      expect(res.status()).toBe(200);
+      const contentType = res.headers()['content-type'] ?? '';
+      expect(contentType).toContain('text/csv');
+    });
+
+    test('returns Content-Disposition attachment header with filename', async ({ request }) => {
+      const res = await request.get('/api/v1/export');
+      const disposition = res.headers()['content-disposition'] ?? '';
+      expect(disposition).toContain('attachment');
+      expect(disposition).toContain('transactions-');
+      expect(disposition).toContain('.csv');
+    });
+
+    test('CSV body starts with the correct header row', async ({ request }) => {
+      const res = await request.get('/api/v1/export');
+      const text = await res.text();
+      const firstLine = text.split('\r\n')[0];
+      expect(firstLine).toBe('Date,Description,Memo,Amount,Account,Institution,Pending');
+    });
+
+    test('returns 400 for invalid date params', async ({ request }) => {
+      const res = await request.get('/api/v1/export?startDate=not-a-date');
+      expect(res.status()).toBe(400);
+    });
+
+    test('accepts startDate and endDate query params', async ({ request }) => {
+      const res = await request.get('/api/v1/export?startDate=2026-01-01&endDate=2026-03-31');
+      expect(res.status()).toBe(200);
+    });
+  });
+
+  test.describe('Export button on /transactions page', () => {
+    test('renders Export CSV button', async ({ page }) => {
+      await page.goto('/transactions');
+      await expect(page.locator('[data-testid="export-btn"]')).toBeVisible();
+      await expect(page.locator('[data-testid="export-btn"]')).toContainText('Export CSV');
+    });
+
+    test('Export CSV button is enabled by default', async ({ page }) => {
+      await page.goto('/transactions');
+      await expect(page.locator('[data-testid="export-btn"]')).toBeEnabled();
+    });
+  });
+});
