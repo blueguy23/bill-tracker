@@ -531,10 +531,10 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 | `01-monthly-summary` | Monthly Summary | `feat/initial-setup` | ✅ Built |
 | `02-payment-history` | Payment History | `feat/initial-setup` | ✅ Built |
 | `03-simplefin-core-sync` | SimpleFIN Core Sync | `feat/simplefin-sync` | ✅ Built + Doc added |
-| `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built — doc missing |
+| `04-budget-alerts` | Budget & Alerts | `feat/budget-alerts` | ✅ Built |
 | `05-credit-health` | Credit Health Module | `feat/session-3` | ✅ Built |
 | `06-discord-notifications` | Discord Notifications | `feat/session-3` | ✅ Built |
-| — | Transaction Subscription Detection | `feat/session-3` | ✅ Built — doc missing |
+| `07-subscription-detection` | Transaction Subscription Detection | `feat/session-3` | ✅ Built |
 | `08-fico-advisor` | Credit Optimizer & Statement Alert | `feat/fico-advisor` | ✅ Built |
 | — | Sync Button + Startup Auto-Sync | `feat/sync-button` | ✅ Built |
 | — | Full Transaction History Page | `feat/sync-button` | ✅ Built |
@@ -756,7 +756,7 @@ Each session runs in an isolated git worktree. **Do NOT start a new session with
 ### Known Pre-Launch Gaps
 
 - Last audit: **2026-04-02** — all findings fixed
-- MDD docs missing for: `04-budget-alerts`, `07-subscription-detection`
+- MDD docs: all complete
 - No auth — single-user only until Phase 5 implemented
 - Runner must be manually started — correct path: `cd ~/projects/bill-tracker/actions-runner && nohup ./run.sh > ~/runner.log 2>&1 &`
 
