@@ -2,6 +2,16 @@
 
 ---
 
+## Session Checklist
+
+Before starting any feature work, start the GitHub Actions runner so CI picks up pushes:
+
+```bash
+cd ~/projects/bill-tracker/actions-runner && nohup ./run.sh > ~/runner.log 2>&1 &
+```
+
+---
+
 ## Quick Reference — Scripts
 
 | Command | What it does |
