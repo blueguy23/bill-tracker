@@ -4,7 +4,8 @@ import { describe, it, expect } from 'vitest';
 
 function escapeCSV(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return '';
-  const str = String(val);
+  let str = String(val);
+  if (/^[=+@\t\r]/.test(str)) str = `'${str}`;
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -34,6 +35,25 @@ describe('escapeCSV', () => {
 
   it('wraps strings containing newlines in quotes', () => {
     expect(escapeCSV('line1\nline2')).toBe('"line1\nline2"');
+  });
+
+  it('prefixes = with single quote to prevent CSV injection', () => {
+    // '=HYPERLINK(...)' contains quotes so gets wrapped: "'=HYPERLINK(...)""
+    const result = escapeCSV('=HYPERLINK("http://evil.com")');
+    expect(result).toContain("'=HYPERLINK"); // injection neutralized
+    expect(result).not.toMatch(/^=/);        // raw formula char not first
+  });
+
+  it('prefixes + with single quote to prevent CSV injection', () => {
+    expect(escapeCSV('+CMD|foo')).toBe("'+CMD|foo");
+  });
+
+  it('prefixes @ with single quote to prevent CSV injection', () => {
+    expect(escapeCSV('@SUM(1+1)')).toBe("'@SUM(1+1)");
+  });
+
+  it('does not prefix normal merchant names', () => {
+    expect(escapeCSV('AMAZON MARKETPLACE')).toBe('AMAZON MARKETPLACE');
   });
 
   it('converts numbers to strings', () => {

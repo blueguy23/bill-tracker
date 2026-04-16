@@ -6,7 +6,10 @@ import type { Transaction, Account } from '@/lib/simplefin/types';
 
 function escapeCSV(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return '';
-  const str = String(val);
+  let str = String(val);
+  // CSV injection guard: prefix formula-starting chars with a single quote (OWASP).
+  // Note: '-' is intentionally excluded — negative amounts are numeric, not formulas.
+  if (/^[=+@\t\r]/.test(str)) str = `'${str}`;
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
     return `"${str.replace(/"/g, '""')}"`;
   }
