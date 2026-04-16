@@ -9,20 +9,20 @@ interface SummaryCardsProps {
 interface CardProps {
   label: string;
   value: string;
-  fromColor: string;
-  dotColor: string;
+  accent: string;      // tailwind text color class
   subtext?: string;
+  large?: boolean;
 }
 
-function Card({ label, value, fromColor, dotColor, subtext }: CardProps) {
+function Card({ label, value, accent, subtext, large }: CardProps) {
   return (
-    <div className={`rounded-xl p-5 border border-white/[0.06] bg-gradient-to-br ${fromColor} to-zinc-900`}>
-      <div className="flex items-center gap-2 mb-4">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
-        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{label}</p>
-      </div>
-      <p className="text-[1.75rem] font-bold text-white leading-none tracking-tight">{value}</p>
-      {subtext && <p className="mt-2 text-xs text-zinc-600">{subtext}</p>}
+    <div className="rounded-xl p-4 border border-white/[0.06] bg-zinc-900 flex flex-col gap-1.5">
+      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">{label}</p>
+      <p className={`font-bold text-white leading-none tabular-nums ${large ? 'text-2xl' : 'text-xl'}`}>
+        {value}
+      </p>
+      {subtext && <p className="text-[11px] text-zinc-600 mt-0.5">{subtext}</p>}
+      <div className={`h-0.5 w-8 rounded-full mt-1 ${accent}`} />
     </div>
   );
 }
@@ -33,27 +33,23 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
       <Card
         label="Owed This Month"
         value={USD.format(summary.totalOwedThisMonth)}
-        fromColor="from-red-500/[0.12]"
-        dotColor="bg-red-500"
+        accent="bg-red-500"
       />
       <Card
         label="Paid"
         value={USD.format(summary.totalPaid)}
-        fromColor="from-emerald-500/[0.12]"
-        dotColor="bg-emerald-500"
+        accent="bg-emerald-500"
       />
       <Card
         label="Overdue"
         value={String(summary.overdueCount)}
-        fromColor="from-orange-500/[0.12]"
-        dotColor="bg-orange-500"
-        subtext={summary.overdueCount === 0 ? "All clear" : summary.overdueCount === 1 ? "1 bill needs attention" : `${summary.overdueCount} bills need attention`}
+        accent="bg-orange-500"
+        subtext={summary.overdueCount === 0 ? 'All clear' : `${summary.overdueCount} bill${summary.overdueCount !== 1 ? 's' : ''} need attention`}
       />
       <Card
         label="AutoPay Total"
         value={USD.format(summary.autoPayTotal)}
-        fromColor="from-blue-500/[0.12]"
-        dotColor="bg-blue-500"
+        accent="bg-blue-500"
       />
     </div>
   );

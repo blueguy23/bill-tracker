@@ -80,7 +80,11 @@ function TagsRow({ txnId, tags = [], notes, onTagsChanged, onNotesChanged }: Tag
   const [tagInput, setTagInput] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesInput, setNotesInput] = useState(notes ?? '');
+  const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasData = tags.length > 0 || !!notes;
+  const showControls = hasData || expanded;
 
   async function submitTag() {
     const val = tagInput.trim().toLowerCase();
@@ -117,72 +121,84 @@ function TagsRow({ txnId, tags = [], notes, onTagsChanged, onNotesChanged }: Tag
   }
 
   return (
-    <div className="mt-1 flex flex-wrap items-center gap-1" data-testid={`tags-row-${txnId}`}>
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          className="group inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] transition-colors"
-          data-testid={`tag-${txnId}-${tag}`}
-        >
-          #{tag}
-          <button
-            onClick={() => void removeTag(tag)}
-            className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-opacity leading-none"
-            aria-label={`Remove tag ${tag}`}
-          >
-            ×
-          </button>
-        </span>
-      ))}
+    <div className="mt-1" data-testid={`tags-row-${txnId}`}>
+      {showControls ? (
+        <div className="flex flex-wrap items-center gap-1">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="group inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] transition-colors"
+              data-testid={`tag-${txnId}-${tag}`}
+            >
+              #{tag}
+              <button
+                onClick={() => void removeTag(tag)}
+                className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-opacity leading-none"
+                aria-label={`Remove tag ${tag}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
 
-      {addingTag ? (
-        <input
-          ref={inputRef}
-          value={tagInput}
-          onChange={(e) => setTagInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void submitTag();
-            if (e.key === 'Escape') { setAddingTag(false); setTagInput(''); }
-          }}
-          onBlur={() => void submitTag()}
-          autoFocus
-          placeholder="tag name"
-          maxLength={50}
-          className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-20"
-        />
-      ) : tags.length < 10 && (
+          {addingTag ? (
+            <input
+              ref={inputRef}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void submitTag();
+                if (e.key === 'Escape') { setAddingTag(false); setTagInput(''); }
+              }}
+              onBlur={() => void submitTag()}
+              autoFocus
+              placeholder="tag name"
+              maxLength={50}
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-20"
+            />
+          ) : tags.length < 10 && (
+            <button
+              onClick={() => setAddingTag(true)}
+              data-testid={`add-tag-btn-${txnId}`}
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08] transition-colors"
+            >
+              + tag
+            </button>
+          )}
+
+          {editingNotes ? (
+            <input
+              value={notesInput}
+              onChange={(e) => setNotesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void saveNotes();
+                if (e.key === 'Escape') { setEditingNotes(false); setNotesInput(notes ?? ''); }
+              }}
+              onBlur={() => void saveNotes()}
+              autoFocus
+              placeholder="add a note…"
+              maxLength={500}
+              className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-40"
+              data-testid={`notes-input-${txnId}`}
+            />
+          ) : (
+            <button
+              onClick={() => { setNotesInput(notes ?? ''); setEditingNotes(true); }}
+              data-testid={`notes-btn-${txnId}`}
+              className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${notes ? 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]' : 'bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08]'}`}
+            >
+              {notes ? `"${notes.slice(0, 20)}${notes.length > 20 ? '…' : ''}"` : '+ note'}
+            </button>
+          )}
+        </div>
+      ) : (
+        // Row has no tags/notes — show a faint "+" only on row hover via CSS group
         <button
-          onClick={() => setAddingTag(true)}
+          onClick={() => setExpanded(true)}
           data-testid={`add-tag-btn-${txnId}`}
-          className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08] transition-colors"
+          className="text-[10px] px-1.5 py-0.5 rounded-full text-zinc-700 hover:text-zinc-500 hover:bg-white/[0.06] transition-colors opacity-0 group-hover/row:opacity-100"
         >
           + tag
-        </button>
-      )}
-
-      {/* Notes toggle */}
-      {editingNotes ? (
-        <input
-          value={notesInput}
-          onChange={(e) => setNotesInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void saveNotes();
-            if (e.key === 'Escape') { setEditingNotes(false); setNotesInput(notes ?? ''); }
-          }}
-          onBlur={() => void saveNotes()}
-          autoFocus
-          placeholder="add a note…"
-          maxLength={500}
-          className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-40"
-          data-testid={`notes-input-${txnId}`}
-        />
-      ) : (
-        <button
-          onClick={() => { setNotesInput(notes ?? ''); setEditingNotes(true); }}
-          data-testid={`notes-btn-${txnId}`}
-          className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${notes ? 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]' : 'bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08]'}`}
-        >
-          {notes ? `"${notes.slice(0, 20)}${notes.length > 20 ? '…' : ''}"` : '+ note'}
         </button>
       )}
     </div>
@@ -451,7 +467,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
                 const acct = accountMap.get(txn.accountId);
                 const transfer = isTransfer(txn.description);
                 return (
-                  <tr key={txn._id} className="hover:bg-white/[0.02] transition-colors">
+                  <tr key={txn._id} className="group/row hover:bg-white/[0.02] transition-colors">
                     <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">
                       {formatDate(txn.posted)}
                     </td>
