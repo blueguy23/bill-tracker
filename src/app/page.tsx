@@ -90,13 +90,15 @@ export default async function DashboardPage() {
   const spendingByCategory = computeSpendingByCategory(bills);
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-end justify-between pt-2">
-        <div>
-          <h1 className="text-xl font-bold text-white">Dashboard</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Your bills at a glance</p>
-        </div>
+    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="pt-2">
+        <h1 className="text-xl font-bold text-white">Dashboard</h1>
+        <p className="text-sm text-zinc-600 mt-0.5">
+          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </p>
       </div>
+
       <OnboardingBanner
         simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)}
         accountCount={accounts.length}
@@ -104,13 +106,22 @@ export default async function DashboardPage() {
         hasBudget={budgets.length > 0}
       />
       <MatchBanner count={matches.length} />
+
+      {/* Summary row */}
       <SummaryCards summary={summary} />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      {/* Charts + accounts — 3-col on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <CashFlowCard cashFlow={cashFlow} />
         <SpendingChart data={spendingByCategory} />
+        <NetWorthCard accounts={accounts} />
       </div>
-      <NetWorthCard accounts={accounts} />
-      <BillsView initialBills={bills} />
+
+      {/* Bills */}
+      <section>
+        <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Bills</h2>
+        <BillsView initialBills={bills} />
+      </section>
     </div>
   );
 }
