@@ -320,6 +320,28 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
     setLoadingMore(false);
   }
 
+  async function handleExport() {
+    const bounds = dateRangeBounds(dateRange);
+    const params = new URLSearchParams();
+    if (bounds.startDate) params.set('startDate', bounds.startDate);
+    if (bounds.endDate) params.set('endDate', bounds.endDate);
+    if (accountFilter !== 'all') params.set('accountId', accountFilter);
+
+    const res = await fetch(`/api/v1/export?${params.toString()}`);
+    if (!res.ok) return;
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const filename = match?.[1] ?? 'transactions.csv';
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
   const DATE_RANGE_LABELS: Record<DateRange, string> = {
     'this-month': 'This Month',
     'last-month': 'Last Month',
@@ -384,6 +406,14 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
           />
           Hide Transfers
         </label>
+
+        <button
+          onClick={() => void handleExport()}
+          data-testid="export-btn"
+          className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 border border-white/[0.08] hover:bg-white/[0.04] transition-colors"
+        >
+          Export CSV
+        </button>
       </div>
 
       {/* Summary bar */}
