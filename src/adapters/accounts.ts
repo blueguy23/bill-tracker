@@ -3,6 +3,30 @@ import type { Account, Transaction } from '@/lib/simplefin/types';
 import { categorize } from '@/lib/categorization/engine';
 import { listCategoryRules } from '@/adapters/categoryRules';
 
+// Descriptions that indicate inter-account transfers (not real income/expense)
+const TRANSFER_DESCRIPTION_RE = /^(deposit from |transfer from |transfer to |online transfer|account transfer)/i;
+
+function buildTransferRe(): RegExp {
+  const ownerName = process.env.TRANSFER_OWNER_NAME?.trim();
+  if (!ownerName) return TRANSFER_DESCRIPTION_RE;
+  const escaped = ownerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(
+    `^(deposit from |transfer from |transfer to |online transfer|account transfer)` +
+    `|zelle.*${escaped}|${escaped}.*zelle`,
+    'i'
+  );
+}
+
+let _transferRe: RegExp | null = null;
+function getTransferRe(): RegExp {
+  return (_transferRe ??= buildTransferRe());
+}
+
+function isTransfer(txn: Transaction, creditAccountIds: Set<string>): boolean {
+  if (creditAccountIds.has(txn.accountId) && txn.amount > 0) return true;
+  return getTransferRe().test(txn.description);
+}
+
 const ACCOUNTS = 'accounts';
 const TRANSACTIONS = 'transactions';
 
@@ -74,22 +98,42 @@ export interface CashFlow {
 export async function getCashFlowThisMonth(db: StrictDB): Promise<CashFlow> {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const { transactions } = await listTransactions(db, {
-    startDate: startOfMonth,
-    endDate: endOfMonth,
-    limit: 2000,
-  });
+  const [{ transactions }, accounts] = await Promise.all([
+    listTransactions(db, { startDate: startOfMonth, endDate: endOfMonth, limit: 5000 }),
+    listAccounts(db),
+  ]);
+  const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
 
   let income = 0;
   let expenses = 0;
   for (const txn of transactions) {
     if (txn.pending) continue;
-    if (txn.amount > 0) income += txn.amount;
-    else expenses += Math.abs(txn.amount);
+    if (isTransfer(txn, creditAccountIds)) continue;
+    const amt = Number(txn.amount);
+    if (amt > 0) income   += amt;
+    else         expenses += Math.abs(amt);
   }
 
+  return { income, expenses, net: income - expenses };
+}
+
+export async function getCashFlowForRange(db: StrictDB, startDate: Date, endDate: Date): Promise<CashFlow> {
+  const [{ transactions }, accounts] = await Promise.all([
+    listTransactions(db, { startDate, endDate, limit: 10000 }),
+    listAccounts(db),
+  ]);
+  const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
+
+  let income = 0, expenses = 0;
+  for (const txn of transactions) {
+    if (txn.pending) continue;
+    if (isTransfer(txn, creditAccountIds)) continue;
+    const amt = Number(txn.amount);
+    if (amt > 0) income += amt;
+    else expenses += Math.abs(amt);
+  }
   return { income, expenses, net: income - expenses };
 }
 

@@ -19,14 +19,15 @@ export default async function SettingsPage() {
   const unknownCount = accounts.filter((a) => a.orgName === 'Unknown').length;
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
-      <div className="pt-2">
-        <h1 className="text-xl font-bold text-white">Settings</h1>
-        <p className="text-sm text-zinc-500 mt-0.5">App configuration and integrations</p>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)' }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Settings</h1>
+        <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>App configuration and integrations</p>
       </div>
-      <SettingsView initialConfigured={configured} dueSoonDays={dueSoonDays} unknownCount={unknownCount} />
-      <hr className="border-white/[0.06]" />
-      <CategoryRulesView initialRules={categoryRules} />
+      <div style={{ padding: '24px 28px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+        <SettingsView initialConfigured={configured} dueSoonDays={dueSoonDays} unknownCount={unknownCount} />
+        <CategoryRulesView initialRules={categoryRules} />
+      </div>
     </div>
   );
 }

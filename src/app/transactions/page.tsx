@@ -5,7 +5,7 @@ import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
 
-export const metadata: Metadata = { title: 'Transactions' };
+export const metadata: Metadata = { title: 'Transactions — Folio' };
 
 export default async function TransactionsPage() {
   const db = await getDb();
@@ -26,21 +26,19 @@ export default async function TransactionsPage() {
     return meta?.customOrgName ? { ...a, orgName: meta.customOrgName } : a;
   });
 
-  const monthLabel = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-end justify-between pt-2">
-        <div>
-          <h1 className="text-xl font-bold text-white">Transactions</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">{monthLabel} — all accounts</p>
-        </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)' }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Transactions</h1>
+        <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>{transactions.length} transactions</p>
       </div>
-      <TransactionsView
-        initialTransactions={transactions as Transaction[]}
-        initialHasMore={hasMore}
-        accounts={accounts}
-      />
+      <div style={{ padding: '24px 28px' }}>
+        <TransactionsView
+          initialTransactions={transactions as Transaction[]}
+          initialHasMore={hasMore}
+          accounts={accounts}
+        />
+      </div>
     </div>
   );
 }

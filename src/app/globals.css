@@ -2,9 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 @layer base {
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  ::-webkit-scrollbar-thumb { background: #1e1e2a; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #252535; }
 }
+
+:root {
+  --bg:       #0b0b0f;
+  --surface:  #131318;
+  --raised:   #17171e;
+  --border:   #1e1e2a;
+  --border-l: #252535;
+  --text:     #ededf5;
+  --text2:    #8080a0;
+  --text3:    #44445a;
+  --accent:   oklch(0.68 0.22 265);
+  --accent-a: oklch(0.68 0.22 265 / 0.15);
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --gold:     oklch(0.78 0.15 85);
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'Plus Jakarta Sans', sans-serif;
+
+  /* legacy aliases kept for backward compat */
+  --bg-old:   #0b0b0f;
+  --s1:       #131318;
+  --s2:       #17171e;
+  --s3:       #1e1e2a;
+  --b1:       #1e1e2a;
+  --b2:       #252535;
+  --text-old: #ededf5;
+  --text2-old:#8080a0;
+  --muted:    #44445a;
+  --inc:      #22c55e;
+  --exp:      #ef4444;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+}
+
+@keyframes btFadeIn  { from { opacity: 0 } to { opacity: 1 } }
+@keyframes btSlideUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@keyframes btSpin    { to   { transform: rotate(360deg) } }
+@keyframes btPulse   { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+@keyframes spin      { to { transform: rotate(360deg) } }
+@keyframes pulse     { 0%, 100% { opacity: 1 } 50% { opacity: .2 } }

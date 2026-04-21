@@ -6,10 +6,10 @@ interface MobileHeaderProps {
 
 export function MobileHeader({ onMenuOpen }: MobileHeaderProps) {
   return (
-    <header className="sm:hidden flex items-center justify-between px-4 py-3 bg-zinc-950 border-b border-white/[0.06] sticky top-0 z-30">
+    <header className="sm:hidden" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--bg)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 30 }}>
       <button
         onClick={onMenuOpen}
-        className="w-9 h-9 flex items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+        style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, background: 'transparent', border: 'none', color: 'var(--text2)', cursor: 'pointer' }}
         aria-label="Open menu"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -19,15 +19,18 @@ export function MobileHeader({ onMenuOpen }: MobileHeaderProps) {
         </svg>
       </button>
 
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">
-          <span className="text-white text-[10px] font-bold leading-none">B</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(145deg, oklch(0.22 0.08 265) 0%, oklch(0.14 0.06 285) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid oklch(0.68 0.22 265 / 0.3)' }}>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+            <rect x="5" y="2" width="11" height="14" rx="2" fill="oklch(0.68 0.22 265)" opacity="0.25" />
+            <rect x="3" y="4" width="11" height="14" rx="2" fill="oklch(0.68 0.22 265)" opacity="0.5" />
+            <path d="M5.5 14.5 L7.5 11.5 L9.5 12.8 L12 9" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+          </svg>
         </div>
-        <span className="text-sm font-semibold text-white">Bill Tracker</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--sans)', letterSpacing: '-.03em' }}>Folio</span>
       </div>
 
-      {/* Spacer to center the title */}
-      <div className="w-9" />
+      <div style={{ width: 36 }} />
     </header>
   );
 }

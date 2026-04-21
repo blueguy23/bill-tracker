@@ -29,14 +29,14 @@ export default async function CreditPage() {
   const advisor = advisorRes.ok ? await advisorRes.json() as CreditAdvisorResponse : EMPTY_ADVISOR;
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-end justify-between pt-2">
-        <div>
-          <h1 className="text-xl font-bold text-white">Credit Health</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Credit utilization and payment activity</p>
-        </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)' }}>
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Credit Health</h1>
+        <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>Credit utilization and payment activity</p>
       </div>
-      <CreditView initialData={summary} advisorData={advisor} />
+      <div style={{ padding: '24px 28px' }}>
+        <CreditView initialData={summary} advisorData={advisor} />
+      </div>
     </div>
   );
 }

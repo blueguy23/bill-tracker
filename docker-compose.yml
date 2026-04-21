@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: bill-tracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      # When running with the local mongo service below, set this in .env:
+      # MONGODB_URI=mongodb://mongo:27017/bill-tracker
+    depends_on:
+      mongo:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bill-tracker.rule=Host(`folio.yourdomain.com`)"
+      - "traefik.http.routers.bill-tracker.entrypoints=websecure"
+      - "traefik.http.routers.bill-tracker.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bill-tracker.loadbalancer.server.port=3000"
+
+  mongo:
+    image: mongo:7
+    container_name: bill-tracker-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Optional: reverse proxy with auto-SSL (uncomment + replace domain to enable)
+  # traefik:
+  #   image: traefik:v3
+  #   ports: ["80:80", "443:443"]
+  #   command:
+  #     - --providers.docker=true
+  #     - --providers.docker.exposedbydefault=false
+  #     - --entrypoints.web.address=:80
+  #     - --entrypoints.websecure.address=:443
+  #     - --certificatesresolvers.letsencrypt.acme.email=you@yourdomain.com
+  #     - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+  #     - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ./acme.json:/acme.json
+
+volumes:
+  mongo_data:

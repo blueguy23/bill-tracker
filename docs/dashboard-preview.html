@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Bill Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:    #0a0a0a;
+  --s1:    #111111;
+  --s2:    #171717;
+  --s3:    #1c1c1c;
+  --b1:    #222222;
+  --b2:    #2e2e2e;
+  --text:  #ededed;
+  --text2: #a3a3a3;
+  --muted: #5c5c5c;
+  --dim:   #333333;
+  --inc:   #22c55e;
+  --inc-d: rgba(34,197,94,.1);
+  --exp:   #ef4444;
+  --exp-d: rgba(239,68,68,.1);
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;font-size:14px;-webkit-font-smoothing:antialiased}
+
+/* ─── SIDEBAR ─── */
+.sidebar{width:224px;min-height:100vh;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:10}
+
+.brand{padding:20px 18px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px}
+.brand-mark{width:28px;height:28px;background:var(--text);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:var(--bg);flex-shrink:0;letter-spacing:-.02em}
+.brand-name{font-size:14px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.brand-tag{font-size:10px;color:var(--muted);letter-spacing:.05em;margin-top:1px}
+
+.wealth{padding:14px 18px;border-bottom:1px solid var(--b1)}
+.w-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin-bottom:3px}
+.w-val{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);letter-spacing:-.01em;line-height:1.15}
+.w-sub{font-size:10px;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+.w-badge{display:inline-flex;align-items:center;gap:4px;background:var(--inc-d);color:var(--inc);border:1px solid rgba(34,197,94,.18);font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;margin-top:8px;font-family:var(--mono)}
+
+.nav{flex:1;padding:8px 10px}
+.nav-grp{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;padding:10px 8px 4px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:4px;font-size:13px;color:var(--muted);margin-bottom:1px;cursor:pointer;font-weight:500;position:relative;transition:background .1s,color .1s}
+.nav-item:hover{background:var(--s2);color:var(--text2)}
+.nav-item.on{background:var(--s3);color:var(--text)}
+.nav-item.on::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:2px;border-radius:0;background:var(--text)}
+.nav-icon{width:14px;height:14px;flex-shrink:0;opacity:.7}
+.nav-item.on .nav-icon{opacity:1}
+.nav-pill{margin-left:auto;background:var(--exp-d);color:var(--exp);font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;border:1px solid rgba(239,68,68,.2);font-family:var(--mono)}
+
+.sidebar-foot{padding:12px 16px;border-top:1px solid var(--b1);display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted);font-family:var(--mono)}
+.pulse{width:5px;height:5px;border-radius:50%;background:var(--inc);animation:blink 2s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ─── MAIN ─── */
+.main{margin-left:224px;flex:1;display:flex;flex-direction:column}
+
+.topbar{padding:12px 26px;border-bottom:1px solid var(--b1);background:var(--bg);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.greeting h1{font-size:15px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.greeting p{font-size:11px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+.tb-right{display:flex;align-items:center;gap:8px}
+.period{display:flex;background:var(--s2);border:1px solid var(--b1);border-radius:4px;padding:3px;gap:1px}
+.pb{padding:4px 10px;border-radius:3px;font-size:11px;font-weight:500;color:var(--muted);cursor:pointer;font-family:var(--mono)}
+.pb.on{background:var(--s3);color:var(--text)}
+.sync-btn{display:flex;align-items:center;gap:5px;border:1px solid var(--b2);border-radius:4px;cursor:pointer;padding:6px 12px;font-size:11px;font-weight:600;font-family:var(--mono);background:var(--s2);color:var(--text2);transition:border-color .1s,color .1s}
+.sync-btn:hover{border-color:var(--text2);color:var(--text)}
+
+.content{padding:18px 26px;flex:1}
+
+/* ─── METRICS ─── */
+.metrics{display:grid;grid-template-columns:1.8fr 1fr 1fr 1fr;gap:1px;margin-bottom:12px;background:var(--b1);border:1px solid var(--b1);border-radius:6px;overflow:hidden}
+.metric{background:var(--s1);padding:18px 20px;position:relative;overflow:hidden}
+.metric.hero{background:var(--s1)}
+.m-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:7px}
+.m-val{font-family:var(--mono);font-size:24px;font-weight:500;letter-spacing:-.01em;line-height:1;color:var(--text)}
+.metric.hero .m-val{font-size:28px}
+.m-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:2px;margin-top:8px;font-family:var(--mono)}
+.m-badge.up{color:var(--inc);background:var(--inc-d)}
+.m-badge.dn{color:var(--exp);background:var(--exp-d)}
+.m-sub{font-size:10px;color:var(--muted);margin-top:5px;font-family:var(--mono)}
+
+/* ─── CARD ─── */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:17px 19px}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.card-title{font-size:11px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:.08em}
+.card-sub{font-size:10px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
+.card-link{font-size:10px;color:var(--text2);font-weight:600;cursor:pointer;font-family:var(--mono);letter-spacing:.04em}
+.card-link:hover{color:var(--text)}
+
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-family:var(--mono)}
+.leg-dash{width:16px;height:1.5px;flex-shrink:0}
+.legends{display:flex;gap:14px}
+
+/* ─── GRID ─── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+
+.ch-wrap{position:relative;height:196px}
+
+/* ─── BUDGET ─── */
+.b-rows{display:flex;flex-direction:column;gap:12px}
+.b-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.b-name{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;color:var(--text2)}
+.b-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.b-amt{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.b-amt strong{color:var(--text2)}
+.track{height:3px;background:var(--b2);overflow:hidden}
+.fill{height:100%}
+.b-foot{display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:var(--muted);font-family:var(--mono)}
+
+/* ─── GOALS ─── */
+.goal-card{background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:14px 16px}
+.g-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:5px}
+.g-vals{display:flex;align-items:baseline;gap:5px;margin-bottom:8px}
+.g-cur{font-family:var(--mono);font-size:18px;font-weight:500;letter-spacing:-.01em;color:var(--text)}
+.g-tgt{font-size:10px;color:var(--muted);font-family:var(--mono)}
+.g-track{height:2px;background:var(--b2);margin-bottom:4px}
+.g-fill{height:100%}
+.g-foot{font-size:9px;color:var(--muted);font-family:var(--mono)}
+
+/* ─── TRANSACTIONS ─── */
+.txn-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--b1)}
+.txn-row:last-child{border-bottom:none}
+.txn-ico{width:32px;height:32px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--s3)}
+.txn-body{flex:1}
+.txn-name{font-size:13px;font-weight:500;color:var(--text)}
+.txn-meta{font-size:10px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:5px;font-family:var(--mono)}
+.chip{background:var(--s3);border:1px solid var(--b2);color:var(--muted);font-size:9px;padding:1px 5px;border-radius:2px;font-weight:500;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em}
+.txn-right{text-align:right;flex-shrink:0}
+.txn-amt{font-size:13px;font-weight:600;font-family:var(--mono)}
+.txn-amt.neg{color:var(--text2)}
+.txn-amt.pos{color:var(--inc)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">BT</div>
+    <div>
+      <div class="brand-name">BillTracker</div>
+      <div class="brand-tag">PERSONAL FINANCE</div>
+    </div>
+  </div>
+
+  <div class="wealth">
+    <div class="w-lbl">Net Worth</div>
+    <div class="w-val">$24,381.00</div>
+    <div class="w-sub">3 linked accounts</div>
+    <div class="w-badge">↑ +$1,358 MTD</div>
+  </div>
+
+  <div class="nav">
+    <div class="nav-grp">Overview</div>
+    <div class="nav-item on">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="5" height="5" rx="1"/><rect x="9.5" y="1.5" width="5" height="5" rx="1"/><rect x="1.5" y="9.5" width="5" height="5" rx="1"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><path d="M2 4h12M2 8h8M2 12h5"/></svg>
+      Transactions
+    </div>
+    <div class="nav-grp">Planning</div>
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      Budget
+      <span class="nav-pill">2!</span>
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><path d="M2 12L6 7l3 3 2-4 3 2"/></svg>
+      Goals
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 7h12"/></svg>
+      Subscriptions
+    </div>
+    <div class="nav-grp">Credit</div>
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="9" rx="1.5"/><path d="M1 7h14"/></svg>
+      Credit Health
+    </div>
+    <div class="nav-item">
+      <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11v.5"/></svg>
+      Summary
+    </div>
+  </div>
+
+  <div class="sidebar-foot">
+    <div class="pulse"></div>
+    LIVE · SYNCED 2H AGO
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="greeting">
+      <h1>Good morning, Glenn</h1>
+      <p>WED APR 16, 2026 · APRIL SNAPSHOT</p>
+    </div>
+    <div class="tb-right">
+      <div class="period">
+        <div class="pb">1W</div>
+        <div class="pb on">1M</div>
+        <div class="pb">3M</div>
+        <div class="pb">YTD</div>
+        <div class="pb">1Y</div>
+      </div>
+      <button class="sync-btn">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 12 12"><path d="M10 2A5 5 0 1 0 11 6"/><path d="M10 2V5h3"/></svg>
+        SYNC
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- METRICS STRIP -->
+    <div class="metrics">
+      <div class="metric hero">
+        <div class="m-lbl">Monthly Net</div>
+        <div class="m-val">+$1,358.00</div>
+        <div class="m-sub">$5,200 income · $3,842 expenses</div>
+        <div class="m-badge up">↑ +12.4% vs MAR</div>
+      </div>
+      <div class="metric">
+        <div class="m-lbl">Total Spent</div>
+        <div class="m-val" style="color:var(--exp)">$3,842.10</div>
+        <div class="m-badge dn">↑ $220 from Mar</div>
+        <div class="m-sub">81 transactions</div>
+      </div>
+      <div class="metric">
+        <div class="m-lbl">Savings Rate</div>
+        <div class="m-val" style="color:var(--inc)">26.1%</div>
+        <div class="m-badge up">↑ +3.0 pts</div>
+        <div class="m-sub">Target: 20.0% ✓</div>
+      </div>
+      <div class="metric">
+        <div class="m-lbl">Avg / Transaction</div>
+        <div class="m-val" style="font-size:20px">$47.43</div>
+        <div class="m-sub" style="margin-top:9px">81 txns this month</div>
+        <div class="m-sub">Max: $1,450.00</div>
+      </div>
+    </div>
+
+    <!-- TREND + GROUPED BAR -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Cash Flow</div>
+            <div class="card-sub">6-month income vs expenses</div>
+          </div>
+          <div class="legends">
+            <div class="leg"><div class="leg-dash" style="background:var(--inc)"></div>INCOME</div>
+            <div class="leg"><div class="leg-dash" style="background:var(--exp)"></div>SPEND</div>
+            <div class="leg"><div class="leg-dash" style="background:var(--text2);opacity:.5"></div>NET</div>
+          </div>
+        </div>
+        <div class="ch-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Monthly Comparison</div>
+            <div class="card-sub">Income vs spend by month</div>
+          </div>
+        </div>
+        <div class="ch-wrap"><canvas id="barGrouped"></canvas></div>
+      </div>
+    </div>
+
+    <!-- CATEGORY + BUDGET -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Spend by Category</div>
+            <div class="card-sub">April 2026</div>
+          </div>
+        </div>
+        <div class="ch-wrap"><canvas id="catBar"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Budget Status</div>
+            <div class="card-sub">16 days remaining</div>
+          </div>
+          <div class="card-link">EDIT →</div>
+        </div>
+        <div class="b-rows">
+          <div>
+            <div class="b-top">
+              <div class="b-name"><div class="b-dot" style="background:var(--text2)"></div>Housing</div>
+              <div class="b-amt"><strong>$1,450</strong> / $1,500</div>
+            </div>
+            <div class="track"><div class="fill" style="width:96%;background:var(--text2)"></div></div>
+            <div class="b-foot"><span>96%</span><span>$50 left</span></div>
+          </div>
+          <div>
+            <div class="b-top">
+              <div class="b-name"><div class="b-dot" style="background:var(--exp)"></div>Food & Dining</div>
+              <div class="b-amt"><strong>$820</strong> / $600</div>
+            </div>
+            <div class="track"><div class="fill" style="width:100%;background:var(--exp)"></div></div>
+            <div class="b-foot"><span style="color:var(--exp)">OVER $220</span><span style="color:var(--exp)">137%</span></div>
+          </div>
+          <div>
+            <div class="b-top">
+              <div class="b-name"><div class="b-dot" style="background:var(--text2)"></div>Transport</div>
+              <div class="b-amt"><strong>$310</strong> / $400</div>
+            </div>
+            <div class="track"><div class="fill" style="width:78%;background:var(--text2)"></div></div>
+            <div class="b-foot"><span>78%</span><span style="color:var(--inc)">$90 left</span></div>
+          </div>
+          <div>
+            <div class="b-top">
+              <div class="b-name"><div class="b-dot" style="background:var(--exp)"></div>Subscriptions</div>
+              <div class="b-amt"><strong>$180</strong> / $150</div>
+            </div>
+            <div class="track"><div class="fill" style="width:100%;background:var(--exp)"></div></div>
+            <div class="b-foot"><span style="color:var(--exp)">OVER $30</span><span style="color:var(--exp)">120%</span></div>
+          </div>
+          <div>
+            <div class="b-top">
+              <div class="b-name"><div class="b-dot" style="background:var(--inc)"></div>Health</div>
+              <div class="b-amt"><strong>$140</strong> / $200</div>
+            </div>
+            <div class="track"><div class="fill" style="width:70%;background:var(--inc)"></div></div>
+            <div class="b-foot"><span>70%</span><span style="color:var(--inc)">$60 left</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GOALS + TRANSACTIONS -->
+    <div class="grid2">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="goal-card">
+          <div class="g-lbl">Emergency Fund</div>
+          <div class="g-vals">
+            <div class="g-cur">$8,200</div>
+            <div class="g-tgt">/ $10,000</div>
+          </div>
+          <div class="g-track"><div class="g-fill" style="width:82%;background:var(--inc)"></div></div>
+          <div class="g-foot">82.0% · $1,800.00 remaining</div>
+        </div>
+        <div class="goal-card">
+          <div class="g-lbl">Vacation Fund</div>
+          <div class="g-vals">
+            <div class="g-cur">$1,240</div>
+            <div class="g-tgt">/ $3,000</div>
+          </div>
+          <div class="g-track"><div class="g-fill" style="width:41%;background:var(--text2)"></div></div>
+          <div class="g-foot">41.3% · $1,760.00 remaining</div>
+        </div>
+        <div class="goal-card">
+          <div class="g-lbl">New Laptop</div>
+          <div class="g-vals">
+            <div class="g-cur">$900</div>
+            <div class="g-tgt">/ $1,500</div>
+          </div>
+          <div class="g-track"><div class="g-fill" style="width:60%;background:var(--text2)"></div></div>
+          <div class="g-foot">60.0% · $600.00 remaining</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <div>
+            <div class="card-title">Recent Transactions</div>
+            <div class="card-sub">Last 7 days · 81 this month</div>
+          </div>
+          <div class="card-link">ALL →</div>
+        </div>
+        <div>
+          <div class="txn-row">
+            <div class="txn-ico">🛒</div>
+            <div class="txn-body">
+              <div class="txn-name">Whole Foods Market</div>
+              <div class="txn-meta">APR 15 · CHK ···4821 <span class="chip">Food</span></div>
+            </div>
+            <div class="txn-right"><div class="txn-amt neg">−$84.22</div></div>
+          </div>
+          <div class="txn-row">
+            <div class="txn-ico">💵</div>
+            <div class="txn-body">
+              <div class="txn-name">Paycheck — Employer Inc.</div>
+              <div class="txn-meta">APR 14 · CHK ···4821 <span class="chip">Income</span></div>
+            </div>
+            <div class="txn-right"><div class="txn-amt pos">+$2,600.00</div></div>
+          </div>
+          <div class="txn-row">
+            <div class="txn-ico">📺</div>
+            <div class="txn-body">
+              <div class="txn-name">Netflix</div>
+              <div class="txn-meta">APR 14 · VISA ···9203 <span class="chip">Sub</span></div>
+            </div>
+            <div class="txn-right"><div class="txn-amt neg">−$15.49</div></div>
+          </div>
+          <div class="txn-row">
+            <div class="txn-ico">🍕</div>
+            <div class="txn-body">
+              <div class="txn-name">Uber Eats</div>
+              <div class="txn-meta">APR 13 · VISA ···9203 <span class="chip">Food</span></div>
+            </div>
+            <div class="txn-right"><div class="txn-amt neg">−$31.50</div></div>
+          </div>
+          <div class="txn-row">
+            <div class="txn-ico">⛽</div>
+            <div class="txn-body">
+              <div class="txn-name">Shell Gas Station</div>
+              <div class="txn-meta">APR 12 · VISA ···9203 <span class="chip">Transport</span></div>
+            </div>
+            <div class="txn-right"><div class="txn-amt neg">−$58.40</div></div>
+          </div>
+          <div class="txn-row">
+            <div class="txn-ico">💊</div>
+            <div class="txn-body">
+              <div class="txn-name">CVS Pharmacy</div>
+              <div class="txn-meta">APR 12 · CHK ···4821 <span class="chip">Health</span></div>
+            </div>
+            <div class="txn-right"><div class="txn-amt neg">−$22.18</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size   = 10;
+
+const GRID  = 'rgba(255,255,255,.04)';
+const MUTED = '#5c5c5c';
+const TEXT2 = '#a3a3a3';
+const INC   = '#22c55e';
+const EXP   = '#ef4444';
+
+const months = ['NOV','DEC','JAN','FEB','MAR','APR'];
+const income  = [4800,5200,5000,5200,5200,5200];
+const spend   = [3200,4100,3650,3400,3620,3842];
+const net     = income.map((v,i)=>v-spend[i]);
+
+const tooltipDefaults = {
+  backgroundColor:'#171717',
+  borderColor:'#222222',
+  borderWidth:1,
+  titleColor:'#ededed',
+  bodyColor:MUTED,
+  padding:10,
+};
+
+/* TREND */
+new Chart(document.getElementById('trendChart'), {
+  type:'line',
+  data:{
+    labels:months,
+    datasets:[
+      { label:'Income', data:income, borderColor:INC,  backgroundColor:'transparent', fill:false, tension:0, borderWidth:1.5, pointRadius:3, pointBackgroundColor:INC,  pointBorderColor:'transparent', pointHoverRadius:5 },
+      { label:'Spend',  data:spend,  borderColor:EXP,  backgroundColor:'transparent', fill:false, tension:0, borderWidth:1.5, pointRadius:3, pointBackgroundColor:EXP,  pointBorderColor:'transparent', pointHoverRadius:5 },
+      { label:'Net',    data:net,    borderColor:TEXT2, backgroundColor:'transparent', fill:false, tension:0, borderWidth:1,   borderDash:[4,3], pointRadius:2, pointBackgroundColor:TEXT2, pointBorderColor:'transparent', pointHoverRadius:4 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{
+      legend:{display:false},
+      tooltip:{ ...tooltipDefaults, callbacks:{ label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString()}` } }
+    },
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:MUTED}, border:{display:false} },
+      y:{ grid:{color:GRID}, ticks:{color:MUTED, callback:v=>'$'+(v/1000).toFixed(1)+'k'}, border:{display:false} }
+    }
+  }
+});
+
+/* GROUPED BAR */
+new Chart(document.getElementById('barGrouped'), {
+  type:'bar',
+  data:{
+    labels:months,
+    datasets:[
+      { label:'Income', data:income, backgroundColor:INC, borderRadius:0, borderSkipped:false },
+      { label:'Spend',  data:spend,  backgroundColor:EXP, borderRadius:0, borderSkipped:false }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{
+      legend:{ display:true, position:'top', align:'end', labels:{ color:MUTED, boxWidth:8, boxHeight:8, padding:12, font:{size:10} } },
+      tooltip:{ ...tooltipDefaults, callbacks:{ label:c=>` ${c.dataset.label}: $${c.parsed.y.toLocaleString()}` } }
+    },
+    scales:{
+      x:{ grid:{display:false}, ticks:{color:MUTED}, border:{display:false} },
+      y:{ grid:{color:GRID},    ticks:{color:MUTED, callback:v=>'$'+(v/1000).toFixed(1)+'k'}, border:{display:false} }
+    }
+  }
+});
+
+/* CATEGORY BAR */
+const catColors = [TEXT2, EXP, TEXT2, INC, MUTED, '#3a3a3a'];
+new Chart(document.getElementById('catBar'), {
+  type:'bar',
+  data:{
+    labels:['Housing','Food','Transport','Health','Subs','Other'],
+    datasets:[{
+      data:[1450,820,430,210,180,752],
+      backgroundColor: catColors,
+      borderRadius:0, borderSkipped:false
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{ ...tooltipDefaults, callbacks:{ label:c=>` $${c.parsed.x.toLocaleString()}` } }
+    },
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:MUTED, callback:v=>'$'+v}, border:{display:false} },
+      y:{ grid:{display:false}, ticks:{color:TEXT2, font:{size:11,weight:'600'}}, border:{display:false} }
+    }
+  }
+});
+</script>
+</body>
+</html>
