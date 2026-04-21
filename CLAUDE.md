@@ -177,20 +177,9 @@ lsof -ti:3000,3001,3002 | xargs kill -9 2>/dev/null
 
 ---
 
-## Naming — NEVER Rename Mid-Project
-
-If you must rename packages, modules, or key variables:
-1. Create a checklist of ALL files and references first
-2. Use IDE semantic rename (not search-and-replace)
-3. Full project search for old name after renaming
-4. Check: .md files, .env files, comments, strings, paths
-5. Start a FRESH Claude session after renaming
-
----
-
 ## Plan Mode — Named Steps Required
 
-Every step in a plan MUST have a unique name (e.g. `Step 3 (Auth System)`). When modifying a plan, REPLACE that step's content — never append. Output the full updated plan so contradictions are visible.
+Every step in a plan MUST have a unique name. When modifying a plan, REPLACE that step's content — never append.
 
 ---
 
@@ -232,57 +221,13 @@ NextAuth v5 credentials provider. Required in `.env`:
 
 ---
 
-## Feature Status (as of 2026-04-20)
+## Transaction Categorization
 
-All features below are built and merged to master:
+**Flow:** Trove (primary) → keyword rules (fallback) → `other`. User overrides (`categorySource: 'user'`) are never touched.
 
-| Feature | Notes |
-|---------|-------|
-| Monthly Summary | |
-| Payment History | |
-| SimpleFIN Core Sync | |
-| Budget & Alerts | |
-| Credit Health Module | |
-| Discord Notifications | |
-| Subscription Detection | |
-| Credit Optimizer (AZEO) | Statement close alerts, utilization spike alerts, `accountMeta` collection |
-| Sync Button + Auto-Sync | `idle/syncing/done/error/quota` states; startup auto-sync if >2h since last |
-| Full Transaction History | Pagination, account/date filters, tags, notes, category badge |
-| Loading Skeletons + Prefetch | All routes have `loading.tsx`; Sidebar prefetches all routes on mount |
-| Unknown Account Alerts | Amber dot in Sidebar + banner in Settings when `orgName === 'Unknown'` |
-| Dashboard Charts | `DashboardCharts.tsx` — Chart.js TrendChart, GroupedBar, CategoryDoughnut |
-| Period Selector | `PeriodSelector.tsx` — 1W/1M/3M/YTD/1Y via `?p=` search param |
-| Auto-Categorization | Engine + inline badge; 280+ rules in `defaultRules.ts`; bulk recategorize endpoint |
-| Manual Tags + Notes | Inline editor; `TagsRow` hidden by default, shows on hover |
-| CSV Export | OWASP injection guard (`escapeCSV`); reads current filter state |
-| Onboarding Wizard | 4-step banner; hides when complete |
-| Auth | NextAuth credentials + middleware |
-| Category Rules UI | Add/delete custom rules in Settings |
-| Dashboard UI Redesign | Pure dark mode, IBM Plex Mono, CSS vars, `--bg #0a0a0a` |
-| Cash Flow Transfer Detection | `isTransfer()` helper, `TRANSFER_OWNER_NAME` env var |
-| Dashboard 3-col layout | `SpendByCategoryCard` + Budget + Recent Payments |
-| RecurringView | Filter tabs (ALL/UNPAID/PAID/AUTOPAY) + sticky header Add Bill button |
-| Recategorize endpoint | `POST /api/v1/transactions/recategorize` — bulk backfill |
-| Trove enrichment | Primary categorizer; keyword rules fallback; `POST /api/v1/transactions/enrich-trove` |
-
-**Current test totals: 310 unit tests (passing). All E2E green.**
-
----
-
-## Trove Transaction Enrichment
-
-Trove is the **primary** categorizer. Keyword rules are the fallback for merchants Trove returns null on.
-
-- API: `POST https://trove.headline.com/api/v1/transactions/enrich` — `X-API-KEY` header
-- Amount must be **positive** (`Math.abs`) — Trove rejects negatives and zeros
-- Returns: `name`, `domain`, `industry`, `categories[]` — null result when merchant unknown
-- Fires automatically after each sync (`void enrichWithTrove(db, 'recent')` in sync route)
-- `categorySource: 'trove'` — stored on enriched transactions alongside `merchantName`/`merchantDomain`
-- Bulk backfill: `pnpm db:query trove-enrich-all`
-- `TROVE_API_KEY` required in `.env` — free tier, always free per Trove
-
-**Flow:** Trove → if null → keyword rules → if no match → `other`
-**User overrides** (`categorySource: 'user'`) are never touched by either.
+- Trove API requires **positive** amounts (`Math.abs`) — rejects negatives and zeros
+- `TROVE_API_KEY` required in `.env` — free tier, always free
+- Fires after each sync; bulk backfill: `pnpm db:query trove-enrich-all`
 
 ---
 
@@ -290,9 +235,8 @@ Trove is the **primary** categorizer. Keyword rules are the fallback for merchan
 
 - **Runner auto-start** — configure as systemd/WSL background service
 - **Production deployment** — MongoDB Atlas (free tier) is set up; Dokploy config in `.env.example`
-- **Transfer UI** — allow manually marking transactions as "transfer" (would catch edge cases the env-var heuristic misses)
-- **Auto-pay detection** — mark bills as paid when a matching transaction is seen for that month
-- **UI blemishes** — "Transfer transfer" duplicate label bug in TransactionsView; other double-field issues
+- **Transfer UI** — manually mark transactions as "transfer" (edge cases the env-var heuristic misses)
+- **Goals page** — `src/app/goals/` already scaffolded, needs wiring
 
 ---
 
