@@ -67,6 +67,8 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'txn-fields':        () => import('./queries/txn-fields.js'),
   'trove-test':        () => import('./queries/trove-test.js'),
   'trove-enrich-all':  () => import('./queries/trove-enrich-all.js'),
+  'autopay-detect':    () => import('./queries/autopay-detect.js'),
+  'debug-bills':       () => import('./queries/debug-bills.js'),
 };
 
 // ---------------------------------------------------------------------------

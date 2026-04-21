@@ -494,7 +494,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{txn.description}</span>
-                  {transfer && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(59,130,246,.12)', color: '#60a5fa', fontFamily: 'var(--mono)', flexShrink: 0 }}>TRANSFER</span>}
+                  {transfer && txn.category !== 'transfer' && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(59,130,246,.12)', color: '#60a5fa', fontFamily: 'var(--mono)', flexShrink: 0 }}>TRANSFER</span>}
                   {txn.pending && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,.12)', color: 'var(--gold)', fontFamily: 'var(--mono)', flexShrink: 0 }}>PENDING</span>}
                   <CategoryBadge txnId={txn._id} category={txn.category} onChanged={handleCategoryChanged} />
                 </div>

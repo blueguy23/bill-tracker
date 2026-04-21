@@ -42,6 +42,8 @@ export interface Bill {
   isRecurring: boolean;
   /** Required when isRecurring === true */
   recurrenceInterval?: RecurrenceInterval;
+  /** YYYY-MM of the month this bill was marked paid — used to reset status each month */
+  paidMonth?: string;
   url?: string;
   notes?: string;
   createdAt: Date;
@@ -75,6 +77,7 @@ export interface BillResponse {
   isAutoPay: boolean;
   isRecurring: boolean;
   recurrenceInterval?: RecurrenceInterval;
+  paidMonth?: string;
   url?: string;
   notes?: string;
   createdAt: string;

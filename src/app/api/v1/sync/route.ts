@@ -4,6 +4,7 @@ import { SimpleFINClient } from '@/lib/simplefin/client';
 import { runDailySync, QuotaExceededError } from '@/handlers/sync';
 import { notifySyncCompleted, notifySyncFailed, checkCreditAlerts } from '@/handlers/notifications';
 import { enrichWithTrove } from '@/handlers/troveEnrich';
+import { detectAutoPayments } from '@/handlers/autoPayDetect';
 
 function getClient() {
   return new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
@@ -27,6 +28,7 @@ export async function POST(): Promise<Response> {
     });
     void checkCreditAlerts(db);
     void enrichWithTrove(db, 'recent');
+    void detectAutoPayments(db);
     return NextResponse.json({ synced: true, ...result });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

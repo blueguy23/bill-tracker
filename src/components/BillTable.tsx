@@ -11,7 +11,19 @@ const CAT_ICONS: Record<string, string> = {
   Healthcare: '💊', Other: '📄',
 };
 
-function getDueDayLabel(dueDate: string | number): { label: string; overdue: boolean } {
+function currentYYYYMM(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getDueDayLabel(
+  dueDate: string | number,
+  isPaid: boolean,
+  paidMonth?: string,
+): { label: string; overdue: boolean } {
+  const effectivelyPaid = isPaid && paidMonth === currentYYYYMM();
+  if (effectivelyPaid) return { label: '✓ PAID', overdue: false };
+
   const today    = new Date();
   const todayDay = today.getDate();
 
@@ -60,7 +72,7 @@ interface BillRowProps {
 function BillRow({ bill, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: BillRowProps) {
   const [hov, setHov]       = useState(false);
   const [paying, setPaying] = useState(false);
-  const { label: dueLabel, overdue } = getDueDayLabel(bill.dueDate);
+  const { label: dueLabel, overdue } = getDueDayLabel(bill.dueDate, bill.isPaid, bill.paidMonth);
 
   function handlePay() {
     setPaying(true);

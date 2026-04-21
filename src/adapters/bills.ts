@@ -59,9 +59,18 @@ export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto):
     updates.dueDate = isRecurring ? Number(data.dueDate) : new Date(data.dueDate as string);
   }
 
+  // Stamp paidMonth before the DB write so it persists in the same operation
+  if (data.isPaid === true) {
+    const now = new Date();
+    updates.paidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+  if (data.isPaid === false) {
+    updates.paidMonth = undefined;
+  }
+
   await db.updateOne<Bill>(COLLECTION, byId(id), { $set: updates });
 
-  // Create a payment record when isPaid transitions false → true
+  // Create payment record only on false → true transition
   if (data.isPaid === true && existing && !existing.isPaid) {
     await createPayment(db, {
       billId: existing._id,

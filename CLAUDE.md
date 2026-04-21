@@ -263,8 +263,26 @@ All features below are built and merged to master:
 | Dashboard 3-col layout | `SpendByCategoryCard` + Budget + Recent Payments |
 | RecurringView | Filter tabs (ALL/UNPAID/PAID/AUTOPAY) + sticky header Add Bill button |
 | Recategorize endpoint | `POST /api/v1/transactions/recategorize` — bulk backfill |
+| Trove enrichment | Primary categorizer; keyword rules fallback; `POST /api/v1/transactions/enrich-trove` |
 
 **Current test totals: 310 unit tests (passing). All E2E green.**
+
+---
+
+## Trove Transaction Enrichment
+
+Trove is the **primary** categorizer. Keyword rules are the fallback for merchants Trove returns null on.
+
+- API: `POST https://trove.headline.com/api/v1/transactions/enrich` — `X-API-KEY` header
+- Amount must be **positive** (`Math.abs`) — Trove rejects negatives and zeros
+- Returns: `name`, `domain`, `industry`, `categories[]` — null result when merchant unknown
+- Fires automatically after each sync (`void enrichWithTrove(db, 'recent')` in sync route)
+- `categorySource: 'trove'` — stored on enriched transactions alongside `merchantName`/`merchantDomain`
+- Bulk backfill: `pnpm db:query trove-enrich-all`
+- `TROVE_API_KEY` required in `.env` — free tier, always free per Trove
+
+**Flow:** Trove → if null → keyword rules → if no match → `other`
+**User overrides** (`categorySource: 'user'`) are never touched by either.
 
 ---
 
@@ -273,6 +291,8 @@ All features below are built and merged to master:
 - **Runner auto-start** — configure as systemd/WSL background service
 - **Production deployment** — MongoDB Atlas (free tier) is set up; Dokploy config in `.env.example`
 - **Transfer UI** — allow manually marking transactions as "transfer" (would catch edge cases the env-var heuristic misses)
+- **Auto-pay detection** — mark bills as paid when a matching transaction is seen for that month
+- **UI blemishes** — "Transfer transfer" duplicate label bug in TransactionsView; other double-field issues
 
 ---
 
