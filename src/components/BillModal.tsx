@@ -1,8 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { BillResponse, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import { BILL_CATEGORIES, RECURRENCE_INTERVALS } from '@/types/bill';
+
+interface TxnSearchResult {
+  _id: string;
+  description: string;
+  amount: number;
+  posted: string | Date;
+}
 
 type ModalMode = 'create' | 'edit';
 
@@ -25,6 +32,7 @@ interface FormState {
   name: string; amount: string; dueDateStr: string; dueDateDay: string;
   category: string; isPaid: boolean; isAutoPay: boolean; isRecurring: boolean;
   recurrenceInterval: string; url: string; notes: string;
+  paymentDescriptionHint: string;
 }
 
 function buildInitialState(initialData?: BillResponse): FormState {
@@ -33,7 +41,7 @@ function buildInitialState(initialData?: BillResponse): FormState {
       name: '', amount: '', dueDateStr: '', dueDateDay: '1',
       category: BILL_CATEGORIES[0] ?? 'other', isPaid: false, isAutoPay: false,
       isRecurring: false, recurrenceInterval: RECURRENCE_INTERVALS[2] ?? 'monthly',
-      url: '', notes: '',
+      url: '', notes: '', paymentDescriptionHint: '',
     };
   }
   return {
@@ -44,6 +52,7 @@ function buildInitialState(initialData?: BillResponse): FormState {
     isRecurring: initialData.isRecurring,
     recurrenceInterval: initialData.recurrenceInterval ?? (RECURRENCE_INTERVALS[2] ?? 'monthly'),
     url: initialData.url ?? '', notes: initialData.notes ?? '',
+    paymentDescriptionHint: initialData.paymentDescriptionHint ?? '',
   };
 }
 
@@ -51,10 +60,33 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
   const [form, setForm] = useState<FormState>(() => buildInitialState(initialData));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hintSearch, setHintSearch] = useState('');
+  const [hintResults, setHintResults] = useState<TxnSearchResult[]>([]);
+  const [hintSearching, setHintSearching] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (isOpen) { setForm(buildInitialState(initialData)); setError(null); }
+    if (isOpen) {
+      setForm(buildInitialState(initialData));
+      setError(null);
+      setHintSearch('');
+      setHintResults([]);
+    }
   }, [isOpen, initialData]);
+
+  const searchTransactions = useCallback((q: string) => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (q.length < 2) { setHintResults([]); return; }
+    setHintSearching(true);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/transactions/search?q=${encodeURIComponent(q)}&limit=8`);
+        const data = await res.json() as { transactions: TxnSearchResult[] };
+        setHintResults(data.transactions ?? []);
+      } catch { setHintResults([]); }
+      finally { setHintSearching(false); }
+    }, 300);
+  }, []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
@@ -80,6 +112,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
       ...(form.isRecurring && { recurrenceInterval: form.recurrenceInterval as CreateBillDto['recurrenceInterval'] }),
       ...(form.url.trim() && { url: form.url.trim() }),
       ...(form.notes.trim() && { notes: form.notes.trim() }),
+      ...(form.paymentDescriptionHint.trim() && { paymentDescriptionHint: form.paymentDescriptionHint.trim() }),
     };
     try {
       await onSave(dto);
@@ -174,6 +207,57 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
           <div>
             <label className={label}>Notes</label>
             <textarea className={input} rows={2} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Optional notes" />
+          </div>
+
+          {/* Payment description hint — helps auto-pay detection for ambiguous bills */}
+          <div className="border-t border-white/[0.06] pt-4">
+            <label className={label}>Payment Transaction Hint</label>
+            <p className="text-xs text-zinc-500 mb-2">
+              For loans or ambiguous bills, link a real transaction so Folio knows what to look for.
+            </p>
+            {form.paymentDescriptionHint ? (
+              <div className="flex items-center gap-2 bg-zinc-800 border border-blue-500/30 rounded-lg px-3 py-2.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>
+                <span className="text-sm text-zinc-200 font-mono flex-1 truncate">{form.paymentDescriptionHint}</span>
+                <button
+                  type="button"
+                  onClick={() => { set('paymentDescriptionHint', ''); setHintSearch(''); setHintResults([]); }}
+                  className="text-zinc-500 hover:text-zinc-200 transition-colors flex-shrink-0"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                </button>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  className={input}
+                  value={hintSearch}
+                  onChange={(e) => { setHintSearch(e.target.value); searchTransactions(e.target.value); }}
+                  placeholder="Search transactions… e.g. SCHOOLSFIRST, AT&T"
+                />
+                {hintSearching && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500">searching…</span>
+                )}
+                {hintResults.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full bg-zinc-800 border border-white/[0.08] rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                    {hintResults.map((t) => (
+                      <li key={t._id}>
+                        <button
+                          type="button"
+                          onClick={() => { set('paymentDescriptionHint', t.description); setHintSearch(''); setHintResults([]); }}
+                          className="w-full text-left px-3 py-2.5 hover:bg-zinc-700 transition-colors flex items-center justify-between gap-3"
+                        >
+                          <span className="text-sm text-zinc-200 font-mono truncate">{t.description}</span>
+                          <span className="text-xs text-zinc-500 flex-shrink-0">
+                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Math.abs(t.amount))}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

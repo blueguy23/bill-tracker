@@ -31,6 +31,7 @@ export async function createBill(db: StrictDB, data: CreateBillDto): Promise<Bil
     recurrenceInterval: data.recurrenceInterval,
     url: data.url,
     notes: data.notes,
+    paymentDescriptionHint: data.paymentDescriptionHint,
     createdAt: now,
     updatedAt: now,
   };
@@ -52,6 +53,7 @@ export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto):
   if (data.recurrenceInterval !== undefined) updates.recurrenceInterval = data.recurrenceInterval;
   if (data.url !== undefined) updates.url = data.url;
   if (data.notes !== undefined) updates.notes = data.notes;
+  if (data.paymentDescriptionHint !== undefined) updates.paymentDescriptionHint = data.paymentDescriptionHint || undefined;
 
   if (data.dueDate !== undefined) {
     // isRecurring in the patch takes precedence; fall back to existing value

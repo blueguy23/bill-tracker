@@ -23,9 +23,10 @@ function billMatchesTransaction(billName: string, description: string): boolean 
 }
 
 function findBestMatch(bill: Bill, txns: Transaction[]): Transaction | null {
+  const matchName = bill.paymentDescriptionHint ?? bill.name;
   const candidates = txns.filter(
     (txn) =>
-      billMatchesTransaction(bill.name, txn.description) &&
+      billMatchesTransaction(matchName, txn.description) &&
       Math.abs(Math.abs(txn.amount) - bill.amount) / bill.amount <= AMOUNT_MATCH_WINDOW,
   );
   if (!candidates.length) return null;

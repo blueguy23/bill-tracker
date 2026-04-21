@@ -36,6 +36,7 @@ function serializeBill(bill: Bill): BillResponse {
     recurrenceInterval: bill.recurrenceInterval,
     url: bill.url,
     notes: bill.notes,
+    paymentDescriptionHint: bill.paymentDescriptionHint,
     createdAt: toISOString(bill.createdAt, 'createdAt'),
     updatedAt: toISOString(bill.updatedAt, 'updatedAt'),
   };
@@ -94,6 +95,10 @@ function validateUpdateDto(body: Record<string, unknown>): string | null {
     return `recurrenceInterval must be one of: ${RECURRENCE_INTERVALS.join(', ')}`;
   }
   if (typeof body.notes === 'string' && body.notes.length > 2000) return 'notes must be 2000 characters or fewer';
+  if (body.paymentDescriptionHint !== undefined && body.paymentDescriptionHint !== null) {
+    if (typeof body.paymentDescriptionHint !== 'string') return 'paymentDescriptionHint must be a string';
+    if (body.paymentDescriptionHint.length > 500) return 'paymentDescriptionHint must be 500 characters or fewer';
+  }
   return null;
 }
 

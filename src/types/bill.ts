@@ -46,6 +46,8 @@ export interface Bill {
   paidMonth?: string;
   /** Most recent transaction amount detected for this bill — tracks price drift */
   lastChargedAmount?: number;
+  /** Exact transaction description to match instead of bill name — for ambiguous bills like loans */
+  paymentDescriptionHint?: string;
   url?: string;
   notes?: string;
   createdAt: Date;
@@ -62,6 +64,7 @@ export interface CreateBillDto {
   isAutoPay?: boolean;
   isRecurring: boolean;
   recurrenceInterval?: RecurrenceInterval;
+  paymentDescriptionHint?: string;
   url?: string;
   notes?: string;
 }
@@ -81,6 +84,7 @@ export interface BillResponse {
   recurrenceInterval?: RecurrenceInterval;
   paidMonth?: string;
   lastChargedAmount?: number;
+  paymentDescriptionHint?: string;
   url?: string;
   notes?: string;
   createdAt: string;
