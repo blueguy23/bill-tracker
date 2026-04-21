@@ -6,12 +6,19 @@ export default auth((req) => {
   const isLoginPage = req.nextUrl.pathname === '/login';
 
   if (!isLoggedIn && !isLoginPage) {
-    const loginUrl = new URL('/login', req.nextUrl.origin);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/login', req.nextUrl.origin));
   }
 
   if (isLoggedIn && isLoginPage) {
     return NextResponse.redirect(new URL('/', req.nextUrl.origin));
+  }
+
+  // Demo users are read-only — block all mutating API calls
+  const isDemo = req.auth?.user?.name === 'Demo';
+  const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+  const isApiRoute = req.nextUrl.pathname.startsWith('/api/v1/');
+  if (isDemo && isMutation && isApiRoute) {
+    return NextResponse.json({ error: 'Demo mode — read only' }, { status: 403 });
   }
 });
 

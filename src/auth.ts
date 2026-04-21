@@ -10,14 +10,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       authorize(credentials) {
         const submitted = credentials?.password;
-        const expected = process.env.AUTH_PASSWORD;
 
+        // Demo login — enabled only when DEMO_MODE=true
+        if (process.env.DEMO_MODE === 'true') {
+          const demoPassword = process.env.DEMO_PASSWORD ?? 'demo';
+          if (submitted === demoPassword) {
+            return { id: 'demo', name: 'Demo' };
+          }
+        }
+
+        const expected = process.env.AUTH_PASSWORD;
         if (!submitted || !expected) return null;
 
         const a = Buffer.from(String(submitted));
         const b = Buffer.from(expected);
 
-        // Lengths must match before timingSafeEqual
         if (a.length !== b.length) return null;
         if (!timingSafeEqual(a, b)) return null;
 
@@ -30,6 +37,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 });

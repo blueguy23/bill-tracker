@@ -7,6 +7,9 @@ export default function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  const isDemoMode = process.env.DEMO_MODE === 'true';
+  const demoPassword = process.env.DEMO_PASSWORD ?? 'demo';
+
   async function handleLogin(formData: FormData) {
     'use server';
     try {
@@ -22,12 +25,17 @@ export default function LoginPage({
     }
   }
 
+  async function handleDemoLogin() {
+    'use server';
+    await signIn('credentials', { password: demoPassword, redirectTo: '/' });
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">Bill Tracker</h1>
-          <p className="text-sm text-zinc-500 mt-1">Enter your password to continue</p>
+          <h1 className="text-2xl font-bold text-white">Folio</h1>
+          <p className="text-sm text-zinc-500 mt-1">Your personal finance command center</p>
         </div>
 
         <form action={handleLogin} className="space-y-4">
@@ -57,6 +65,25 @@ export default function LoginPage({
             Sign in
           </button>
         </form>
+
+        {isDemoMode && (
+          <div className="mt-4">
+            <div className="relative flex items-center gap-3 my-4">
+              <div className="flex-1 border-t border-white/[0.06]" />
+              <span className="text-xs text-zinc-600">or</span>
+              <div className="flex-1 border-t border-white/[0.06]" />
+            </div>
+            <form action={handleDemoLogin}>
+              <button
+                type="submit"
+                className="w-full py-2.5 px-4 rounded-lg bg-zinc-800 border border-white/[0.08] hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors"
+              >
+                Try Demo
+              </button>
+            </form>
+            <p className="text-xs text-zinc-600 text-center mt-2">Read-only · pre-seeded data</p>
+          </div>
+        )}
       </div>
     </div>
   );
