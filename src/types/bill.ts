@@ -44,6 +44,8 @@ export interface Bill {
   recurrenceInterval?: RecurrenceInterval;
   /** YYYY-MM of the month this bill was marked paid — used to reset status each month */
   paidMonth?: string;
+  /** Most recent transaction amount detected for this bill — tracks price drift */
+  lastChargedAmount?: number;
   url?: string;
   notes?: string;
   createdAt: Date;
@@ -78,6 +80,7 @@ export interface BillResponse {
   isRecurring: boolean;
   recurrenceInterval?: RecurrenceInterval;
   paidMonth?: string;
+  lastChargedAmount?: number;
   url?: string;
   notes?: string;
   createdAt: string;

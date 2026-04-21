@@ -6,6 +6,7 @@ import type {
   SyncCompletedPayload,
   SyncFailedPayload,
   DigestPayload,
+  PriceIncreasePayload,
 } from '@/types/notification';
 import type { StatementAlertPayload, CreditUtilizationAlertPayload } from '@/types/creditAdvisor';
 
@@ -166,6 +167,21 @@ export function buildCreditUtilizationAlertEmbed(p: CreditUtilizationAlertPayloa
       { name: 'Balance', value: `${usd(p.currentBalance)} / ${usd(p.creditLimit)}`, inline: true },
       { name: 'Action', value: `Pay ${usd(p.paydownTo30Pct)} to bring below 30%`, inline: false },
     ],
+    timestamp: ts(),
+  };
+}
+
+export function buildPriceIncreaseEmbed(p: PriceIncreasePayload): DiscordEmbed {
+  const sign = p.increase >= 0 ? '+' : '';
+  return {
+    title: `💸 Price Increase — ${p.billName}`,
+    color: COLOR.amber,
+    fields: [
+      { name: 'Previous', value: usd(p.previousAmount), inline: true },
+      { name: 'New Charge', value: usd(p.newAmount), inline: true },
+      { name: 'Change', value: `${sign}${usd(p.increase)} (${sign}${(p.percentIncrease * 100).toFixed(1)}%)`, inline: true },
+    ],
+    footer: { text: 'Update the bill amount in Bill Tracker if this is permanent' },
     timestamp: ts(),
   };
 }
