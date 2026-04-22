@@ -97,12 +97,17 @@ async function LoginError({
   const params = await searchParams;
   if (!params.error) return null;
 
+  const message =
+    params.error === 'rate-limited'
+      ? 'Too many attempts. Please wait 15 minutes and try again.'
+      : 'Incorrect password. Please try again.';
+
   return (
     <p
       data-testid="login-error"
       className="text-xs text-red-400 bg-red-950/40 border border-red-900/40 rounded-lg px-3 py-2"
     >
-      Incorrect password. Please try again.
+      {message}
     </p>
   );
 }
