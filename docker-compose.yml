@@ -1,8 +1,25 @@
+# bill-tracker — self-hosted Docker Compose
+#
+# MongoDB is NOT bundled here. Bring your own:
+#   - MongoDB Atlas free tier (recommended for self-hosters): https://www.mongodb.com/atlas
+#   - Self-hosted Mongo: add a `mongo` service below and set MONGODB_URI=mongodb://mongo:27017/bill-tracker
+#
+# Required .env vars (copy from .env.example):
+#   MONGODB_URI, AUTH_SECRET, AUTH_PASSWORD
+#   Optional: NEXT_PUBLIC_RYBBIT_SITE_ID, NEXT_PUBLIC_RYBBIT_URL, TROVE_API_KEY, SIMPLEFIN_TOKEN
+
 version: '3.9'
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Pass NEXT_PUBLIC_* vars at build time if using analytics
+      args:
+        NEXT_PUBLIC_RYBBIT_SITE_ID: ${NEXT_PUBLIC_RYBBIT_SITE_ID:-}
+        NEXT_PUBLIC_RYBBIT_URL: ${NEXT_PUBLIC_RYBBIT_URL:-}
+    image: bill-tracker:latest
     container_name: bill-tracker
     restart: unless-stopped
     ports:
@@ -11,32 +28,16 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      # When running with the local mongo service below, set this in .env:
-      # MONGODB_URI=mongodb://mongo:27017/bill-tracker
-    depends_on:
-      mongo:
-        condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.bill-tracker.rule=Host(`folio.yourdomain.com`)"
-      - "traefik.http.routers.bill-tracker.entrypoints=websecure"
-      - "traefik.http.routers.bill-tracker.tls.certresolver=letsencrypt"
-      - "traefik.http.services.bill-tracker.loadbalancer.server.port=3000"
-
-  mongo:
-    image: mongo:7
-    container_name: bill-tracker-mongo
-    restart: unless-stopped
-    volumes:
-      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      # node:22-slim doesn't include curl; use Node's built-in fetch (stable since Node 18)
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/v1/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
-  # Optional: reverse proxy with auto-SSL (uncomment + replace domain to enable)
+  # ── Optional: Traefik reverse proxy with auto-SSL ─────────────────────────
+  # Uncomment and replace yourdomain.com + your email to enable.
   # traefik:
   #   image: traefik:v3
   #   ports: ["80:80", "443:443"]
@@ -51,6 +52,13 @@ services:
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
   #     - ./acme.json:/acme.json
+  #   labels:
+  #     - "traefik.enable=false"
 
-volumes:
-  mongo_data:
+  # ── If app labels are uncommented above, also uncomment these on the app ──
+  # labels:
+  #   - "traefik.enable=true"
+  #   - "traefik.http.routers.bill-tracker.rule=Host(`folio.yourdomain.com`)"
+  #   - "traefik.http.routers.bill-tracker.entrypoints=websecure"
+  #   - "traefik.http.routers.bill-tracker.tls.certresolver=letsencrypt"
+  #   - "traefik.http.services.bill-tracker.loadbalancer.server.port=3000"
