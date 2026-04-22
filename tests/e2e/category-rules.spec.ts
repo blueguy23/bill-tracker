@@ -1,17 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const PASSWORD = process.env['AUTH_PASSWORD'] ?? 'testpassword';
-
-async function login(page: import('@playwright/test').Page) {
-  await page.goto('/login');
-  await page.locator('[data-testid="password-input"]').fill(PASSWORD);
-  await page.locator('[data-testid="login-btn"]').click();
-  await expect(page).toHaveURL('/');
-}
-
 test.describe('Category Rules — Settings page', () => {
   test.beforeEach(async ({ page }) => {
-    await login(page);
     await page.goto('/settings');
     await expect(page.locator('[data-testid="category-rules"]')).toBeVisible();
   });

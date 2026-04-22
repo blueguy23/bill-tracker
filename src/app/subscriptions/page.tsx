@@ -8,7 +8,7 @@ import { listBills } from '@/adapters/bills';
 import { listDismissedSubscriptions } from '@/adapters/subscriptions';
 import { detectSubscriptions } from '@/lib/subscriptions/detect';
 
-export const metadata: Metadata = { title: 'Subscriptions — Bill Tracker' };
+export const metadata: Metadata = { title: 'Subscriptions' };
 
 function serializeDetected(d: DetectedSubscription): DetectedSubscriptionResponse {
   return {

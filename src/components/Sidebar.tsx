@@ -47,6 +47,7 @@ function NavItem({ href, icon, label, active, hasAlert, collapsed }: NavItemProp
   return (
     <Link
       href={href}
+      aria-current={active ? 'page' : undefined}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       title={collapsed ? label : undefined}

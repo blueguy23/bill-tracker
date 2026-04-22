@@ -19,6 +19,7 @@ tsconfig.tsbuildinfo
 coverage/
 test-results/
 playwright-report/
+tests/e2e/.auth/
 
 # IDE
 .idea/

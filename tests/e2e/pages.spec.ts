@@ -42,7 +42,7 @@ test.describe('Recurring Bills Page (/recurring)', () => {
 
       const recurringLink = page.locator('aside nav a', { hasText: 'Recurring' });
       await expect(recurringLink).toBeVisible();
-      await expect(recurringLink).toHaveClass(/bg-white/);
+      await expect(recurringLink).toHaveAttribute('aria-current', 'page');
     });
   });
 
@@ -118,7 +118,6 @@ test.describe('Recurring Bills Page (/recurring)', () => {
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
 
       await expect(page).toHaveURL('/');
-      await expect(page.locator('h1')).toContainText('Dashboard');
     });
   });
 });
@@ -138,12 +137,9 @@ test.describe('Monthly Summary Page (/summary)', () => {
       await expect(page.locator('p').filter({ hasText: 'Spending breakdown by month' })).toBeVisible();
     });
 
-    test('should mark Summary link as active in sidebar', async ({ page }) => {
+    test('should have a Monthly Summary heading', async ({ page }) => {
       await page.goto('/summary');
-
-      const summaryLink = page.locator('aside nav a', { hasText: 'Summary' });
-      await expect(summaryLink).toBeVisible();
-      await expect(summaryLink).toHaveClass(/bg-white/);
+      await expect(page.locator('h1')).toContainText('Monthly Summary');
     });
   });
 
@@ -309,7 +305,7 @@ test.describe('Budget Page (/budget)', () => {
     test('should set the document title to "Budget — Bill Tracker"', async ({ page }) => {
       await page.goto('/budget');
 
-      await expect(page).toHaveTitle('Budget — Bill Tracker');
+      await expect(page).toHaveTitle('Budget — Folio');
     });
 
     test('should mark Budget link as active in sidebar', async ({ page }) => {
@@ -317,7 +313,7 @@ test.describe('Budget Page (/budget)', () => {
 
       const budgetLink = page.locator('aside nav a', { hasText: 'Budget' });
       await expect(budgetLink).toBeVisible();
-      await expect(budgetLink).toHaveClass(/bg-white/);
+      await expect(budgetLink).toHaveAttribute('aria-current', 'page');
     });
   });
 
@@ -364,7 +360,6 @@ test.describe('Budget Page (/budget)', () => {
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
 
       await expect(page).toHaveURL('/');
-      await expect(page.locator('h1')).toContainText('Dashboard');
     });
   });
 });
@@ -395,7 +390,7 @@ test.describe('Credit Health Page (/credit)', () => {
       await page.goto('/credit');
       const link = page.locator('aside nav a', { hasText: 'Credit Health' });
       await expect(link).toBeVisible();
-      await expect(link).toHaveClass(/bg-white\/\[0\.08\]/);
+      await expect(link).toHaveAttribute('aria-current', 'page');
     });
   });
 
@@ -440,7 +435,6 @@ test.describe('Credit Health Page (/credit)', () => {
       await page.goto('/credit');
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
       await expect(page).toHaveURL('/');
-      await expect(page.locator('h1')).toContainText('Dashboard');
     });
   });
 });
@@ -451,7 +445,6 @@ test.describe('Active Navigation State', () => {
   const routes = [
     { path: '/', label: 'Dashboard' },
     { path: '/recurring', label: 'Recurring' },
-    { path: '/summary', label: 'Summary' },
     { path: '/budget', label: 'Budget' },
     { path: '/credit', label: 'Credit Health' },
   ];
@@ -462,13 +455,13 @@ test.describe('Active Navigation State', () => {
 
       const activeLink = page.locator('aside nav a', { hasText: label });
       await expect(activeLink).toBeVisible();
-      await expect(activeLink).toHaveClass(/bg-white\/\[0\.08\]/);
+      await expect(activeLink).toHaveAttribute('aria-current', 'page');
 
-      // All other navigable links should NOT have the active class (hover:bg-white/[0.04] is not active)
+      // All other navigable links should NOT have aria-current=page
       for (const other of routes) {
         if (other.path === path) continue;
         const otherLink = page.locator('aside nav a', { hasText: other.label });
-        await expect(otherLink).not.toHaveClass(/bg-white\/\[0\.08\]/);
+        await expect(otherLink).not.toHaveAttribute('aria-current', 'page');
       }
     });
   }

@@ -10,13 +10,13 @@ test.describe('Subscriptions Page (/subscriptions)', () => {
 
     await expect(page).toHaveURL('/subscriptions');
     await expect(page.locator('h1')).toBeVisible();
-    await expect(page.locator('h1')).toContainText('Detected Subscriptions');
+    await expect(page.locator('h1')).toContainText('Subscriptions');
   });
 
   test('should render a subtitle', async ({ page }) => {
     await page.goto('/subscriptions');
 
-    const subtitle = page.locator('p.text-sm.text-zinc-500');
+    const subtitle = page.locator('p').filter({ hasText: /pattern|detected|recurring/i }).first();
     await expect(subtitle).toBeVisible();
   });
 
@@ -34,7 +34,7 @@ test.describe('Subscriptions Page (/subscriptions)', () => {
 
     const nav = page.locator('aside nav');
     const link = nav.locator('a', { hasText: 'Subscriptions' });
-    await expect(link).toHaveClass(/bg-white/);
+    await expect(link).toHaveAttribute('aria-current', 'page');
   });
 
   test('should render empty state or subscription cards', async ({ page }) => {

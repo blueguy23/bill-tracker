@@ -7,10 +7,12 @@ import { test, expect } from '@playwright/test';
 const PASSWORD = process.env['AUTH_PASSWORD'] ?? 'testpassword';
 
 test.describe('Auth — login page', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test('unauthenticated visit to / redirects to /login', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL('/login');
-    await expect(page.locator('h1')).toContainText('Bill Tracker');
+    await expect(page.locator('h1')).toContainText('Folio');
   });
 
   test('login page renders password input and submit button', async ({ page }) => {
@@ -34,7 +36,7 @@ test.describe('Auth — login page', () => {
     await page.locator('[data-testid="password-input"]').fill(PASSWORD);
     await page.locator('[data-testid="login-btn"]').click();
     await expect(page).toHaveURL('/');
-    await expect(page.locator('h1')).toContainText('Dashboard');
+    await expect(page.locator('h1')).toContainText(/Good (morning|afternoon|evening)/);
   });
 
   test('authenticated visit to /login redirects to /', async ({ page }) => {

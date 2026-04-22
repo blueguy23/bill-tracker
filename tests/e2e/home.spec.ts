@@ -6,19 +6,18 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard Page (/)', () => {
   test.describe('page structure', () => {
-    test('should render the correct heading and subtitle', async ({ page }) => {
+    test('should render the correct heading', async ({ page }) => {
       await page.goto('/');
 
       await expect(page).toHaveURL('/');
       await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Dashboard');
-      await expect(page.locator('p').filter({ hasText: 'Your bills at a glance' })).toBeVisible();
+      await expect(page.locator('h1')).toContainText(/Good (morning|afternoon|evening)/);
     });
 
     test('should set the correct document title', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page).toHaveTitle('Bill Tracker');
+      await expect(page).toHaveTitle('Folio');
       await expect(page).toHaveURL('/');
     });
 
@@ -107,7 +106,7 @@ test.describe('Sidebar Navigation', () => {
     await page.goto('/');
 
     await expect(page.locator('aside')).toBeVisible();
-    await expect(page.locator('aside').locator('span').filter({ hasText: 'Bill Tracker' })).toBeVisible();
+    await expect(page.locator('aside').locator('div').filter({ hasText: 'Folio' }).first()).toBeVisible();
   });
 
   test('should render all four navigation links', async ({ page }) => {
@@ -115,8 +114,8 @@ test.describe('Sidebar Navigation', () => {
 
     const nav = page.locator('aside nav');
     await expect(nav.locator('a', { hasText: 'Dashboard' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Recurring' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Summary' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Budget' })).toBeVisible();
   });
 
@@ -136,7 +135,7 @@ test.describe('Sidebar Navigation', () => {
     await expect(dashboardLink).toBeVisible();
     // Active state uses bg-white/[0.08] and text-white; inactive uses text-zinc-500
     // We verify the class contains the active token
-    await expect(dashboardLink).toHaveClass(/bg-white\/\[0\.08\]/);
+    await expect(dashboardLink).toHaveAttribute('aria-current', 'page');
   });
 
   test('should navigate to /recurring when Recurring link is clicked', async ({ page }) => {
@@ -148,13 +147,13 @@ test.describe('Sidebar Navigation', () => {
     await expect(page.locator('h1')).toContainText('Recurring Bills');
   });
 
-  test('should navigate to /summary when Summary link is clicked', async ({ page }) => {
+  test('should navigate to /transactions when Transactions link is clicked', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('aside nav a', { hasText: 'Summary' }).click();
+    await page.locator('aside nav a', { hasText: 'Transactions' }).click();
 
-    await expect(page).toHaveURL('/summary');
-    await expect(page.locator('h1')).toContainText('Monthly Summary');
+    await expect(page).toHaveURL('/transactions');
+    await expect(page.locator('h1')).toContainText('Transactions');
   });
 
   test('should navigate to /budget when Budget link is clicked', async ({ page }) => {

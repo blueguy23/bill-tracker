@@ -5,7 +5,7 @@ import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
 
-export const metadata: Metadata = { title: 'Transactions — Folio' };
+export const metadata: Metadata = { title: 'Transactions' };
 
 export default async function TransactionsPage() {
   const db = await getDb();
