@@ -24,7 +24,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    // Protect everything except NextAuth internals and static assets
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    // Protect everything except NextAuth internals, static assets, and the health endpoint
+    '/((?!api/auth|api/v1/health|_next/static|_next/image|favicon.ico).*)',
   ],
 };
