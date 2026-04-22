@@ -72,6 +72,8 @@ export default defineConfig({
       timeout: 60_000,
       env: {
         NEXT_PUBLIC_SITE_URL: 'http://localhost:4000',
+        AUTH_SECRET: process.env.AUTH_SECRET ?? 'test-secret-for-ci-only-not-used-in-prod',
+        AUTH_PASSWORD: process.env.AUTH_PASSWORD ?? 'test-password',
       },
     },
   ],
