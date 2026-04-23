@@ -15,7 +15,7 @@ async function globalSetup(config: FullConfig) {
     process.env.AUTH_PASSWORD ?? 'testpassword',
   );
   await page.locator('[data-testid="login-btn"]').click();
-  await page.waitForURL('/');
+  await page.waitForURL(`${baseURL}/`);
 
   await page.context().storageState({ path: path.join(authDir, 'user.json') });
   await browser.close();
