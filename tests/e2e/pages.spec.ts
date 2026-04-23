@@ -76,7 +76,8 @@ test.describe('Recurring Bills Page (/recurring)', () => {
       await page.goto('/recurring');
 
       const billsTable = page.locator('[data-testid="bills-table"]');
-      const emptyState = page.locator('p.text-zinc-500').filter({ hasText: 'No bills yet' });
+      // BillTable empty state is a div with inline styles (not p.text-zinc-500)
+      const emptyState = page.getByText('No bills yet', { exact: true });
 
       const hasTable = await billsTable.isVisible().catch(() => false);
 
@@ -233,6 +234,8 @@ test.describe('Monthly Summary Page (/summary)', () => {
   test.describe('empty state vs category table', () => {
     test('should render either a category breakdown table or an empty state message', async ({ page }) => {
       await page.goto('/summary');
+      // Wait for the MonthlySummary useEffect /api/v1/summary fetch to complete
+      await page.waitForLoadState('networkidle');
 
       const categoryTable = page.locator('h3').filter({ hasText: 'By Category' });
       const emptyMsg = page.locator('p').filter({ hasText: 'No bills for this month' });
