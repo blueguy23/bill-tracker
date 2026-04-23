@@ -482,7 +482,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
           const acct     = accountMap.get(txn.accountId);
           const transfer = isTransfer(txn.description);
           return (
-            <div key={txn._id} className="group/row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: '1px solid var(--border)', transition: 'background .1s' }}
+            <div key={txn._id} className="group/row" data-testid={`txn-row-${txn._id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: '1px solid var(--border)', transition: 'background .1s' }}
               onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(237,237,245,0.02)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >

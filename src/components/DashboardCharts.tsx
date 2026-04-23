@@ -49,9 +49,9 @@ function useCancelRef() {
   return ref;
 }
 
-function Card({ children, title, subtitle, action }: { children: React.ReactNode; title: string; subtitle?: string; action?: React.ReactNode }) {
+function Card({ children, title, subtitle, action, testId }: { children: React.ReactNode; title: string; subtitle?: string; action?: React.ReactNode; testId?: string }) {
   return (
-    <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px' }}>
+    <div data-testid={testId} style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#ededf5', fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 3 }}>{title}</p>
@@ -197,6 +197,7 @@ export function DashboardCharts({ history }: { history: MonthlyFlow[] }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
       <Card
+        testId="cash-flow-card"
         title="Cash Flow"
         subtitle="Income vs expenses over time"
         action={
@@ -227,10 +228,12 @@ export function DashboardCharts({ history }: { history: MonthlyFlow[] }) {
 export function SpendByCategoryCard({ data }: { data: { label: string; amount: number }[] }) {
   const hasSpend = data.length > 0;
   return (
-    <Card title="Spend by Category" subtitle="This period">
-      <div style={{ position: 'relative', height: 200 }}>
-        {hasSpend ? <CategoryDoughnut data={data} /> : <EmptyChart />}
-      </div>
-    </Card>
+    <div data-testid="spending-chart">
+      <Card title="Spend by Category" subtitle="This period">
+        <div style={{ position: 'relative', height: 200 }}>
+          {hasSpend ? <CategoryDoughnut data={data} /> : <EmptyChart />}
+        </div>
+      </Card>
+    </div>
   );
 }

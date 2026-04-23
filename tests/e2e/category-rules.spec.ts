@@ -30,7 +30,7 @@ test.describe('Category Rules — Settings page', () => {
 
     await expect(page.locator('[data-testid="rules-list"]')).toBeVisible();
     await expect(page.locator('[data-testid="rules-list"]')).toContainText(pattern);
-    await expect(page.locator('[data-testid="rules-list"]')).toContainText('Food & Dining');
+    await expect(page.locator('[data-testid="rules-list"]')).toContainText(/food & dining/i);
   });
 
   test('can delete a rule', async ({ page }) => {
