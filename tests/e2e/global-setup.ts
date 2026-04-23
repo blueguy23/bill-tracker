@@ -4,7 +4,7 @@ import * as path from 'path';
 
 async function globalSetup(config: FullConfig) {
   const baseURL = (config.projects[0]?.use.baseURL) ?? 'http://localhost:4000';
-  const authDir = path.join(__dirname, '.auth');
+  const authDir = path.join(import.meta.dirname, '.auth');
   if (!fs.existsSync(authDir)) fs.mkdirSync(authDir, { recursive: true });
 
   const browser = await chromium.launch();
