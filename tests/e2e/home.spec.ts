@@ -6,12 +6,13 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dashboard Page (/)', () => {
   test.describe('page structure', () => {
-    test('should have correct URL and h1 heading', async ({ page }) => {
+    test('should load at / and render a greeting heading', async ({ page }) => {
       await page.goto('/');
 
       await expect(page).toHaveURL('/');
       await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Dashboard');
+      // Greeting is time-dependent: "Good morning", "Good afternoon", or "Good evening"
+      await expect(page.locator('h1')).toContainText('Good');
     });
 
     test('should set the correct document title', async ({ page }) => {
@@ -20,58 +21,31 @@ test.describe('Dashboard Page (/)', () => {
       await expect(page).toHaveTitle('Folio');
     });
 
-    test('should render all four summary cards', async ({ page }) => {
+    test('should render the three metric cards', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('Owed This Month', { exact: true })).toBeVisible();
-      await expect(page.getByText('Paid', { exact: true })).toBeVisible();
-      await expect(page.getByText('Overdue', { exact: true })).toBeVisible();
-      await expect(page.getByText('AutoPay Total', { exact: true })).toBeVisible();
+      await expect(page.getByText('Monthly Net', { exact: true })).toBeVisible();
+      await expect(page.getByText('Bills Owed', { exact: true })).toBeVisible();
+      await expect(page.getByText('AutoPay', { exact: true })).toBeVisible();
     });
 
-    test('should render the summary card grid', async ({ page }) => {
+    test('should render metric card values as USD currency strings', async ({ page }) => {
       await page.goto('/');
 
-      const cardGrid = page.locator('.grid.grid-cols-2');
-      await expect(cardGrid).toBeVisible();
+      // All three MetricCards display monetary values — find at least 3 $ signs
+      const dollarTexts = page.getByText(/\$[\d,]+/).all();
+      expect((await dollarTexts).length).toBeGreaterThanOrEqual(3);
     });
   });
 
-  test.describe('bills section', () => {
-    test('should render the Bills section heading', async ({ page }) => {
+  test.describe('period selector', () => {
+    test('should render the period selector buttons', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.locator('h2').filter({ hasText: 'Bills' })).toBeVisible();
-    });
-
-    test('should render the Add Bill button', async ({ page }) => {
-      await page.goto('/');
-
-      const addBillBtn = page.locator('[data-testid="add-bill-btn"]');
-      await expect(addBillBtn).toBeVisible();
-      await expect(addBillBtn).toContainText('Add Bill');
-      await expect(addBillBtn).toBeEnabled();
-    });
-
-    test('should show bill count or bills table', async ({ page }) => {
-      await page.goto('/');
-
-      const billsTable = page.locator('[data-testid="bills-table"]');
-      const hasTable = await billsTable.isVisible().catch(() => false);
-
-      if (hasTable) {
-        await expect(billsTable).toBeVisible();
-      } else {
-        await expect(page.getByText('NO BILLS')).toBeVisible();
-      }
-    });
-
-    test('should open Add Bill modal when button is clicked', async ({ page }) => {
-      await page.goto('/');
-
-      await page.locator('[data-testid="add-bill-btn"]').click();
-
-      await expect(page.locator('input[name="name"], input[placeholder*="name" i]').first()).toBeVisible();
+      // PeriodSelector renders 1W 1M 3M YTD 1Y as buttons
+      await expect(page.getByRole('button', { name: '1M' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '3M' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '1Y' })).toBeVisible();
     });
   });
 });
@@ -88,7 +62,7 @@ test.describe('Sidebar Navigation', () => {
     await expect(page.locator('aside').getByText('Folio', { exact: true })).toBeVisible();
   });
 
-  test('should render core navigation links', async ({ page }) => {
+  test('should render all navigation links', async ({ page }) => {
     await page.goto('/');
 
     const nav = page.locator('aside nav');
@@ -96,6 +70,8 @@ test.describe('Sidebar Navigation', () => {
     await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Recurring Bills' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Budget' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Credit Health' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Settings' })).toBeVisible();
   });
 
   test('should render Settings link pointing to /settings', async ({ page }) => {
@@ -143,76 +119,77 @@ test.describe('Sidebar Navigation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Cash Flow Card
+// Cash Flow Chart Card
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Cash Flow Card', () => {
-  test('should render the cash flow card with heading and period label', async ({ page }) => {
+  test('should render the cash flow card with heading', async ({ page }) => {
     await page.goto('/');
 
     const card = page.locator('[data-testid="cash-flow-card"]');
     await expect(card).toBeVisible();
-    await expect(card.locator('h3')).toContainText('Cash Flow');
-    await expect(card.getByText('This month', { exact: true })).toBeVisible();
+    await expect(card.getByText('Cash Flow', { exact: true })).toBeVisible();
   });
 
-  test('should show Income, Expenses, and Net labels', async ({ page }) => {
+  test('should show INCOME, SPEND, and NET legend labels', async ({ page }) => {
     await page.goto('/');
 
     const card = page.locator('[data-testid="cash-flow-card"]');
-    await expect(card.getByText('Income', { exact: true })).toBeVisible();
-    await expect(card.getByText('Expenses', { exact: true })).toBeVisible();
-    await expect(card.getByText('Net', { exact: true })).toBeVisible();
+    await expect(card.getByText('INCOME', { exact: true })).toBeVisible();
+    await expect(card.getByText('SPEND', { exact: true })).toBeVisible();
+    await expect(card.getByText('NET', { exact: true })).toBeVisible();
   });
 
-  test('should display income as a USD value', async ({ page }) => {
+  test('should render the chart area', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('[data-testid="cash-flow-income"]')).toBeVisible();
-    await expect(page.locator('[data-testid="cash-flow-income"]')).toContainText('$');
-  });
-
-  test('should display expenses as a USD value', async ({ page }) => {
-    await page.goto('/');
-
-    await expect(page.locator('[data-testid="cash-flow-expenses"]')).toBeVisible();
-    await expect(page.locator('[data-testid="cash-flow-expenses"]')).toContainText('$');
-  });
-
-  test('should display net as a USD value', async ({ page }) => {
-    await page.goto('/');
-
-    await expect(page.locator('[data-testid="cash-flow-net"]')).toBeVisible();
-    await expect(page.locator('[data-testid="cash-flow-net"]')).toContainText('$');
-  });
-
-  test('should render the income/expense split bar', async ({ page }) => {
-    await page.goto('/');
-
-    await expect(page.locator('[data-testid="cash-flow-bar"]')).toBeVisible();
+    // The chart area is a canvas element rendered by Chart.js inside the card
+    const card = page.locator('[data-testid="cash-flow-card"]');
+    await expect(card).toBeVisible();
+    // Chart canvas or empty state div must exist within the card
+    const chartContent = card.locator('canvas, div[style*="height"]').first();
+    await expect(chartContent).toBeVisible();
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Spending Chart
+// Spend by Category Card
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Spending Chart', () => {
-  test('should render the spending chart with heading', async ({ page }) => {
+  test('should render the spend by category card', async ({ page }) => {
     await page.goto('/');
 
     const chart = page.locator('[data-testid="spending-chart"]');
     await expect(chart).toBeVisible();
-    await expect(chart.locator('h3')).toContainText('Spending by Category');
+    await expect(chart.getByText('Spend by Category', { exact: true })).toBeVisible();
   });
 
-  test('should show Monthly bills label or empty state', async ({ page }) => {
+  test('should show This period subtitle or chart content', async ({ page }) => {
     await page.goto('/');
 
     const chart = page.locator('[data-testid="spending-chart"]');
-    const subtitle = chart.getByText('Monthly bills', { exact: true });
-    const emptyState = chart.getByText('No bill data yet.', { exact: true });
-    await expect(subtitle.or(emptyState).first()).toBeVisible();
+    await expect(chart.getByText('This period', { exact: true })).toBeVisible();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Budget & Recent Panels (bottom row)
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('Bottom row panels', () => {
+  test('should render a Budget panel with a View link', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.getByText('Budget', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View →' })).toBeVisible();
+  });
+
+  test('should render a Recent transactions panel', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.getByText('Recent', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'All →' })).toBeVisible();
   });
 });
 
