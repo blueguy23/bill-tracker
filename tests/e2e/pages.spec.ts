@@ -35,13 +35,13 @@ test.describe('Recurring Bills Page (/recurring)', () => {
 
       await expect(page.locator('aside')).toBeVisible();
       await expect(page.locator('aside nav a', { hasText: 'Dashboard' })).toBeVisible();
-      await expect(page.locator('aside nav a', { hasText: 'Recurring' })).toBeVisible();
+      await expect(page.locator('aside nav a', { hasText: 'Recurring Bills' })).toBeVisible();
     });
 
     test('should mark Recurring link as active in sidebar', async ({ page }) => {
       await page.goto('/recurring');
 
-      const recurringLink = page.locator('aside nav a', { hasText: 'Recurring' });
+      const recurringLink = page.locator('aside nav a', { hasText: 'Recurring Bills' });
       await expect(recurringLink).toBeVisible();
       await expect(recurringLink).toHaveAttribute('aria-current', 'page');
     });
@@ -444,7 +444,7 @@ test.describe('Credit Health Page (/credit)', () => {
 test.describe('Active Navigation State', () => {
   const routes = [
     { path: '/', label: 'Dashboard' },
-    { path: '/recurring', label: 'Recurring' },
+    { path: '/recurring', label: 'Recurring Bills' },
     { path: '/budget', label: 'Budget' },
     { path: '/credit', label: 'Credit Health' },
   ];
