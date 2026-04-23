@@ -20,6 +20,9 @@ export async function PATCH(
   if (typeof notes !== 'string' && notes !== null && notes !== undefined) {
     return NextResponse.json({ error: 'notes must be a string or null' }, { status: 400 });
   }
+  if (typeof notes === 'string' && notes.length > 2000) {
+    return NextResponse.json({ error: 'notes must be 2000 characters or fewer' }, { status: 400 });
+  }
 
   const db = await getDb();
   const updated = await setTransactionNotes(db, id, (notes as string | null | undefined) ?? '');

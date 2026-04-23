@@ -19,22 +19,26 @@ const ratelimit =
 export default auth(async (req) => {
   const isLoggedIn = !!req.auth;
   const isLoginPage = req.nextUrl.pathname === '/login';
+  const isLoginCallback = req.nextUrl.pathname === '/api/auth/callback/credentials';
 
-  if (!isLoggedIn && !isLoginPage) {
+  // Rate limit all login attempts — both the form POST and the direct callback endpoint
+  if (ratelimit && req.method === 'POST' && (isLoginPage || isLoginCallback)) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous';
+    const { success } = await ratelimit.limit(ip);
+    if (!success) {
+      if (isLoginCallback) {
+        return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
+      }
+      return NextResponse.redirect(new URL('/login?error=rate-limited', req.nextUrl.origin));
+    }
+  }
+
+  if (!isLoggedIn && !isLoginPage && !isLoginCallback) {
     return NextResponse.redirect(new URL('/login', req.nextUrl.origin));
   }
 
   if (isLoggedIn && isLoginPage) {
     return NextResponse.redirect(new URL('/', req.nextUrl.origin));
-  }
-
-  // Rate limit login attempts — 5 per 15 minutes per IP
-  if (ratelimit && req.method === 'POST' && isLoginPage) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'anonymous';
-    const { success } = await ratelimit.limit(ip);
-    if (!success) {
-      return NextResponse.redirect(new URL('/login?error=rate-limited', req.nextUrl.origin));
-    }
   }
 
   // Demo users are read-only — block all mutating API calls
@@ -48,6 +52,8 @@ export default auth(async (req) => {
 
 export const config = {
   matcher: [
+    // Explicitly include the credentials callback so rate limiting applies to direct API calls
+    '/api/auth/callback/credentials',
     // Protect everything except NextAuth internals, static assets, and the health endpoint
     '/((?!api/auth|api/v1/health|_next/static|_next/image|favicon.ico).*)',
   ],
