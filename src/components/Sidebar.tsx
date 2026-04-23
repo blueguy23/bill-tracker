@@ -2,266 +2,261 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-// ── Mobile sidebar context ────────────────────────────────────────────────────
-const SidebarContext = createContext<{ open: () => void }>({ open: () => {} });
-export function useSidebarOpen() { return useContext(SidebarContext); }
-
-function IconGrid() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-
-function IconRepeat() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 1l4 4-4 4" />
-      <path d="M3 11V9a4 4 0 014-4h14" />
-      <path d="M7 23l-4-4 4-4" />
-      <path d="M21 13v2a4 4 0 01-4 4H3" />
-    </svg>
-  );
-}
-
-function IconCalendar() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  );
-}
-
-function IconPieChart() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21.21 15.89A10 10 0 118 2.83" />
-      <path d="M22 12A10 10 0 0012 2v10z" />
-    </svg>
-  );
-}
-
-function IconCreditCard() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="4" width="22" height="16" rx="2" />
-      <line x1="1" y1="10" x2="23" y2="10" />
-    </svg>
-  );
-}
-
-function IconRefreshCw() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-    </svg>
-  );
-}
-
-function IconList() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="8" y1="6" x2="21" y2="6" />
-      <line x1="8" y1="12" x2="21" y2="12" />
-      <line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" />
-      <line x1="3" y1="12" x2="3.01" y2="12" />
-      <line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  );
-}
-
-function IconSettings() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-    </svg>
-  );
-}
+const NAV_SECTIONS = [
+  { label: 'Overview', items: [
+    { href: '/',              icon: '▦',  label: 'Dashboard' },
+    { href: '/transactions',  icon: '↕',  label: 'Transactions' },
+    { href: '/recurring',     icon: '↺',  label: 'Recurring Bills' },
+  ]},
+  { label: 'Planning', items: [
+    { href: '/budget',        icon: '◎',  label: 'Budget' },
+    { href: '/goals',         icon: '◈',  label: 'Goals' },
+    { href: '/subscriptions', icon: '⟳',  label: 'Subscriptions' },
+  ]},
+  { label: 'Insights', items: [
+    { href: '/credit',        icon: '◇',  label: 'Credit Health' },
+    { href: '/settings',      icon: '⚙',  label: 'Settings' },
+  ]},
+];
 
 function formatLastSync(iso: string | null): string {
   if (!iso) return 'Never synced';
   const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (diffMin < 1) return 'Just now';
   if (diffMin < 60) return `${diffMin}m ago`;
-  const hours = Math.floor(diffMin / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  const h = Math.floor(diffMin / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 type SyncState = 'idle' | 'syncing' | 'done' | 'error' | 'quota';
 
 interface NavItemProps {
   href: string;
-  icon: React.ReactNode;
+  icon: string;
   label: string;
-  active?: boolean;
-  disabled?: boolean;
+  active: boolean;
+  hasAlert?: boolean;
+  collapsed: boolean;
 }
 
-function NavItem({ href, icon, label, active, disabled }: NavItemProps) {
-  const base = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full';
-  if (disabled) {
-    return (
-      <div className={`${base} text-zinc-700 cursor-not-allowed`}>
-        {icon}<span>{label}</span>
-      </div>
-    );
-  }
+function NavItem({ href, icon, label, active, hasAlert, collapsed }: NavItemProps) {
+  const [hov, setHov] = useState(false);
   return (
     <Link
       href={href}
-      className={`${base} ${active ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'}`}
+      aria-current={active ? 'page' : undefined}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title={collapsed ? label : undefined}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 9,
+        padding: collapsed ? '9px 12px' : '8px 10px',
+        width: '100%', borderRadius: 8,
+        fontSize: 13, fontWeight: active ? 600 : 500,
+        fontFamily: 'var(--sans)',
+        color: active ? 'var(--text)' : hov ? 'var(--text2)' : 'var(--text2)',
+        background: active ? 'var(--surface)' : hov ? 'rgba(237,237,245,0.04)' : 'transparent',
+        textDecoration: 'none', transition: 'all .1s',
+        borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
+        marginBottom: 2,
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        boxSizing: 'border-box',
+      }}
     >
-      {icon}<span>{label}</span>
+      <span style={{ fontSize: 14, opacity: active ? 1 : 0.65, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
+      {!collapsed && <span style={{ flex: 1 }}>{label}</span>}
+      {!collapsed && hasAlert && (
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+      )}
+      {!collapsed && active && !hasAlert && (
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+      )}
     </Link>
   );
 }
 
-interface SidebarProps {
-  isOpen?: boolean;
-  onClose?: () => void;
-}
+interface SidebarProps { isOpen?: boolean; onClose?: () => void; collapsed?: boolean; onCollapseChange?: (v: boolean) => void; }
 
-export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseChange }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [syncState, setSyncState] = useState<SyncState>('idle');
+  const router   = useRouter();
+  const [syncState, setSyncState]   = useState<SyncState>('idle');
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [hasUnknownAccounts, setHasUnknownAccounts] = useState(false);
+  const [errorMsg, setErrorMsg]     = useState<string | null>(null);
+  const [hasUnknown, setHasUnknown] = useState(false);
+  const [netWorth, setNetWorth]     = useState<number>(0);
+  const [accountCount, setAccountCount] = useState<number>(0);
+  const [mtdChange, setMtdChange]   = useState<number | null>(null);
 
   const fetchStatus = useCallback(() => {
-    fetch('/api/v1/sync/status')
-      .then((r) => r.json())
-      .then((data) => setLastSyncAt(data.lastSyncAt ?? null))
-      .catch(() => {});
+    fetch('/api/v1/sync/status').then(r => r.json()).then(d => setLastSyncAt(d.lastSyncAt ?? null)).catch(() => {});
   }, []);
 
   useEffect(() => {
     fetchStatus();
     fetch('/api/v1/accounts')
-      .then((r) => r.json() as Promise<{ accounts: { orgName: string }[] }>)
-      .then((d) => setHasUnknownAccounts((d.accounts ?? []).some((a) => a.orgName === 'Unknown')))
+      .then(r => r.json() as Promise<{ accounts: { orgName: string; balance?: string | number }[] }>)
+      .then(d => {
+        const accts = d.accounts ?? [];
+        setHasUnknown(accts.some((a) => a.orgName === 'Unknown'));
+        setAccountCount(accts.length);
+        setNetWorth(accts.reduce((sum, a) => sum + (Number(a.balance) || 0), 0));
+      })
+      .catch(() => {});
+    fetch('/api/v1/transactions/cash-flow-month')
+      .then(r => r.json())
+      .then(d => setMtdChange(typeof d.net === 'number' ? d.net : null))
       .catch(() => {});
   }, [fetchStatus]);
 
-  const PREFETCH_ROUTES = ['/', '/recurring', '/summary', '/transactions', '/budget', '/subscriptions', '/credit', '/settings'];
-  useEffect(() => {
-    PREFETCH_ROUTES.forEach((route) => router.prefetch(route));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router]);
+  const PREFETCH = ['/', '/recurring', '/transactions', '/budget', '/goals', '/subscriptions', '/credit', '/settings'];
+  useEffect(() => { PREFETCH.forEach(r => router.prefetch(r)); }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
     if (syncState === 'syncing') return;
-    setSyncState('syncing');
-    setErrorMsg(null);
+    setSyncState('syncing'); setErrorMsg(null);
     try {
       const r = await fetch('/api/v1/sync', { method: 'POST' });
-      if (r.ok) {
-        setSyncState('done');
-        setLastSyncAt(new Date().toISOString());
-        router.refresh();
-        setTimeout(() => setSyncState('idle'), 3000);
-      } else if (r.status === 429) {
-        setSyncState('quota');
-        setErrorMsg('Quota reached');
-        setTimeout(() => setSyncState('idle'), 5000);
-      } else {
-        setSyncState('error');
-        setErrorMsg('Sync failed');
-        setTimeout(() => setSyncState('idle'), 5000);
-      }
-    } catch {
-      setSyncState('error');
-      setErrorMsg('Network error');
-      setTimeout(() => setSyncState('idle'), 5000);
-    }
+      if (r.ok) { setSyncState('done'); setLastSyncAt(new Date().toISOString()); router.refresh(); setTimeout(() => setSyncState('idle'), 3000); }
+      else if (r.status === 429) { setSyncState('quota'); setErrorMsg('Quota reached'); setTimeout(() => setSyncState('idle'), 5000); }
+      else { setSyncState('error'); setErrorMsg('Sync failed'); setTimeout(() => setSyncState('idle'), 5000); }
+    } catch { setSyncState('error'); setErrorMsg('Network error'); setTimeout(() => setSyncState('idle'), 5000); }
   }
 
-  const syncLabel =
-    syncState === 'syncing' ? 'Syncing…' :
-    syncState === 'done'    ? 'Synced!' :
-    syncState === 'quota'   ? 'Quota reached' :
-    syncState === 'error'   ? (errorMsg ?? 'Error') :
-    'Sync Now';
+  const syncLabel = syncState === 'syncing' ? 'SYNCING…' : syncState === 'done' ? '✓ SYNCED' : syncState === 'quota' ? 'QUOTA' : syncState === 'error' ? (errorMsg?.toUpperCase() ?? 'ERROR') : 'SYNC NOW';
+  const syncColor = syncState === 'done' ? 'var(--green)' : (syncState === 'error' || syncState === 'quota') ? 'var(--red)' : syncState === 'syncing' ? 'var(--accent)' : 'var(--text3)';
 
-  const syncColor =
-    syncState === 'done'  ? 'text-green-400' :
-    syncState === 'error' || syncState === 'quota' ? 'text-red-400' :
-    syncState === 'syncing' ? 'text-cyan-400' :
-    'text-zinc-400 hover:text-zinc-200';
+  const w = collapsed ? 64 : 224;
 
   return (
     <>
-      {/* Mobile backdrop */}
       {onClose && (
         <div
-          className={`fixed inset-0 z-40 bg-black/60 sm:hidden transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           onClick={onClose}
+          style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,.6)', display: isOpen ? 'block' : 'none' }}
+          className="sm:hidden"
         />
       )}
-      <aside className={`
-        w-56 shrink-0 flex flex-col min-h-screen border-r border-white/[0.06] bg-zinc-950
-        sm:relative sm:translate-x-0 sm:opacity-100
-        ${onClose ? 'fixed inset-y-0 left-0 z-50 transition-transform duration-200 sm:static' : ''}
-        ${onClose && !isOpen ? '-translate-x-full sm:translate-x-0' : 'translate-x-0'}
-      `}>
-      <div className="px-4 py-5 border-b border-white/[0.06]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
-            <span className="text-white text-xs font-bold leading-none">B</span>
+      <aside
+        className="sidebar-overlay"
+        style={{
+          width: w, minHeight: '100vh',
+          background: 'linear-gradient(180deg, #0f0f14 0%, var(--bg) 100%)',
+          borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', flexShrink: 0,
+          position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50,
+          transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'width .2s cubic-bezier(.4,0,.2,1), transform .2s',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Brand */}
+        <div style={{ padding: collapsed ? '18px 16px' : '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+            background: 'linear-gradient(145deg, oklch(0.22 0.08 265) 0%, oklch(0.14 0.06 285) 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 14px oklch(0.68 0.22 265 / 0.28), inset 0 1px 0 rgba(255,255,255,0.08)',
+            border: '1px solid oklch(0.68 0.22 265 / 0.3)',
+          }}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="5" y="2" width="11" height="14" rx="2" fill="oklch(0.68 0.22 265)" opacity="0.25" />
+              <rect x="3" y="4" width="11" height="14" rx="2" fill="oklch(0.68 0.22 265)" opacity="0.5" />
+              <rect x="3" y="4" width="11" height="14" rx="2" fill="none" stroke="oklch(0.78 0.22 265)" strokeWidth="1" />
+              <path d="M5.5 14.5 L7.5 11.5 L9.5 12.8 L12 9" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+              <circle cx="12" cy="9" r="1.2" fill="white" opacity="0.9" />
+            </svg>
           </div>
-          <span className="text-sm font-semibold text-white">Bill Tracker</span>
-        </div>
-      </div>
-
-      <nav className="flex-1 p-3 space-y-0.5">
-        <p className="px-3 pt-2 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Overview</p>
-        <NavItem href="/" icon={<IconGrid />} label="Dashboard" active={pathname === '/'} />
-        <NavItem href="/recurring" icon={<IconRepeat />} label="Recurring" active={pathname === '/recurring'} />
-        <NavItem href="/summary" icon={<IconCalendar />} label="Summary" active={pathname === '/summary'} />
-        <NavItem href="/transactions" icon={<IconList />} label="Transactions" active={pathname === '/transactions'} />
-        <NavItem href="/budget" icon={<IconPieChart />} label="Budget" active={pathname === '/budget'} />
-        <NavItem href="/subscriptions" icon={<IconRefreshCw />} label="Subscriptions" active={pathname === '/subscriptions'} />
-        <NavItem href="/credit" icon={<IconCreditCard />} label="Credit Health" active={pathname === '/credit'} />
-        <p className="px-3 pt-4 pb-1.5 text-[10px] font-semibold text-zinc-600 uppercase tracking-widest">Account</p>
-        <Link
-          href="/settings"
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${pathname === '/settings' ? 'bg-white/[0.08] text-white' : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'}`}
-        >
-          <IconSettings />
-          <span className="flex-1">Settings</span>
-          {hasUnknownAccounts && (
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Some accounts show as Unknown" />
+          {!collapsed && (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--sans)', letterSpacing: '-.03em' }}>Folio</div>
+              <div style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: '.1em', fontFamily: 'var(--mono)', marginTop: 1 }}>PERSONAL FINANCE</div>
+            </div>
           )}
-        </Link>
-      </nav>
+          {!collapsed && onCollapseChange && (
+            <button onClick={() => onCollapseChange(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 2 }}>‹</button>
+          )}
+        </div>
 
-      <div className="p-3 border-t border-white/[0.06] space-y-1">
-        <button
-          onClick={handleSync}
-          disabled={syncState === 'syncing'}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full ${syncColor} hover:bg-white/[0.04] disabled:cursor-not-allowed`}
-        >
-          <span className={syncState === 'syncing' ? 'animate-spin' : ''}>
-            <IconRefreshCw />
-          </span>
-          <span>{syncLabel}</span>
-        </button>
-        <p className="px-3 text-[10px] text-zinc-600">{formatLastSync(lastSyncAt)}</p>
-      </div>
-    </aside>
+        {collapsed && onCollapseChange && (
+          <button onClick={() => onCollapseChange(false)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: '8px 20px', fontSize: 14 }}>›</button>
+        )}
+
+        {/* Net Worth */}
+        {!collapsed && (
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', fontFamily: 'var(--mono)', marginBottom: 4 }}>Net Worth</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 400, color: 'var(--text)', letterSpacing: '-.01em', lineHeight: 1.2 }}>
+              {netWorth > 0 ? USD0.format(netWorth) : '—'}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4, fontFamily: 'var(--mono)' }}>
+              {accountCount} linked account{accountCount !== 1 ? 's' : ''}
+            </div>
+            {mtdChange !== null && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, fontFamily: 'var(--mono)', background: mtdChange >= 0 ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)', color: mtdChange >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                {mtdChange >= 0 ? '↑' : '↓'} {mtdChange >= 0 ? '+' : ''}{USD0.format(mtdChange)} MTD
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', overflowY: 'auto' }}>
+          {NAV_SECTIONS.map(section => (
+            <div key={section.label}>
+              {!collapsed && (
+                <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', padding: '12px 8px 5px', fontWeight: 600, fontFamily: 'var(--mono)' }}>
+                  {section.label}
+                </div>
+              )}
+              {section.items.map(item => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
+                  active={pathname === item.href}
+                  collapsed={collapsed}
+                  hasAlert={item.href === '/settings' && hasUnknown}
+                />
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer sync */}
+        <div style={{ padding: collapsed ? '12px 8px' : '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+          <button
+            onClick={handleSync}
+            disabled={syncState === 'syncing'}
+            title="Sync accounts"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+              gap: 8, width: '100%', padding: collapsed ? '8px' : '8px 10px',
+              borderRadius: 8, border: '1px solid var(--border)',
+              background: syncState === 'syncing' ? 'var(--accent-a)' : 'var(--raised)',
+              cursor: syncState === 'syncing' ? 'not-allowed' : 'pointer',
+              fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600,
+              color: syncColor,
+              transition: 'all .15s', letterSpacing: '.04em',
+            }}
+          >
+            <span style={{ display: 'inline-block', animation: syncState === 'syncing' ? 'btSpin 1s linear infinite' : 'none', fontSize: 12 }}>↻</span>
+            {!collapsed && syncLabel}
+          </button>
+          {!collapsed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', animation: 'btPulse 2s infinite', flexShrink: 0 }} />
+              LIVE · {formatLastSync(lastSyncAt).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </aside>
     </>
   );
 }

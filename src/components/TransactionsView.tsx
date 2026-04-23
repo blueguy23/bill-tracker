@@ -1,11 +1,209 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import type { Account, Transaction } from '@/lib/simplefin/types';
+import { CATEGORY_LABELS, CATEGORY_COLORS, TRANSACTION_CATEGORIES } from '@/lib/categorization/types';
+import type { TransactionCategory } from '@/lib/categorization/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+interface CategoryBadgeProps {
+  txnId: string;
+  category: TransactionCategory | undefined;
+  onChanged: (txnId: string, category: TransactionCategory) => void;
+}
+
+function CategoryBadge({ txnId, category, onChanged }: CategoryBadgeProps) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const colors = category ? CATEGORY_COLORS[category] : CATEGORY_COLORS.other;
+  const label = category ? CATEGORY_LABELS[category] : 'Uncategorized';
+
+  async function pick(next: TransactionCategory) {
+    setOpen(false);
+    if (next === category) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/v1/transactions/${txnId}/category`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: next }),
+      });
+      onChanged(txnId, next);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={saving}
+        data-testid={`category-badge-${txnId}`}
+        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full transition-opacity ${colors.bg} ${colors.text} ${saving ? 'opacity-50' : 'hover:opacity-80 cursor-pointer'}`}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="absolute z-10 left-0 top-5 w-44 rounded-lg border border-white/[0.1] bg-zinc-900 shadow-xl py-1">
+          {TRANSACTION_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => void pick(cat)}
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-white/[0.05] transition-colors ${cat === category ? 'text-white font-semibold' : 'text-zinc-400'}`}
+            >
+              {CATEGORY_LABELS[cat]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Tags & Notes inline editor ────────────────────────────────────────────────
+
+interface TagsRowProps {
+  txnId: string;
+  tags: string[] | undefined;
+  notes: string | null | undefined;
+  onTagsChanged: (txnId: string, tags: string[]) => void;
+  onNotesChanged: (txnId: string, notes: string | null) => void;
+}
+
+function TagsRow({ txnId, tags = [], notes, onTagsChanged, onNotesChanged }: TagsRowProps) {
+  const [addingTag, setAddingTag] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesInput, setNotesInput] = useState(notes ?? '');
+  const [expanded, setExpanded] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasData = tags.length > 0 || !!notes;
+  const showControls = hasData || expanded;
+
+  async function submitTag() {
+    const val = tagInput.trim().toLowerCase();
+    if (!val || tags.includes(val)) { setAddingTag(false); setTagInput(''); return; }
+    const next = [...tags, val];
+    setAddingTag(false);
+    setTagInput('');
+    await fetch(`/api/v1/transactions/${txnId}/tags`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: next }),
+    });
+    onTagsChanged(txnId, next);
+  }
+
+  async function removeTag(tag: string) {
+    const next = tags.filter((t) => t !== tag);
+    await fetch(`/api/v1/transactions/${txnId}/tags`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: next }),
+    });
+    onTagsChanged(txnId, next);
+  }
+
+  async function saveNotes() {
+    setEditingNotes(false);
+    await fetch(`/api/v1/transactions/${txnId}/notes`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: notesInput || null }),
+    });
+    onNotesChanged(txnId, notesInput || null);
+  }
+
+  return (
+    <div className="mt-1" data-testid={`tags-row-${txnId}`}>
+      {showControls ? (
+        <div className="flex flex-wrap items-center gap-1">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="group inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] transition-colors"
+              data-testid={`tag-${txnId}-${tag}`}
+            >
+              #{tag}
+              <button
+                onClick={() => void removeTag(tag)}
+                className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-opacity leading-none"
+                aria-label={`Remove tag ${tag}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+
+          {addingTag ? (
+            <input
+              ref={inputRef}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void submitTag();
+                if (e.key === 'Escape') { setAddingTag(false); setTagInput(''); }
+              }}
+              onBlur={() => void submitTag()}
+              autoFocus
+              placeholder="tag name"
+              maxLength={50}
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-20"
+            />
+          ) : tags.length < 10 && (
+            <button
+              onClick={() => setAddingTag(true)}
+              data-testid={`add-tag-btn-${txnId}`}
+              className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08] transition-colors"
+            >
+              + tag
+            </button>
+          )}
+
+          {editingNotes ? (
+            <input
+              value={notesInput}
+              onChange={(e) => setNotesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void saveNotes();
+                if (e.key === 'Escape') { setEditingNotes(false); setNotesInput(notes ?? ''); }
+              }}
+              onBlur={() => void saveNotes()}
+              autoFocus
+              placeholder="add a note…"
+              maxLength={500}
+              className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-zinc-300 placeholder-zinc-600 border border-white/[0.12] focus:outline-none focus:border-blue-500/50 w-40"
+              data-testid={`notes-input-${txnId}`}
+            />
+          ) : (
+            <button
+              onClick={() => { setNotesInput(notes ?? ''); setEditingNotes(true); }}
+              data-testid={`notes-btn-${txnId}`}
+              className={`text-[10px] px-1.5 py-0.5 rounded-full transition-colors ${notes ? 'bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1]' : 'bg-white/[0.04] text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.08]'}`}
+            >
+              {notes ? `"${notes.slice(0, 20)}${notes.length > 20 ? '…' : ''}"` : '+ note'}
+            </button>
+          )}
+        </div>
+      ) : (
+        // Row has no tags/notes — show a faint "+" only on row hover via CSS group
+        <button
+          onClick={() => setExpanded(true)}
+          data-testid={`add-tag-btn-${txnId}`}
+          className="text-[10px] px-1.5 py-0.5 rounded-full text-zinc-700 hover:text-zinc-500 hover:bg-white/[0.06] transition-colors opacity-0 group-hover/row:opacity-100"
+        >
+          + tag
+        </button>
+      )}
+    </div>
+  );
+}
 
 function formatDate(d: Date | string): string {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -64,21 +262,43 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [recategorizing, setRecategorizing] = useState(false);
   const [accountFilter, setAccountFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
   const [search, setSearch] = useState('');
   const [hideTransfers, setHideTransfers] = useState(false);
+  const [catFilter, setCatFilter] = useState<TransactionCategory | 'all'>('all');
+  const [sort, setSort] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
+
+  const handleCategoryChanged = useCallback((txnId: string, category: TransactionCategory) => {
+    setTransactions((prev) =>
+      prev.map((t) => (t._id === txnId ? { ...t, category, categorySource: 'user' } : t)),
+    );
+  }, []);
+
+  const handleTagsChanged = useCallback((txnId: string, tags: string[]) => {
+    setTransactions((prev) => prev.map((t) => (t._id === txnId ? { ...t, tags } : t)));
+  }, []);
+
+  const handleNotesChanged = useCallback((txnId: string, notes: string | null) => {
+    setTransactions((prev) => prev.map((t) => (t._id === txnId ? { ...t, notes } : t)));
+  }, []);
 
   const accountMap = new Map(accounts.map((a) => [a._id, a]));
 
   const displayed = useMemo(() => {
     const q = search.toLowerCase();
-    return transactions.filter((t) => {
+    let list = transactions.filter((t) => {
       if (hideTransfers && isTransfer(t.description)) return false;
       if (q && !t.description.toLowerCase().includes(q)) return false;
+      if (catFilter !== 'all' && t.category !== catFilter) return false;
       return true;
     });
-  }, [transactions, search, hideTransfers]);
+    if (sort === 'date-asc') list = [...list].sort((a, b) => new Date(a.posted).getTime() - new Date(b.posted).getTime());
+    else if (sort === 'amount-desc') list = [...list].sort((a, b) => b.amount - a.amount);
+    else if (sort === 'amount-asc') list = [...list].sort((a, b) => a.amount - b.amount);
+    return list;
+  }, [transactions, search, hideTransfers, catFilter, sort]);
 
   const summary = useMemo(() => {
     let totalIn = 0;
@@ -124,6 +344,38 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
     setLoadingMore(false);
   }
 
+  async function handleRecategorize() {
+    setRecategorizing(true);
+    try {
+      const res = await fetch('/api/v1/transactions/recategorize', { method: 'POST' });
+      if (res.ok) await fetchTransactions(accountFilter, dateRange);
+    } finally {
+      setRecategorizing(false);
+    }
+  }
+
+  async function handleExport() {
+    const bounds = dateRangeBounds(dateRange);
+    const params = new URLSearchParams();
+    if (bounds.startDate) params.set('startDate', bounds.startDate);
+    if (bounds.endDate) params.set('endDate', bounds.endDate);
+    if (accountFilter !== 'all') params.set('accountId', accountFilter);
+
+    const res = await fetch(`/api/v1/export?${params.toString()}`);
+    if (!res.ok) return;
+
+    const blob = await res.blob();
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const filename = match?.[1] ?? 'transactions.csv';
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
   const DATE_RANGE_LABELS: Record<DateRange, string> = {
     'this-month': 'This Month',
     'last-month': 'Last Month',
@@ -132,159 +384,149 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
     'all': 'All Time',
   };
 
+  const inputStyle: React.CSSProperties = {
+    background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8,
+    padding: '8px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--sans)',
+    outline: 'none',
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search transactions…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-zinc-900 border border-white/[0.08] rounded-lg pl-9 pr-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-blue-500/50"
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Filter bar row 1: search + sort + account + export */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: '1 1 220px' }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: 13, pointerEvents: 'none' }}>⌕</span>
+          <input
+            type="text" placeholder="Search transactions…" value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ ...inputStyle, width: '100%', paddingLeft: 32 }}
+          />
+        </div>
+        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} style={{ ...inputStyle, cursor: 'pointer' }}>
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="amount-desc">Largest first</option>
+          <option value="amount-asc">Smallest first</option>
+        </select>
+        <select value={accountFilter} onChange={(e) => handleFilterChange(e.target.value, dateRange)} style={{ ...inputStyle, cursor: 'pointer' }}>
+          <option value="all">All Accounts</option>
+          {accounts.map((a) => <option key={a._id} value={a._id}>{a.orgName} — {a.name}</option>)}
+        </select>
+        {!loading && displayed.length > 0 && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontSize: 12, fontFamily: 'var(--mono)', fontWeight: 600 }}>
+            <span style={{ color: 'var(--green)' }}>+{USD.format(summary.totalIn)}</span>
+            <span style={{ color: 'var(--red)' }}>−{USD.format(summary.totalOut)}</span>
+          </div>
+        )}
+        <button
+          onClick={() => void handleRecategorize()}
+          disabled={recategorizing}
+          title="Re-run auto-categorization on all transactions"
+          style={{ ...inputStyle, cursor: recategorizing ? 'not-allowed' : 'pointer', fontSize: 11, fontFamily: 'var(--mono)', letterSpacing: '.04em', opacity: recategorizing ? 0.5 : 1 }}
+        >
+          {recategorizing ? 'CATEGORIZING…' : 'AUTO-CATEGORIZE'}
+        </button>
+        <button onClick={() => void handleExport()} data-testid="export-btn" style={{ ...inputStyle, cursor: 'pointer', fontSize: 11, fontFamily: 'var(--mono)', letterSpacing: '.04em', marginLeft: 'auto' }}>
+          EXPORT CSV
+        </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <select
-          value={accountFilter}
-          onChange={(e) => handleFilterChange(e.target.value, dateRange)}
-          className="bg-zinc-900 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500/50"
-        >
-          <option value="all">All Accounts</option>
-          {accounts.map((a) => (
-            <option key={a._id} value={a._id}>
-              {a.orgName} — {a.name}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex rounded-lg border border-white/[0.08] overflow-hidden">
+      {/* Filter bar row 2: date range tabs + hide transfers */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
           {(Object.keys(DATE_RANGE_LABELS) as DateRange[]).map((range) => (
-            <button
-              key={range}
-              onClick={() => handleFilterChange(accountFilter, range)}
-              className={`px-3 py-2 text-xs font-medium transition-colors ${
-                dateRange === range
-                  ? 'bg-white/[0.1] text-white'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]'
-              }`}
-            >
+            <button key={range} onClick={() => handleFilterChange(accountFilter, range)} style={{
+              padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+              fontFamily: 'var(--mono)', transition: 'all .12s',
+              background: dateRange === range ? 'var(--surface)' : 'transparent',
+              color: dateRange === range ? 'var(--text)' : 'var(--text3)',
+            }}>
               {DATE_RANGE_LABELS[range]}
             </button>
           ))}
         </div>
-
-        <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
-          <input
-            type="checkbox"
-            checked={hideTransfers}
-            onChange={(e) => setHideTransfers(e.target.checked)}
-            className="rounded border-white/[0.2] bg-zinc-800 accent-blue-500"
-          />
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>
+          <input type="checkbox" checked={hideTransfers} onChange={(e) => setHideTransfers(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
           Hide Transfers
         </label>
       </div>
 
-      {/* Summary bar */}
-      {!loading && displayed.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-zinc-500 border-t border-white/[0.06] pt-3">
-          <span>In: <span className="text-emerald-400 font-medium">{USD.format(summary.totalIn)}</span></span>
-          <span>Out: <span className="text-red-400 font-medium">{USD.format(summary.totalOut)}</span></span>
-          <span>Net: <span className={`font-medium ${summary.net >= 0 ? 'text-blue-400' : 'text-orange-400'}`}>
-            {summary.net >= 0 ? '+' : ''}{USD.format(summary.net)}
-          </span></span>
-          <span className="ml-auto">{displayed.length} transaction{displayed.length !== 1 ? 's' : ''}</span>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="rounded-xl border border-white/[0.06] overflow-hidden">
-        {loading ? (
-          <div className="py-16 text-center text-zinc-600 text-sm">Loading…</div>
-        ) : displayed.length === 0 ? (
-          <div className="py-16 text-center text-zinc-600 text-sm">
-            {search || hideTransfers ? 'No matching transactions' : 'No transactions found'}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.06] text-left">
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider w-32">Date</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider">Description</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider hidden md:table-cell">Account</th>
-                <th className="px-4 py-3 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right w-32">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/[0.03]">
-              {displayed.map((txn) => {
-                const acct = accountMap.get(txn.accountId);
-                const transfer = isTransfer(txn.description);
-                return (
-                  <tr key={txn._id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-zinc-500 text-xs whitespace-nowrap">
-                      {formatDate(txn.posted)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-zinc-200">{txn.description}</span>
-                        {transfer && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 shrink-0">
-                            Transfer
-                          </span>
-                        )}
-                        {txn.pending && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 shrink-0">
-                            Pending
-                          </span>
-                        )}
-                      </div>
-                      {txn.memo && (
-                        <p className="text-xs text-zinc-600 mt-0.5">{txn.memo}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      {acct ? (
-                        <div>
-                          <p className="text-zinc-400 text-xs">{acct.orgName}</p>
-                          <p className="text-zinc-600 text-[11px]">{acct.name}</p>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-600 text-xs">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap font-medium">
-                      <span className={txn.amount < 0 ? 'text-red-400' : 'text-emerald-400'}>
-                        {USD.format(Math.abs(txn.amount))}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+      {/* Category pills */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {(['all', ...TRANSACTION_CATEGORIES] as (TransactionCategory | 'all')[]).map((cat) => {
+          const active = catFilter === cat;
+          const label  = cat === 'all' ? 'All' : CATEGORY_LABELS[cat];
+          return (
+            <button key={cat} onClick={() => setCatFilter(cat)} style={{
+              padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontSize: 11, fontWeight: 600, fontFamily: 'var(--mono)', letterSpacing: '.04em',
+              background: active ? 'var(--accent)' : 'var(--raised)',
+              color: active ? '#fff' : 'var(--text3)',
+              transition: 'all .12s',
+            }}>
+              {label}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Load More */}
+      {/* Transaction list */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text3)', fontSize: 13, fontFamily: 'var(--sans)' }}>Loading…</div>
+        ) : displayed.length === 0 ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text3)', fontSize: 13, fontFamily: 'var(--sans)' }}>
+            {search || hideTransfers || catFilter !== 'all' ? 'No matching transactions' : 'No transactions found'}
+          </div>
+        ) : displayed.map((txn) => {
+          const acct     = accountMap.get(txn.accountId);
+          const transfer = isTransfer(txn.description);
+          return (
+            <div key={txn._id} className="group/row" data-testid={`txn-row-${txn._id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: '1px solid var(--border)', transition: 'background .1s' }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(237,237,245,0.02)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              {/* Date */}
+              <div style={{ width: 64, flexShrink: 0, fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+                {new Date(txn.posted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
+              </div>
+              {/* Desc + account */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{txn.description}</span>
+                  {transfer && txn.category !== 'transfer' && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(59,130,246,.12)', color: '#60a5fa', fontFamily: 'var(--mono)', flexShrink: 0 }}>TRANSFER</span>}
+                  {txn.pending && <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4, background: 'rgba(245,158,11,.12)', color: 'var(--gold)', fontFamily: 'var(--mono)', flexShrink: 0 }}>PENDING</span>}
+                  <CategoryBadge txnId={txn._id} category={txn.category} onChanged={handleCategoryChanged} />
+                </div>
+                {acct && (
+                  <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
+                    {acct.orgName.toUpperCase()} · {acct.name}
+                  </div>
+                )}
+                {txn.memo && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{txn.memo}</div>}
+                <TagsRow txnId={txn._id} tags={txn.tags} notes={txn.notes} onTagsChanged={handleTagsChanged} onNotesChanged={handleNotesChanged} />
+              </div>
+              {/* Amount */}
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600, color: txn.amount < 0 ? 'var(--text)' : 'var(--green)', flexShrink: 0, minWidth: 90, textAlign: 'right' }}>
+                {txn.amount >= 0 ? '+' : '−'}{USD.format(Math.abs(txn.amount))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Load more / footer */}
       {hasMore && !loading && (
-        <div className="text-center">
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="px-5 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 border border-white/[0.08] hover:bg-white/[0.04] transition-colors disabled:opacity-50"
-          >
+        <div style={{ textAlign: 'center' }}>
+          <button onClick={handleLoadMore} disabled={loadingMore} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: loadingMore ? 'not-allowed' : 'pointer', fontSize: 13, fontFamily: 'var(--sans)', opacity: loadingMore ? 0.5 : 1 }}>
             {loadingMore ? 'Loading…' : 'Load More'}
           </button>
         </div>
       )}
-
       {!hasMore && displayed.length > 0 && !loading && (
-        <p className="text-center text-xs text-zinc-700">{transactions.length} loaded · {displayed.length} shown</p>
+        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+          {transactions.length} loaded · {displayed.length} shown
+        </div>
       )}
     </div>
   );

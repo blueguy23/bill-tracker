@@ -76,6 +76,12 @@ export interface Transaction {
   memo: string | null;
   pending: boolean;
   importedAt: Date;
+  category?: import('@/lib/categorization/types').TransactionCategory;
+  categorySource?: 'auto' | 'user' | 'trove';
+  merchantName?: string | null;
+  merchantDomain?: string | null;
+  tags?: string[];
+  notes?: string | null;
 }
 
 export interface SyncLog {

@@ -38,40 +38,41 @@ export function NetWorthCard({ accounts }: NetWorthCardProps) {
   const isPositive = totalBalance >= 0;
 
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">Net Worth</h3>
-        <span className={`text-xl font-bold tabular-nums ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="px-4 py-3.5 border-b border-white/[0.06]">
+        <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">Net Worth</p>
+        <span className={`text-2xl font-bold tabular-nums leading-none ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
           {USD.format(totalBalance)}
         </span>
       </div>
-      <div className="divide-y divide-white/[0.03]">
+
+      {/* Account list */}
+      <div className="divide-y divide-white/[0.03] flex-1">
         {accounts.map((a) => (
-          <div key={a._id} className="flex items-center justify-between px-5 py-3 hover:bg-white/[0.02] transition-colors">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="min-w-0">
-                <p className="text-sm text-zinc-200 truncate">{a.orgName}</p>
-                <p className="text-xs text-zinc-500 truncate">{a.name}</p>
-              </div>
+          <div key={a._id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-zinc-300 truncate">{a.orgName}</p>
+              <p className="text-[11px] text-zinc-600 truncate">{a.name}</p>
             </div>
-            <div className="flex items-center gap-3 shrink-0 ml-4">
-              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${TYPE_COLORS[a.accountType] ?? TYPE_COLORS.other}`}>
-                {TYPE_LABELS[a.accountType] ?? 'Other'}
-              </span>
-              <span className={`text-sm font-medium tabular-nums ${a.balance < 0 ? 'text-red-400' : 'text-zinc-200'}`}>
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <span className={`text-xs font-medium tabular-nums ${a.balance < 0 ? 'text-red-400' : 'text-zinc-200'}`}>
                 {USD.format(a.balance)}
+              </span>
+              <span className={`text-[10px] font-medium px-1.5 py-px rounded-full ${TYPE_COLORS[a.accountType] ?? TYPE_COLORS['other']}`}>
+                {TYPE_LABELS[a.accountType] ?? 'Other'}
               </span>
             </div>
           </div>
         ))}
       </div>
-      {accounts.length > 0 && (
-        <div className="px-5 py-2.5 border-t border-white/[0.06]">
-          <p className="text-[11px] text-zinc-600">
-            Last synced {timeAgo(accounts[0]!.lastSyncedAt)}
-          </p>
-        </div>
-      )}
+
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-white/[0.06]">
+        <p className="text-[11px] text-zinc-700">
+          Synced {timeAgo(accounts[0]!.lastSyncedAt)}
+        </p>
+      </div>
     </div>
   );
 }

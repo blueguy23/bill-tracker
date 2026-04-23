@@ -16,32 +16,32 @@ function formatUSD(n: number): string {
 
 export function RecentPaymentsPanel({ payments }: RecentPaymentsPanelProps) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.06]">
-        <p className="text-sm font-semibold text-white">Recent Payments</p>
-        <p className="text-xs text-zinc-500 mt-0.5">Last 30 days</p>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Recent Payments</div>
+        <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)', marginTop: 3 }}>Last 30 days</div>
       </div>
 
       {payments.length === 0 ? (
-        <div className="px-5 py-8 text-center">
-          <p className="text-sm text-zinc-500">No payments in the last 30 days</p>
+        <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+          <div style={{ fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>No payments in the last 30 days</div>
         </div>
       ) : (
-        <ul className="divide-y divide-white/[0.04]">
-          {payments.map((p) => (
-            <li key={p.id} className="px-5 py-3 flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-sm text-white truncate">{p.description}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {payments.map((p, i) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 20px', borderBottom: i < payments.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.description}</div>
+                <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
                   {p.orgName} · {p.accountName} · {formatDate(p.posted)}
-                </p>
+                </div>
               </div>
-              <p className="text-sm font-semibold text-emerald-400 shrink-0">
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)', fontFamily: 'var(--mono)', flexShrink: 0 }}>
                 +{formatUSD(p.amount)}
-              </p>
-            </li>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

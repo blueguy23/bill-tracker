@@ -1,136 +1,111 @@
 'use client';
 
 import type { CreditAdvisorResponse, AZEOCard } from '@/types/creditAdvisor';
-import { UtilizationTrendChart } from './UtilizationTrendChart';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
-function utilizationColor(util: number): string {
-  if (util < 0.10) return 'text-emerald-400';
-  if (util < 0.30) return 'text-green-400';
-  if (util < 0.70) return 'text-amber-400';
-  return 'text-red-400';
-}
-
-function utilizationBg(util: number): string {
-  if (util < 0.10) return 'bg-emerald-500/[0.10]';
-  if (util < 0.30) return 'bg-green-500/[0.10]';
-  if (util < 0.70) return 'bg-amber-500/[0.10]';
-  return 'bg-red-500/[0.10]';
+function utilColor(util: number): string {
+  if (util < 0.10) return 'var(--green)';
+  if (util < 0.30) return '#22c55e';
+  if (util < 0.70) return 'var(--gold)';
+  return 'var(--red)';
 }
 
 function AZEOCardRow({ card }: { card: AZEOCard }) {
-  const pct = `${Math.round(card.currentUtilization * 100)}%`;
+  const pct       = `${Math.round(card.currentUtilization * 100)}%`;
   const targetPct = `${Math.round(card.targetUtilization * 100)}%`;
+  const color     = utilColor(card.currentUtilization);
 
   return (
-    <div className={`rounded-xl border p-4 space-y-3 ${card.alertActive ? 'border-amber-500/40 bg-amber-500/[0.04]' : 'border-white/[0.06] bg-zinc-800/50'}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{card.accountName}</p>
+    <div style={{
+      borderRadius: 10, border: card.alertActive ? '1px solid rgba(245,158,11,.4)' : '1px solid var(--border)',
+      background: card.alertActive ? 'rgba(245,158,11,.04)' : 'var(--raised)',
+      padding: '16px', display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.accountName}</div>
           {card.isAnchor && (
-            <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/[0.12] rounded-full px-2 py-0.5 mt-0.5 inline-block">
-              AZEO Anchor
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'oklch(0.68 0.22 265 / 0.12)', borderRadius: 10, padding: '2px 8px', display: 'inline-block', marginTop: 3, fontFamily: 'var(--mono)' }}>
+              AZEO ANCHOR
             </span>
           )}
         </div>
-        <div className="text-right shrink-0">
-          <p className={`text-lg font-bold tabular-nums ${utilizationColor(card.currentUtilization)}`}>{pct}</p>
-          <p className="text-xs text-zinc-500">{USD.format(card.currentBalance)} / {USD.format(card.creditLimit)}</p>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 17, fontWeight: 700, color }}>{pct}</div>
+          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 1 }}>
+            {USD.format(card.currentBalance)} / {USD.format(card.creditLimit)}
+          </div>
         </div>
       </div>
 
       {card.paydownNeeded > 0 && (
-        <div className={`rounded-lg px-3 py-2 text-xs space-y-1 ${utilizationBg(card.currentUtilization)}`}>
-          <p className="text-zinc-300">
-            Pay <span className="font-semibold text-white">{USD.format(card.paydownNeeded)}</span>
-            {' '}→ report{' '}
-            <span className="font-semibold text-white">{USD.format(card.targetBalance)} ({targetPct})</span>
-          </p>
+        <div style={{ borderRadius: 8, padding: '8px 10px', background: `${color}10`, fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--sans)' }}>
+          Pay <strong style={{ color: 'var(--text)' }}>{USD.format(card.paydownNeeded)}</strong>
+          {' → report '}
+          <strong style={{ color: 'var(--text)' }}>{USD.format(card.targetBalance)} ({targetPct})</strong>
           {!card.isAnchor && (
-            <p className="text-zinc-400">Pay <span className="font-semibold text-white">{USD.format(card.currentBalance)}</span> → report $0 (AZEO target)</p>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>
+              Pay <strong style={{ color: 'var(--text)' }}>{USD.format(card.currentBalance)}</strong> → report $0 (AZEO target)
+            </div>
           )}
         </div>
       )}
 
       {card.paydownNeeded === 0 && (
-        <p className="text-xs text-emerald-400">Already at target ({targetPct}) ✓</p>
+        <div style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>Already at target ({targetPct}) ✓</div>
       )}
 
-      {card.statementClosingDay && (
-        <div className="flex items-center gap-2 text-xs">
-          {card.alertActive ? (
-            <span className="text-amber-400 font-medium">
-              ⚠ Statement closes in {card.daysUntilClose} day{card.daysUntilClose !== 1 ? 's' : ''} — pay now
-            </span>
-          ) : (
-            <span className="text-zinc-500">
-              Statement closes day {card.statementClosingDay}
-              {card.daysUntilClose !== null && ` (${card.daysUntilClose}d away)`}
-            </span>
-          )}
+      {card.statementClosingDay ? (
+        <div style={{ fontSize: 11, fontFamily: 'var(--sans)', color: card.alertActive ? 'var(--gold)' : 'var(--text3)', fontWeight: card.alertActive ? 600 : 400 }}>
+          {card.alertActive
+            ? `⚠ Statement closes in ${card.daysUntilClose} day${card.daysUntilClose !== 1 ? 's' : ''} — pay now`
+            : `Statement closes day ${card.statementClosingDay}${card.daysUntilClose !== null ? ` (${card.daysUntilClose}d away)` : ''}`}
         </div>
-      )}
-
-      {!card.statementClosingDay && (
-        <p className="text-xs text-zinc-600">
-          Set statement closing date in <a href="/settings" className="text-zinc-400 underline underline-offset-2">Settings</a> for close alerts
-        </p>
+      ) : (
+        <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>
+          Set statement closing date in <a href="/settings" style={{ color: 'var(--text2)', textDecoration: 'underline' }}>Settings</a> for close alerts
+        </div>
       )}
     </div>
   );
 }
 
-interface CreditAdvisorPanelProps {
-  data: CreditAdvisorResponse;
-}
-
-export function CreditAdvisorPanel({ data }: CreditAdvisorPanelProps) {
-  const { trend, azeo } = data;
-
-  if (!azeo && trend.length === 0) return null;
+export function CreditAdvisorPanel({ data }: { data: CreditAdvisorResponse }) {
+  const { azeo } = data;
+  if (!azeo) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Utilization trend */}
-      {trend.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-white/[0.06]">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">30-Day Utilization Trend</p>
-          </div>
-          <div className="px-5 py-4">
-            <UtilizationTrendChart data={trend} />
-          </div>
-        </div>
-      )}
-
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* AZEO Plan */}
       {azeo && (
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-white/[0.06] flex items-center justify-between">
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">AZEO Paydown Plan</p>
-              <p className="text-xs text-zinc-600 mt-0.5">
-                All Zero Except One — pay every card to $0 except your highest-limit card (anchor), left at {Math.round(azeo.anchorCard.targetUtilization * 100)}%
-              </p>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', fontFamily: 'var(--mono)', letterSpacing: '.08em' }}>AZEO PAYDOWN PLAN</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)', marginTop: 3 }}>
+                All Zero Except One — pay every card to $0 except your anchor, left at {Math.round(azeo.anchorCard.targetUtilization * 100)}%
+              </div>
             </div>
             {azeo.projectedScore !== null && (
-              <div className="text-right shrink-0 ml-4">
-                <p className="text-xs text-zinc-500">If completed</p>
-                <p className="text-lg font-bold text-emerald-400">{azeo.projectedScore}<span className="text-xs text-zinc-500">/100</span></p>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>If completed</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 17, fontWeight: 700, color: 'var(--green)' }}>
+                  {azeo.projectedScore}<span style={{ fontSize: 11, color: 'var(--text3)' }}>/100</span>
+                </div>
               </div>
             )}
           </div>
-          <div className="p-4 space-y-3">
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {azeo.cards.map((card) => (
               <AZEOCardRow key={card.accountId} card={card} />
             ))}
           </div>
-          <div className="px-5 py-3 border-t border-white/[0.06]">
-            <p className="text-xs text-zinc-600">
-              Projected utilization after AZEO: <span className="text-zinc-400">{Math.round(azeo.projectedOverallUtilization * 100)}%</span>
-              {' · '}Configure statement dates in <a href="/settings" className="text-zinc-400 underline underline-offset-2">Settings</a> to receive close alerts
-            </p>
+          <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>
+              Projected utilization after AZEO: <span style={{ color: 'var(--text2)' }}>{Math.round(azeo.projectedOverallUtilization * 100)}%</span>
+              {' · '}Configure statement dates in <a href="/settings" style={{ color: 'var(--text2)', textDecoration: 'underline' }}>Settings</a>
+            </div>
           </div>
         </div>
       )}

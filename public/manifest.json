@@ -1,15 +1,20 @@
 {
   "name": "Bill Tracker",
   "short_name": "Bills",
+  "description": "Your personal finance command center. Track bills, goals, budgets and spending in one place.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "categories": ["finance", "productivity"],
   "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard",    "url": "/",              "description": "View financial overview" },
+    { "name": "Add Bill",     "url": "/recurring",     "description": "Add a recurring bill" },
+    { "name": "Goals",        "url": "/goals",         "description": "Track financial goals" }
   ]
 }

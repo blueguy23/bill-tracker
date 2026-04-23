@@ -1,26 +1,51 @@
+# Secrets — never bake into image
 .env
 .env.*
+secrets.json
+credentials.json
+
+# Version control
 .git/
+
+# Dependencies and build output (rebuilt inside Docker)
 node_modules/
 .next/
 dist/
+
+# Test artifacts
 coverage/
 test-results/
 playwright-report/
-*.md
-!README.md
-_ai_temp/
 
-# Added by starter kit update
-.env.local
-secrets.json
-credentials.json
-.gitignore
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
 .vscode/
 .idea/
+
+# Claude / AI tooling (large, not needed in image)
 .claude/
 CLAUDE.md
 CLAUDE.local.md
+_ai_temp/
+.mdd/
+
+# Project docs (not needed in image)
 project-docs/
-.DS_Store
-Thumbs.db
+
+# GitHub Actions runner (very large)
+actions-runner/
+
+# Dev-only scripts and tests (not needed in any Docker layer)
+scripts/
+tests/
+
+# Other dev-only files
+.gitignore

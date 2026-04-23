@@ -13,20 +13,55 @@ interface SettingsViewProps {
 type TestStatus = 'idle' | 'loading' | 'success' | 'error';
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
+const TYPE_ICON: Record<string, string> = {
+  checking: '🏦', savings: '💰', credit: '💳', investment: '📈', loan: '🏠',
+};
+
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+const cardStyle: React.CSSProperties = {
+  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden',
+};
+
+const sectionHead: React.CSSProperties = {
+  padding: '16px 20px', borderBottom: '1px solid var(--border)',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+};
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)',
+};
+
+const sectionSub: React.CSSProperties = {
+  fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)', marginTop: 3,
+};
+
+const inputStyle: React.CSSProperties = {
+  background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8,
+  padding: '7px 10px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--mono)',
+  outline: 'none', width: '100%',
+};
+
+const btnPrimary: React.CSSProperties = {
+  padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)',
+  color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600,
+};
+
 export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 }: SettingsViewProps) {
-  const [testStatus, setTestStatus] = useState<TestStatus>('idle');
-  const [testMessage, setTestMessage] = useState('');
+  const [testStatus, setTestStatus]       = useState<TestStatus>('idle');
+  const [testMessage, setTestMessage]     = useState('');
   const [creditSettings, setCreditSettings] = useState<CreditSettingsEntry[]>([]);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [accountNames, setAccountNames] = useState<Record<string, string>>({});
+  const [saveStatus, setSaveStatus]       = useState<SaveStatus>('idle');
+  const [accounts, setAccounts]           = useState<Account[]>([]);
+  const [accountNames, setAccountNames]   = useState<Record<string, string>>({});
   const [nameSaveStatus, setNameSaveStatus] = useState<SaveStatus>('idle');
+  const [syncingFromBanner, setSyncingFromBanner] = useState(false);
 
   useEffect(() => {
     fetch('/api/v1/credit/settings')
       .then((r) => r.json() as Promise<{ settings: CreditSettingsEntry[] }>)
       .then((d) => setCreditSettings(d.settings ?? []))
-      .catch(() => { /* no credit accounts configured yet */ });
+      .catch(() => {});
 
     fetch('/api/v1/accounts')
       .then((r) => r.json() as Promise<{ accounts: Account[] }>)
@@ -64,21 +99,14 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
   }
 
   async function handleSendTest() {
-    setTestStatus('loading');
-    setTestMessage('');
+    setTestStatus('loading'); setTestMessage('');
     try {
-      const res = await fetch('/api/v1/notifications/test');
+      const res  = await fetch('/api/v1/notifications/test');
       const body = await res.json() as { sent?: boolean; message?: string; error?: string };
-      if (res.ok && body.sent) {
-        setTestStatus('success');
-        setTestMessage(body.message ?? 'Test notification sent');
-      } else {
-        setTestStatus('error');
-        setTestMessage(body.error ?? 'Failed to send test notification');
-      }
+      if (res.ok && body.sent) { setTestStatus('success'); setTestMessage(body.message ?? 'Test notification sent'); }
+      else { setTestStatus('error'); setTestMessage(body.error ?? 'Failed to send test notification'); }
     } catch {
-      setTestStatus('error');
-      setTestMessage('Network error — could not reach the server');
+      setTestStatus('error'); setTestMessage('Network error — could not reach the server');
     }
   }
 
@@ -90,235 +118,201 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           settings: creditSettings.map((s) => ({
-            accountId: s.accountId,
-            statementClosingDay: s.statementClosingDay,
-            targetUtilization: s.targetUtilization,
-            manualCreditLimit: s.manualCreditLimit,
+            accountId: s.accountId, statementClosingDay: s.statementClosingDay,
+            targetUtilization: s.targetUtilization, manualCreditLimit: s.manualCreditLimit,
           })),
         }),
       });
       setSaveStatus(res.ok ? 'saved' : 'error');
-    } catch {
-      setSaveStatus('error');
-    }
+    } catch { setSaveStatus('error'); }
   }
-
-  const [syncingFromBanner, setSyncingFromBanner] = useState(false);
 
   async function handleBannerSync() {
     setSyncingFromBanner(true);
-    try {
-      await fetch('/api/v1/sync', { method: 'POST' });
-    } finally {
-      setSyncingFromBanner(false);
-    }
+    try { await fetch('/api/v1/sync', { method: 'POST' }); }
+    finally { setSyncingFromBanner(false); }
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
       {/* Unknown accounts warning */}
       {unknownCount > 0 && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-4 flex items-start gap-3">
-          <span className="text-amber-400 shrink-0 mt-0.5">⚠</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-300">
+        <div style={{ background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <span style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 1 }}>⚠</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)', fontFamily: 'var(--sans)' }}>
               {unknownCount} account{unknownCount !== 1 ? 's' : ''} couldn&apos;t be identified
-            </p>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)', marginTop: 3 }}>
               Their names show as &ldquo;Unknown&rdquo;. This happens when SimpleFIN doesn&apos;t send institution data.
-              Try syncing again, or rename them below in the Account Names section.
-            </p>
+              Try syncing again, or rename them below.
+            </div>
           </div>
           <button
             onClick={handleBannerSync}
             disabled={syncingFromBanner}
-            className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
+            style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: 'none', background: 'rgba(245,158,11,.2)', color: 'var(--gold)', cursor: 'pointer', opacity: syncingFromBanner ? 0.5 : 1 }}
           >
             {syncingFromBanner ? 'Syncing…' : 'Sync Now'}
           </button>
         </div>
       )}
 
-      {/* Discord Notifications */}
-      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/[0.06]">
-          <p className="text-sm font-semibold text-white">Discord Notifications</p>
-          <p className="text-xs text-zinc-500 mt-0.5">Bill alerts, budget warnings, and daily digest</p>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
-          <div className="flex items-center justify-between">
+      {/* Connected Accounts */}
+      {accounts.length > 0 && (
+        <div style={cardStyle}>
+          <div style={sectionHead}>
             <div>
-              <p className="text-sm text-zinc-300">Webhook URL</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Set DISCORD_WEBHOOK_URL in your .env file</p>
+              <div style={sectionTitle}>Connected Accounts</div>
+              <div style={sectionSub}>Your synced SimpleFIN accounts</div>
             </div>
-            {initialConfigured ? (
-              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/[0.12] rounded-full px-2.5 py-1">
-                Configured
-              </span>
-            ) : (
-              <span className="text-xs font-semibold text-zinc-500 bg-zinc-800 rounded-full px-2.5 py-1">
-                Not configured
-              </span>
-            )}
           </div>
+          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {accounts.map((a) => (
+              <div key={a._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--raised)', borderRadius: 8 }}>
+                <span style={{ fontSize: 18 }}>{TYPE_ICON[a.accountType] ?? '🏦'}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)' }}>{a.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>{a.orgName.toUpperCase()} · {a.accountType}</div>
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: a.balance < 0 ? 'var(--red)' : 'var(--text)' }}>
+                  {USD.format(a.balance)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-          <div className="space-y-2">
+      {/* Discord Notifications */}
+      <div style={cardStyle}>
+        <div style={sectionHead}>
+          <div>
+            <div style={sectionTitle}>Discord Notifications</div>
+            <div style={sectionSub}>Bill alerts, budget warnings, and daily digest</div>
+          </div>
+          <span style={{
+            fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 4,
+            fontFamily: 'var(--mono)', letterSpacing: '.04em',
+            background: initialConfigured ? 'rgba(34,197,94,.12)' : 'rgba(113,113,122,.12)',
+            color: initialConfigured ? 'var(--green)' : 'var(--text3)',
+          }}>
+            {initialConfigured ? 'CONFIGURED' : 'NOT SET'}
+          </span>
+        </div>
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)', marginBottom: 12 }}>
+            Set <code style={{ fontFamily: 'var(--mono)', color: 'var(--text2)' }}>DISCORD_WEBHOOK_URL</code> in your .env file to enable notifications.
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               onClick={handleSendTest}
               disabled={!initialConfigured || testStatus === 'loading'}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors
-                bg-blue-600 hover:bg-blue-500 text-white
-                disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ ...btnPrimary, opacity: !initialConfigured || testStatus === 'loading' ? 0.4 : 1, cursor: !initialConfigured || testStatus === 'loading' ? 'not-allowed' : 'pointer' }}
             >
               {testStatus === 'loading' ? 'Sending…' : 'Send Test Notification'}
             </button>
-            {testStatus === 'success' && <p className="text-xs text-emerald-400">{testMessage}</p>}
-            {testStatus === 'error' && <p className="text-xs text-red-400">{testMessage}</p>}
+            {testStatus === 'success' && <span style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>{testMessage}</span>}
+            {testStatus === 'error' && <span style={{ fontSize: 12, color: 'var(--red)', fontFamily: 'var(--sans)' }}>{testMessage}</span>}
           </div>
+        </div>
+      </div>
+
+      {/* Notification Events reference */}
+      <div style={cardStyle}>
+        <div style={sectionHead}>
+          <div style={sectionTitle}>Notification Events</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {[
+            { event: 'Bill Due Soon',       desc: `Bills due within ${dueSoonDays} days`,             color: 'var(--gold)' },
+            { event: 'Bill Overdue',        desc: 'Unpaid bills past their due date',                 color: 'var(--red)' },
+            { event: 'Budget Warning',      desc: 'Category spending reaches 80%+',                   color: 'var(--gold)' },
+            { event: 'Budget Exceeded',     desc: 'Category spending exceeds budget',                 color: 'var(--red)' },
+            { event: 'Sync Completed',      desc: 'SimpleFIN sync finishes successfully',             color: 'var(--green)' },
+            { event: 'Statement Closing',   desc: 'Pay down before close to lower reported utilization', color: 'var(--gold)' },
+            { event: 'High Utilization',    desc: 'Credit card crosses 70% utilization after sync',   color: 'var(--red)' },
+            { event: 'Daily Digest',        desc: 'Morning summary via /api/v1/notifications/digest', color: 'var(--accent)' },
+          ].map(({ event, desc, color }, i, arr) => (
+            <div key={event} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color, fontFamily: 'var(--sans)' }}>{event}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)', marginTop: 2 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Credit Card Statements */}
       {creditSettings.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <p className="text-sm font-semibold text-white">Credit Card Statements</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Set statement closing dates to get paydown alerts before your balance is reported to the bureaus.
-              Find your closing date on your monthly statement or card issuer app.
-            </p>
+        <div style={cardStyle}>
+          <div style={sectionHead}>
+            <div>
+              <div style={sectionTitle}>Credit Card Statements</div>
+              <div style={sectionSub}>Set closing dates to get paydown alerts before your balance is reported to bureaus</div>
+            </div>
           </div>
-
-          <ul className="divide-y divide-white/[0.04]">
-            {creditSettings.map((s) => (
-              <li key={s.accountId} className="px-5 py-4 flex items-center gap-4">
-                <p className="text-sm text-zinc-300 flex-1 min-w-0 truncate">{s.accountName}</p>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="flex flex-col gap-0.5">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Closes day</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={31}
-                      placeholder="1–31"
-                      value={s.statementClosingDay ?? ''}
-                      onChange={(e) => updateSetting(s.accountId, 'statementClosingDay', e.target.value ? Number(e.target.value) : null)}
-                      className="w-16 px-2 py-1 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg
-                        focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                    />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {creditSettings.map((s, i) => (
+              <div key={s.accountId} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < creditSettings.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <span style={{ fontSize: 13, color: 'var(--text2)', flex: 1, minWidth: 0, fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.accountName}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--mono)', letterSpacing: '.08em' }}>CLOSES DAY</label>
+                    <input type="number" min={1} max={31} placeholder="1–31" value={s.statementClosingDay ?? ''} onChange={(e) => updateSetting(s.accountId, 'statementClosingDay', e.target.value ? Number(e.target.value) : null)} style={{ ...inputStyle, width: 60 }} />
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Target %</label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      placeholder="5"
-                      value={Math.round(s.targetUtilization * 100)}
-                      onChange={(e) => updateSetting(s.accountId, 'targetUtilization', Number(e.target.value) / 100)}
-                      className="w-16 px-2 py-1 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg
-                        focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--mono)', letterSpacing: '.08em' }}>TARGET %</label>
+                    <input type="number" min={0} max={100} placeholder="5" value={Math.round(s.targetUtilization * 100)} onChange={(e) => updateSetting(s.accountId, 'targetUtilization', Number(e.target.value) / 100)} style={{ ...inputStyle, width: 60 }} />
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Credit Limit</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={100}
-                      placeholder="e.g. 5000"
-                      value={s.manualCreditLimit ?? ''}
-                      onChange={(e) => updateSetting(s.accountId, 'manualCreditLimit', e.target.value ? Number(e.target.value) : null)}
-                      className="w-24 px-2 py-1 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg
-                        focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <label style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--mono)', letterSpacing: '.08em' }}>CREDIT LIMIT</label>
+                    <input type="number" min={0} step={100} placeholder="e.g. 5000" value={s.manualCreditLimit ?? ''} onChange={(e) => updateSetting(s.accountId, 'manualCreditLimit', e.target.value ? Number(e.target.value) : null)} style={{ ...inputStyle, width: 90 }} />
                   </div>
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
-
-          <div className="px-5 py-4 border-t border-white/[0.06] flex items-center gap-3">
-            <button
-              onClick={handleSaveCreditSettings}
-              disabled={saveStatus === 'saving'}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors
-                bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+          </div>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={handleSaveCreditSettings} disabled={saveStatus === 'saving'} style={{ ...btnPrimary, opacity: saveStatus === 'saving' ? 0.4 : 1, cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer' }}>
               {saveStatus === 'saving' ? 'Saving…' : 'Save'}
             </button>
-            {saveStatus === 'saved' && <p className="text-xs text-emerald-400">Saved</p>}
-            {saveStatus === 'error' && <p className="text-xs text-red-400">Failed to save</p>}
+            {saveStatus === 'saved' && <span style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>Saved</span>}
+            {saveStatus === 'error'  && <span style={{ fontSize: 12, color: 'var(--red)', fontFamily: 'var(--sans)' }}>Failed to save</span>}
           </div>
         </div>
       )}
 
       {/* Account Names */}
       {accounts.length > 0 && (
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <p className="text-sm font-semibold text-white">Account Names</p>
-            <p className="text-xs text-zinc-500 mt-0.5">
-              Override the bank name shown in the app. Helpful when SimpleFIN returns "Unknown" or an abbreviation.
-            </p>
+        <div style={cardStyle}>
+          <div style={sectionHead}>
+            <div>
+              <div style={sectionTitle}>Account Names</div>
+              <div style={sectionSub}>Override the bank name shown in the app</div>
+            </div>
           </div>
-          <ul className="divide-y divide-white/[0.04]">
-            {accounts.map((a) => (
-              <li key={a._id} className="px-5 py-3.5 flex items-center gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-zinc-500 truncate">{a.name}</p>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {accounts.map((a, i) => (
+              <div key={a._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', borderBottom: i < accounts.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</div>
                 </div>
-                <input
-                  type="text"
-                  value={accountNames[a._id] ?? ''}
-                  onChange={(e) => setAccountNames((prev) => ({ ...prev, [a._id]: e.target.value }))}
-                  placeholder="Bank name"
-                  className="w-48 px-3 py-1.5 text-sm text-white bg-zinc-800 border border-white/[0.08] rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </li>
+                <input type="text" value={accountNames[a._id] ?? ''} onChange={(e) => setAccountNames((prev) => ({ ...prev, [a._id]: e.target.value }))} placeholder="Bank name" style={{ ...inputStyle, width: 180 }} />
+              </div>
             ))}
-          </ul>
-          <div className="px-5 py-4 border-t border-white/[0.06] flex items-center gap-3">
-            <button
-              onClick={handleSaveAccountNames}
-              disabled={nameSaveStatus === 'saving'}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
-            >
+          </div>
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={handleSaveAccountNames} disabled={nameSaveStatus === 'saving'} style={{ ...btnPrimary, opacity: nameSaveStatus === 'saving' ? 0.4 : 1, cursor: nameSaveStatus === 'saving' ? 'not-allowed' : 'pointer' }}>
               {nameSaveStatus === 'saving' ? 'Saving…' : 'Save Names'}
             </button>
-            {nameSaveStatus === 'saved' && <p className="text-xs text-emerald-400">Saved — reload to see changes</p>}
-            {nameSaveStatus === 'error' && <p className="text-xs text-red-400">Failed to save</p>}
+            {nameSaveStatus === 'saved' && <span style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>Saved — reload to see changes</span>}
+            {nameSaveStatus === 'error'  && <span style={{ fontSize: 12, color: 'var(--red)', fontFamily: 'var(--sans)' }}>Failed to save</span>}
           </div>
         </div>
       )}
-
-      {/* Notification events reference */}
-      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/[0.06]">
-          <p className="text-sm font-semibold text-white">Notification Events</p>
-        </div>
-        <ul className="divide-y divide-white/[0.04]">
-          {[
-            { event: 'Bill Due Soon', desc: `Bills due within ${dueSoonDays} days`, color: 'text-amber-400' },
-            { event: 'Bill Overdue', desc: 'Unpaid bills past their due date', color: 'text-red-400' },
-            { event: 'Budget Warning', desc: 'Category spending reaches 80%+', color: 'text-amber-400' },
-            { event: 'Budget Exceeded', desc: 'Category spending exceeds budget', color: 'text-red-400' },
-            { event: 'Sync Completed', desc: 'SimpleFIN sync finishes successfully', color: 'text-emerald-400' },
-            { event: 'Sync Failed', desc: 'SimpleFIN sync encounters an error', color: 'text-red-400' },
-            { event: 'Daily Digest', desc: 'Morning summary via /api/v1/notifications/digest', color: 'text-blue-400' },
-            { event: 'Statement Closing Soon', desc: 'Pay down before statement closes to lower reported utilization', color: 'text-amber-400' },
-            { event: 'High Utilization', desc: 'Credit card crosses 70% utilization after sync', color: 'text-red-400' },
-          ].map(({ event, desc, color }) => (
-            <li key={event} className="px-5 py-3 flex items-center justify-between gap-4">
-              <div>
-                <p className={`text-sm font-medium ${color}`}>{event}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 }

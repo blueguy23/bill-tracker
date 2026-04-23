@@ -61,6 +61,15 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   // --- Add your queries below this line ---
   'recent-txns': () => import('./queries/recent-txns.js'),
   'debug-credit': () => import('./queries/debug-credit.js'),
+  'cashflow-debug': () => import('./queries/cashflow-debug.js'),
+  'income-debug':      () => import('./queries/income-debug.js'),
+  'cashflow-filtered': () => import('./queries/cashflow-filtered.js'),
+  'txn-fields':        () => import('./queries/txn-fields.js'),
+  'trove-test':        () => import('./queries/trove-test.js'),
+  'trove-enrich-all':  () => import('./queries/trove-enrich-all.js'),
+  'autopay-detect':    () => import('./queries/autopay-detect.js'),
+  'debug-bills':       () => import('./queries/debug-bills.js'),
+  'seed-demo':         () => import('./queries/seed-demo.js'),
 };
 
 // ---------------------------------------------------------------------------

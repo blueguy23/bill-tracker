@@ -42,6 +42,12 @@ export interface Bill {
   isRecurring: boolean;
   /** Required when isRecurring === true */
   recurrenceInterval?: RecurrenceInterval;
+  /** YYYY-MM of the month this bill was marked paid — used to reset status each month */
+  paidMonth?: string;
+  /** Most recent transaction amount detected for this bill — tracks price drift */
+  lastChargedAmount?: number;
+  /** Exact transaction description to match instead of bill name — for ambiguous bills like loans */
+  paymentDescriptionHint?: string;
   url?: string;
   notes?: string;
   createdAt: Date;
@@ -58,6 +64,7 @@ export interface CreateBillDto {
   isAutoPay?: boolean;
   isRecurring: boolean;
   recurrenceInterval?: RecurrenceInterval;
+  paymentDescriptionHint?: string;
   url?: string;
   notes?: string;
 }
@@ -75,6 +82,9 @@ export interface BillResponse {
   isAutoPay: boolean;
   isRecurring: boolean;
   recurrenceInterval?: RecurrenceInterval;
+  paidMonth?: string;
+  lastChargedAmount?: number;
+  paymentDescriptionHint?: string;
   url?: string;
   notes?: string;
   createdAt: string;

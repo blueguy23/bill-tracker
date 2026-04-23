@@ -45,15 +45,7 @@ export default async function BudgetPage() {
   });
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-end justify-between pt-2">
-        <div>
-          <h1 className="text-xl font-bold text-white">Budget</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {month ? `${month} — spending by category` : 'Monthly spending by category'}
-          </p>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <BudgetView initialData={{ month, budgets }} />
     </div>
   );

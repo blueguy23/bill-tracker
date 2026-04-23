@@ -2,171 +2,199 @@
 
 import { useState } from 'react';
 import type { BillResponse } from '@/types/bill';
-import { CategoryBadge } from './CategoryBadge';
-import { PaymentHistoryModal } from './PaymentHistoryModal';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
-type DueDateStatus = 'overdue' | 'soon' | 'upcoming';
+const CAT_ICONS: Record<string, string> = {
+  Housing: '🏠', Utilities: '💡', Subscriptions: '📺', Fitness: '💪',
+  Insurance: '🛡️', Credit: '💳', Food: '🍔', Transport: '🚗',
+  Healthcare: '💊', Other: '📄',
+};
 
-function getDueDateStatus(bill: BillResponse): DueDateStatus {
+function currentYYYYMM(): string {
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
 
-  if (typeof bill.dueDate === 'number') {
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-    const clampedDay = Math.min(bill.dueDate, lastDay);
-    const due = new Date(today.getFullYear(), today.getMonth(), clampedDay);
-    const diff = (due.getTime() - today.getTime()) / 86400000;
-    if (diff < 0) return 'overdue';
-    if (diff <= 7) return 'soon';
-    return 'upcoming';
+function getDueDayLabel(
+  dueDate: string | number,
+  isPaid: boolean,
+  paidMonth?: string,
+): { label: string; overdue: boolean } {
+  const effectivelyPaid = isPaid && paidMonth === currentYYYYMM();
+  if (effectivelyPaid) return { label: '✓ PAID', overdue: false };
+
+  const today    = new Date();
+  const todayDay = today.getDate();
+
+  if (typeof dueDate === 'number') {
+    const overdue = dueDate < todayDay;
+    const suffix  = dueDate === 1 ? 'ST' : dueDate === 2 ? 'ND' : dueDate === 3 ? 'RD' : 'TH';
+    return { label: overdue ? '⚠ OVERDUE' : `DUE ${dueDate}${suffix}`, overdue };
   }
 
-  const due = new Date(bill.dueDate);
+  const due  = new Date(dueDate);
   const diff = (due.getTime() - today.getTime()) / 86400000;
-  if (diff < 0) return 'overdue';
-  if (diff <= 7) return 'soon';
-  return 'upcoming';
+  const overdue = diff < 0;
+  return {
+    label: overdue ? '⚠ OVERDUE' : `DUE ${due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}`,
+    overdue,
+  };
 }
 
-function formatDueDate(dueDate: string | number): string {
-  if (typeof dueDate === 'number') return `Day ${dueDate}`;
-  const d = new Date(dueDate);
-  return isNaN(d.getTime())
-    ? String(dueDate)
-    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      onClick={onChange}
+      style={{
+        width: 36, height: 20, borderRadius: 10, border: 'none',
+        background: checked ? 'var(--green)' : 'var(--text3)',
+        cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
+      }}
+    >
+      <div style={{
+        position: 'absolute', top: 3, left: checked ? 19 : 3,
+        width: 14, height: 14, borderRadius: '50%', background: '#fff',
+        transition: 'left .2s', boxShadow: '0 1px 4px rgba(0,0,0,.3)',
+      }} />
+    </button>
+  );
 }
 
-const DUE_BADGE: Record<DueDateStatus, string> = {
-  overdue:  'text-[11px] font-semibold text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full',
-  soon:     'text-[11px] font-semibold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full',
-  upcoming: 'text-[11px] font-medium text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full',
-};
+interface BillRowProps {
+  bill: BillResponse;
+  onEdit: (bill: BillResponse) => void;
+  onDelete: (id: string) => void;
+  onTogglePaid: (id: string, isPaid: boolean) => void;
+  onToggleAutoPay?: (id: string, isAutoPay: boolean) => void;
+}
 
-const DUE_LABEL: Record<DueDateStatus, string> = {
-  overdue: 'Overdue',
-  soon: 'Due soon',
-  upcoming: 'Upcoming',
-};
+function BillRow({ bill, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: BillRowProps) {
+  const [hov, setHov]       = useState(false);
+  const [paying, setPaying] = useState(false);
+  const { label: dueLabel, overdue } = getDueDayLabel(bill.dueDate, bill.isPaid, bill.paidMonth);
+
+  function handlePay() {
+    setPaying(true);
+    setTimeout(() => { onTogglePaid(bill._id, !bill.isPaid); setPaying(false); }, 350);
+  }
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
+        borderBottom: '1px solid var(--border)',
+        background: hov ? 'rgba(237,237,245,0.02)' : 'transparent',
+        transition: 'background .1s',
+        opacity: bill.isPaid ? 0.6 : 1,
+      }}
+    >
+      {/* Paid checkbox */}
+      <button
+        onClick={handlePay}
+        style={{
+          width: 22, height: 22, borderRadius: '50%',
+          border: `2px solid ${bill.isPaid ? 'var(--green)' : 'var(--border-l)'}`,
+          background: bill.isPaid ? 'var(--green)' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', flexShrink: 0, transition: 'all .2s',
+          transform: paying ? 'scale(0.85)' : 'scale(1)',
+        }}
+      >
+        {bill.isPaid && <span style={{ color: '#000', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+      </button>
+
+      {/* Icon + name + category */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{CAT_ICONS[bill.category] ?? '📄'}</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{
+            fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            textDecoration: bill.isPaid ? 'line-through' : 'none',
+          }}>
+            {bill.name}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
+            {bill.category.toUpperCase()}
+          </div>
+        </div>
+      </div>
+
+      {/* Due date */}
+      <div style={{ textAlign: 'center', flexShrink: 0, width: 90 }}>
+        <div style={{ fontSize: 11, color: overdue ? 'var(--red)' : 'var(--text3)', fontFamily: 'var(--mono)', fontWeight: overdue ? 700 : 400 }}>
+          {dueLabel}
+        </div>
+      </div>
+
+      {/* AutoPay toggle */}
+      {onToggleAutoPay && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <Toggle checked={bill.isAutoPay} onChange={() => onToggleAutoPay(bill._id, bill.isAutoPay)} />
+          <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', width: 44 }}>
+            {bill.isAutoPay ? 'AUTO' : 'MANUAL'}
+          </span>
+        </div>
+      )}
+
+      {/* Amount */}
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 15, fontWeight: 400, color: 'var(--text)', minWidth: 80, textAlign: 'right', flexShrink: 0 }}>
+        {USD.format(bill.amount)}
+      </div>
+
+      {/* Edit / delete */}
+      <div style={{ display: 'flex', gap: 6, opacity: hov ? 1 : 0, transition: 'opacity .1s', flexShrink: 0 }}>
+        <button
+          onClick={() => onEdit(bill)}
+          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'rgba(237,237,245,.04)', color: 'var(--text2)', cursor: 'pointer', fontSize: 12 }}
+        >
+          ✎
+        </button>
+        <button
+          onClick={() => onDelete(bill._id)}
+          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'rgba(239,68,68,.08)', color: 'var(--red)', cursor: 'pointer', fontSize: 12 }}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface BillTableProps {
   bills: BillResponse[];
   onEdit: (bill: BillResponse) => void;
   onDelete: (id: string) => void;
   onTogglePaid: (id: string, isPaid: boolean) => void;
+  onToggleAutoPay?: (id: string, isAutoPay: boolean) => void;
 }
 
-export function BillTable({ bills, onEdit, onDelete, onTogglePaid }: BillTableProps) {
-  const [historyBill, setHistoryBill] = useState<{ id: string; name: string } | null>(null);
-
+export function BillTable({ bills, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: BillTableProps) {
   if (bills.length === 0) {
     return (
-      <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-16 text-center">
-        <p className="text-zinc-500 text-sm">No bills yet</p>
-        <p className="text-zinc-600 text-xs mt-1">Click &ldquo;Add Bill&rdquo; to get started</p>
+      <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>📄</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)', fontFamily: 'var(--sans)', marginBottom: 6 }}>No bills yet</div>
+        <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>Click &ldquo;Add Bill&rdquo; to get started</div>
       </div>
     );
   }
 
   return (
-    <>
-    <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden">
-      <table className="min-w-full" data-testid="bills-table">
-        <thead>
-          <tr className="border-b border-white/[0.06]">
-            {['Name', 'Amount', 'Due Date', 'Category', 'Status', ''].map((h) => (
-              <th key={h} className={`px-5 py-3.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ${h === '' ? 'text-right' : 'text-left'}`}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/[0.04]">
-          {bills.map((bill) => {
-            const status = getDueDateStatus(bill);
-            return (
-              <tr key={bill._id} className="group hover:bg-white/[0.02] transition-colors">
-
-                <td className="px-5 py-4">
-                  <p className="font-medium text-zinc-100 text-sm">{bill.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {bill.isAutoPay && <span className="text-[11px] font-medium text-blue-400">AutoPay</span>}
-                    {bill.isRecurring && <span className="text-[11px] text-zinc-600 capitalize">{bill.recurrenceInterval}</span>}
-                  </div>
-                </td>
-
-                <td className="px-5 py-4">
-                  <span className="text-base font-semibold text-white tabular-nums">{USD.format(bill.amount)}</span>
-                </td>
-
-                <td className="px-5 py-4" suppressHydrationWarning>
-                  <p className="text-sm text-zinc-300">{formatDueDate(bill.dueDate)}</p>
-                  {!bill.isPaid && (
-                    <span className={`mt-1 inline-block ${DUE_BADGE[status]}`}>
-                      {DUE_LABEL[status]}
-                    </span>
-                  )}
-                </td>
-
-                <td className="px-5 py-4">
-                  <CategoryBadge category={bill.category} />
-                </td>
-
-                <td className="px-5 py-4">
-                  <button
-                    onClick={() => onTogglePaid(bill._id, !bill.isPaid)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                      bill.isPaid
-                        ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
-                        : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                    }`}
-                    data-testid={`toggle-paid-${bill._id}`}
-                  >
-                    {bill.isPaid && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />}
-                    {bill.isPaid ? 'Paid' : 'Unpaid'}
-                  </button>
-                </td>
-
-                <td className="px-5 py-4">
-                  <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => setHistoryBill({ id: bill._id, name: bill.name })}
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
-                      data-testid={`history-${bill._id}`}
-                    >
-                      History
-                    </button>
-                    <button
-                      onClick={() => onEdit(bill)}
-                      className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
-                      data-testid={`edit-${bill._id}`}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => { if (window.confirm(`Delete "${bill.name}"?`)) onDelete(bill._id); }}
-                      className="text-xs font-medium text-zinc-600 hover:text-red-400 transition-colors"
-                      data-testid={`delete-${bill._id}`}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
-
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div data-testid="bills-table">
+      {bills.map((bill) => (
+        <BillRow
+          key={bill._id}
+          bill={bill}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onTogglePaid={onTogglePaid}
+          onToggleAutoPay={onToggleAutoPay}
+        />
+      ))}
     </div>
-
-    <PaymentHistoryModal
-      billId={historyBill?.id ?? ''}
-      billName={historyBill?.name ?? ''}
-      isOpen={historyBill !== null}
-      onClose={() => setHistoryBill(null)}
-    />
-    </>
   );
 }

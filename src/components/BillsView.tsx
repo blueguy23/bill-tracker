@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
 import type { BillResponse, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import { BillTable } from './BillTable';
@@ -8,9 +8,14 @@ import { BillModal } from './BillModal';
 
 interface BillsViewProps {
   initialBills: BillResponse[];
+  hideAddButton?: boolean;
 }
 
-export function BillsView({ initialBills }: BillsViewProps) {
+export interface BillsViewHandle {
+  openCreate: () => void;
+}
+
+export const BillsView = forwardRef<BillsViewHandle, BillsViewProps>(function BillsView({ initialBills, hideAddButton }, ref) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBill, setEditingBill] = useState<BillResponse | undefined>(undefined);
@@ -19,6 +24,8 @@ export function BillsView({ initialBills }: BillsViewProps) {
     setEditingBill(undefined);
     setIsModalOpen(true);
   }
+
+  useImperativeHandle(ref, () => ({ openCreate }));
 
   function openEdit(bill: BillResponse) {
     setEditingBill(bill);
@@ -73,32 +80,39 @@ export function BillsView({ initialBills }: BillsViewProps) {
     router.refresh();
   }
 
+  async function handleToggleAutoPay(id: string, isAutoPay: boolean) {
+    const res = await fetch(`/api/v1/bills/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isAutoPay: !isAutoPay }),
+    });
+    if (!res.ok) { alert('Failed to update autopay'); return; }
+    router.refresh();
+  }
+
   return (
     <div>
-      <div className="flex items-end justify-between mb-4">
-        <div>
-          <h2 className="text-base font-semibold text-white">All Bills</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {initialBills.length === 0 ? 'No bills' : `${initialBills.length} bill${initialBills.length !== 1 ? 's' : ''}`}
-          </p>
+      {!hideAddButton && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', letterSpacing: '.08em' }}>
+            {initialBills.length === 0 ? 'NO BILLS' : `${initialBills.length} BILL${initialBills.length !== 1 ? 'S' : ''}`}
+          </div>
+          <button
+            onClick={openCreate}
+            data-testid="add-bill-btn"
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}
+          >
+            + Add Bill
+          </button>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors"
-          data-testid="add-bill-btn"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add Bill
-        </button>
-      </div>
+      )}
 
       <BillTable
         bills={initialBills}
         onEdit={openEdit}
         onDelete={handleDelete}
         onTogglePaid={handleTogglePaid}
+        onToggleAutoPay={handleToggleAutoPay}
       />
 
       <BillModal
@@ -110,4 +124,5 @@ export function BillsView({ initialBills }: BillsViewProps) {
       />
     </div>
   );
-}
+});
+
