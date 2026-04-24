@@ -96,13 +96,15 @@ const products = await getProducts();
 
 ### 9. Git Workflow — NEVER Work Directly on Main
 
-**ALWAYS branch BEFORE editing any files:**
+**ALWAYS sync master from origin BEFORE branching:**
 
 ```bash
-git branch --show-current
-# If on main → create a feature branch IMMEDIATELY:
+git checkout master
+git pull origin master          # ← REQUIRED — never skip this
 git checkout -b feat/<task-name>
 ```
+
+Running `pnpm dev` from a stale branch is the #1 cause of "old UI" incidents. If the branch was not created from a fresh pull, the running app may be weeks behind origin/master. Always verify with `git log --oneline origin/master -3` before starting the dev server.
 
 ### 10. Server Pages — Direct DB Calls Only
 
