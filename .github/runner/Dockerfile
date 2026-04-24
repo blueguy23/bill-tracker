@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # ── System packages ───────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y \
-    ca-certificates curl git jq gnupg \
+    ca-certificates curl git jq gnupg gosu lsof \
     # Chromium/Playwright system deps (pnpm exec playwright install chromium)
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
     libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 \
@@ -53,11 +53,14 @@ RUN mkdir -p /tmp/runner-install /home/garci/actions-runner \
   && rm -rf /tmp/runner-install
 
 # ── MongoDB data dir ─────────────────────────────────────────────────────────
-RUN mkdir -p /data/db && chown garci:garci /data/db
+RUN mkdir -p /data/db
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-USER garci
+# Container starts as root so the entrypoint can chown named volumes, then drops
+# to garci via gosu. HOME is explicit so tool caches (pnpm, Playwright) land at
+# the paths hardcoded in ci.yml (/home/garci/.cache/ms-playwright etc.).
+ENV HOME=/home/garci
 WORKDIR /home/garci/actions-runner
 ENTRYPOINT ["/entrypoint.sh"]
