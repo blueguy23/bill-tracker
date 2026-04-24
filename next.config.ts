@@ -17,23 +17,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
-  // strictdb is ESM-only — tell Next.js to import it natively instead of bundling
+  // strictdb is ESM-only — tell Next.js to import it natively instead of bundling.
+  // serverExternalPackages also prevents Turbopack from traversing strictdb's optional
+  // peer deps (mysql2, pg, better-sqlite3, etc.) that aren't installed.
   serverExternalPackages: ['strictdb', 'mongodb'],
   images: {
     formats: ['image/webp'],
-  },
-  webpack: (config) => {
-    // StrictDB supports multiple DB backends via optional dynamic imports.
-    // Suppress "module not found" warnings for drivers not installed.
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      'mysql2/promise': false,
-      pg: false,
-      'better-sqlite3': false,
-      mssql: false,
-      tedious: false,
-    };
-    return config;
   },
 };
 
