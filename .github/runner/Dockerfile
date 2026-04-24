@@ -42,7 +42,7 @@ RUN curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
 RUN useradd -m -u 1000 -s /bin/bash garci
 
 # ── GitHub Actions runner binary ──────────────────────────────────────────────
-ARG RUNNER_VERSION=2.333.1
+ARG RUNNER_VERSION=2.334.0
 RUN mkdir -p /tmp/runner-install /home/garci/actions-runner \
   && curl -fsSL \
      "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
