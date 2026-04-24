@@ -46,6 +46,7 @@ if [ ! -f .runner ]; then
     --labels        "self-hosted,Linux,X64" \
     --work          _work \
     --unattended \
+    --replace \
     --disableupdate
 fi
 
