@@ -27,6 +27,21 @@ echo "MongoDB started"
 cd /home/garci/actions-runner
 
 if [ ! -f .runner ]; then
+  # Delete any stale runner with the same name before registering
+  STALE_ID=$(curl -fsSL \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/blueguy23/bill-tracker/actions/runners" \
+    | jq -r ".runners[] | select(.name == \"${RUNNER_NAME}\") | .id // empty")
+
+  if [ -n "$STALE_ID" ]; then
+    echo "Removing stale runner (id: ${STALE_ID})..."
+    curl -fsSL -X DELETE \
+      -H "Authorization: token ${GITHUB_PAT}" \
+      -H "Accept: application/vnd.github+json" \
+      "https://api.github.com/repos/blueguy23/bill-tracker/actions/runners/${STALE_ID}"
+  fi
+
   REG_TOKEN=$(curl -fsSL -X POST \
     -H "Authorization: token ${GITHUB_PAT}" \
     -H "Accept: application/vnd.github+json" \
@@ -46,7 +61,6 @@ if [ ! -f .runner ]; then
     --labels        "self-hosted,Linux,X64" \
     --work          _work \
     --unattended \
-    --replace \
     --disableupdate
 fi
 
