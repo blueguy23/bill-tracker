@@ -42,15 +42,15 @@ RUN curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
 RUN useradd -m -u 1000 -s /bin/bash garci
 
 # ── GitHub Actions runner binary ──────────────────────────────────────────────
-ARG RUNNER_VERSION=2.334.0
-RUN mkdir -p /tmp/runner-install /home/garci/actions-runner \
-  && curl -fsSL \
-     "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-x64-${RUNNER_VERSION}.tar.gz" \
-     | tar -xz -C /tmp/runner-install \
-  && mv /tmp/runner-install/* /home/garci/actions-runner/ \
+# Tarball is pre-downloaded to the build context (actions-runner.tar.gz) to avoid
+# flaky network downloads inside the BuildKit container on WSL2.
+# To upgrade: download the new tarball, rename it actions-runner.tar.gz, rebuild.
+COPY actions-runner.tar.gz /tmp/actions-runner.tar.gz
+RUN mkdir -p /home/garci/actions-runner \
+  && tar -xz -C /home/garci/actions-runner -f /tmp/actions-runner.tar.gz \
   && /home/garci/actions-runner/bin/installdependencies.sh \
   && chown -R garci:garci /home/garci \
-  && rm -rf /tmp/runner-install
+  && rm /tmp/actions-runner.tar.gz
 
 # ── MongoDB data dir ─────────────────────────────────────────────────────────
 RUN mkdir -p /data/db
