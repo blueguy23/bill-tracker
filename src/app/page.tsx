@@ -153,7 +153,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const savingsRate = cashFlow.income > 0 ? ((cashFlow.income - cashFlow.expenses) / cashFlow.income) * 100 : 0;
 
-  const budgetMap = new Map<string, Budget>(budgets.map(b => [b.category, b]));
+  const _budgetMap = new Map<string, Budget>(budgets.map(b => [b.category, b]));
   const spendByCat = new Map<BillCategory, number>();
   for (const bill of bills) {
     if (bill.isRecurring) spendByCat.set(bill.category, (spendByCat.get(bill.category) ?? 0) + bill.amount);

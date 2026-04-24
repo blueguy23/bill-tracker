@@ -18,7 +18,7 @@ const THRESHOLDS = [
   { pct: 0.70, color: '#ef4444', label: '70%' },
 ];
 
-function pctStr(n: number) { return `${Math.round(n * 100)}%`; }
+function _pctStr(n: number) { return `${Math.round(n * 100)}%`; }
 
 export function UtilizationTrendChart({ data }: UtilizationTrendChartProps) {
   if (data.length === 0) return null;

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { StrictDB } from 'strictdb';
-import { listBudgets, getBudget, upsertBudget } from '@/adapters/budgets';
+import { listBudgets, upsertBudget } from '@/adapters/budgets';
 import { listUnmatchedQuickAdds } from '@/adapters/quickAdd';
 import { listTransactionsForMonth } from '@/adapters/transactions';
 import {

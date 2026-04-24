@@ -3,6 +3,7 @@ import { listBills, updateBill } from '@/adapters/bills';
 import { notifyPriceIncrease } from '@/handlers/notifications';
 import type { Transaction } from '@/lib/simplefin/types';
 import type { Bill } from '@/types/bill';
+import { logger } from '@/lib/logger';
 
 const PRICE_INCREASE_PCT   = 0.05;  // >5% triggers alert
 const PRICE_INCREASE_MIN   = 0.50;  // must be >$0.50 absolute to avoid noise
@@ -49,10 +50,10 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
   const now        = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // StrictDB's queryMany filter type doesn't expose MongoDB operator shapes ($lt, $gte)
   const txns = await db.queryMany<Transaction>(
     'transactions',
-    { amount: { $lt: 0 }, pending: false, posted: { $gte: monthStart } } as any,
+    { amount: { $lt: 0 }, pending: false, posted: { $gte: monthStart } } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     { limit: 5000 },
   );
 
@@ -67,9 +68,12 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
 
     // Price increase — charge is meaningfully higher than expected
     if (pctDiff > PRICE_INCREASE_PCT && absDiff > PRICE_INCREASE_MIN) {
-      console.log(
-        `[autoPayDetect] Price increase on "${bill.name}": $${expectedAmt} → $${chargedAmt} (+${(pctDiff * 100).toFixed(1)}%)`,
-      );
+      logger.info('autoPayDetect.priceIncrease', {
+        billName: bill.name,
+        expectedAmt,
+        chargedAmt,
+        pctDiff: `+${(pctDiff * 100).toFixed(1)}%`,
+      });
       void notifyPriceIncrease(db, {
         billId: bill._id,
         billName: bill.name,
@@ -82,12 +86,13 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
 
     // Mark paid and record the actual charged amount for drift tracking
     await updateBill(db, bill._id, { isPaid: true });
+    // StrictDB's updateOne filter type doesn't expose MongoDB's _id query shape
     await db.updateOne<Bill>(
       'bills',
-      { _id: bill._id } as any,
+      { _id: bill._id } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
       { $set: { lastChargedAmount: chargedAmt } },
       false,
     );
-    console.log(`[autoPayDetect] Marked "${bill.name}" paid for ${month} ($${chargedAmt})`);
+    logger.info('autoPayDetect.markedPaid', { billName: bill.name, month, chargedAmt });
   }
 }
