@@ -56,7 +56,7 @@ export class SimpleFINClient {
         clearTimeout(timeout);
       }
     } catch (err) {
-      throw new Error(`SimpleFIN network error: ${err instanceof Error ? err.message : String(err)}`);
+      throw new Error(`SimpleFIN network error: ${err instanceof Error ? err.message : String(err)}`, { cause: err });
     }
 
     if (!res.ok) {

@@ -82,7 +82,7 @@ export function computeBurnRate(
 
   // 7-day rolling average
   const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const { year: sy, monthIndex: sm } = parseMonth(month);
+  const { year: _sy, monthIndex: _sm } = parseMonth(month);
   const rollingTxns = transactions.filter(
     (t) =>
       t.category === category &&

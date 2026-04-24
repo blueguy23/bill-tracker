@@ -1,3 +1,5 @@
+import { logger } from '@/lib/logger';
+
 const STARTUP_SYNC_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 export async function register() {
@@ -31,13 +33,13 @@ export async function register() {
         const stale = !log.lastSyncAt || Date.now() - log.lastSyncAt.getTime() > STARTUP_SYNC_THRESHOLD_MS;
 
         if (stale) {
-          console.log('[startup] Last sync >2h ago — triggering background sync');
+          logger.info('startup.autoSync.triggered', { reason: 'last sync >2h ago' });
           const client = new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
           runDailySync(appDb, client, 'manual')
-            .then((r) => console.log(`[startup] Auto-sync done: ${r.transactionsUpserted} txns, ${r.accountsUpdated} accounts`))
+            .then((r) => logger.info('startup.autoSync.done', { transactionsUpserted: r.transactionsUpserted, accountsUpdated: r.accountsUpdated }))
             .catch((err) => console.error('[startup] Auto-sync failed:', err));
         } else {
-          console.log('[startup] Sync is recent — skipping auto-sync');
+          logger.info('startup.autoSync.skipped', { reason: 'sync is recent' });
         }
       } catch (err) {
         console.error('[startup] Auto-sync setup failed:', err);
