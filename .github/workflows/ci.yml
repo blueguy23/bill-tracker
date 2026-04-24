@@ -165,7 +165,15 @@ jobs:
             playwright-report/
             test-results/
 
-  # ── 5. Docker build (verify image builds on pushes to master) ─────────────────
+  # ── 5. Gate — satisfies the "test" required status check in branch ruleset ──────
+  test:
+    name: test
+    runs-on: self-hosted
+    needs: [typecheck, lint, audit, unit, e2e]
+    steps:
+      - run: echo "All checks passed"
+
+  # ── 6. Docker build (verify image builds on pushes to master) ─────────────────
   docker:
     name: Docker Build
     runs-on: self-hosted
