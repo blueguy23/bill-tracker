@@ -58,6 +58,8 @@ _cleanup() {
     "https://api.github.com/repos/blueguy23/bill-tracker/actions/runners/remove-token" \
     | jq -r '.token')
   ./config.sh remove --token "$REMOVE_TOKEN" 2>/dev/null || true
+  # Remove config files so the next startup re-registers cleanly
+  rm -f .runner .credentials .env
 }
 trap _cleanup EXIT TERM INT
 
