@@ -2,16 +2,6 @@
 
 ---
 
-## Session Checklist
-
-Before starting any feature work, start the GitHub Actions runner:
-
-```bash
-cd ~/projects/bill-tracker/actions-runner && nohup ./run.sh > ~/runner.log 2>&1 &
-```
-
----
-
 ## Quick Reference — Scripts
 
 | Command | What it does |
@@ -242,6 +232,5 @@ NextAuth v5 credentials provider. Required in `.env`:
 
 ## Known Pre-Launch Gaps
 
-- Runner must be manually started each session (see Session Checklist above)
 - Add `TRANSFER_OWNER_NAME=<your name>` to `.env` for self-Zelle filtering
 - Auth requires `AUTH_SECRET` + `AUTH_PASSWORD` in `.env`
