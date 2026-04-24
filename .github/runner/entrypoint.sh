@@ -23,31 +23,31 @@ mongod \
   --quiet
 echo "MongoDB started"
 
-# ── Registration token ────────────────────────────────────────────────────────
+# ── Configure runner (only on first start — skip if already registered) ───────
 cd /home/garci/actions-runner
 
-REG_TOKEN=$(curl -fsSL -X POST \
-  -H "Authorization: token ${GITHUB_PAT}" \
-  -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/blueguy23/bill-tracker/actions/runners/registration-token" \
-  | jq -r '.token')
+if [ ! -f .runner ]; then
+  REG_TOKEN=$(curl -fsSL -X POST \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/blueguy23/bill-tracker/actions/runners/registration-token" \
+    | jq -r '.token')
 
-if [[ "$REG_TOKEN" == "null" || -z "$REG_TOKEN" ]]; then
-  echo "ERROR: Failed to get runner registration token."
-  echo "       Check that GITHUB_PAT is set and has 'repo' scope."
-  exit 1
+  if [[ "$REG_TOKEN" == "null" || -z "$REG_TOKEN" ]]; then
+    echo "ERROR: Failed to get runner registration token."
+    echo "       Check that GITHUB_PAT is set and has 'repo' scope."
+    exit 1
+  fi
+
+  ./config.sh \
+    --url           "$REPO_URL" \
+    --token         "$REG_TOKEN" \
+    --name          "$RUNNER_NAME" \
+    --labels        "self-hosted,Linux,X64" \
+    --work          _work \
+    --unattended \
+    --disableupdate
 fi
-
-# ── Configure runner ──────────────────────────────────────────────────────────
-./config.sh \
-  --url           "$REPO_URL" \
-  --token         "$REG_TOKEN" \
-  --name          "$RUNNER_NAME" \
-  --labels        "self-hosted,Linux,X64" \
-  --work          _work \
-  --unattended \
-  --replace \
-  --disableupdate
 
 # ── Graceful deregister on container stop ─────────────────────────────────────
 _cleanup() {

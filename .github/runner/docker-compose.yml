@@ -3,7 +3,7 @@ services:
     build:
       context: .
       args:
-        RUNNER_VERSION: "2.333.1"
+        RUNNER_VERSION: "2.334.0"
     image: bill-tracker-runner:latest
     restart: unless-stopped
     environment:
@@ -16,6 +16,8 @@ services:
     volumes:
       # Docker socket — lets CI jobs run `docker build` without a nested daemon
       - /var/run/docker.sock:/var/run/docker.sock
+      # Persist runner registration (.runner, .credentials) so restarts don't re-register
+      - runner-config:/home/garci/actions-runner
       # Persist job workspaces across container restarts
       - runner-work:/home/garci/actions-runner/_work
       # Cache Playwright Chromium binary (ci.yml checks this exact path)
@@ -24,9 +26,10 @@ services:
       - pnpm-store:/home/garci/.local/share/pnpm/store
       # MongoDB data — survives container restarts
       - mongo-data:/data/db
-      # No host home-dir mount — intentionally isolated from .env files
+      # No host home dir mount — intentionally isolated from .env files
 
 volumes:
+  runner-config:
   runner-work:
   playwright-cache:
   pnpm-store:
