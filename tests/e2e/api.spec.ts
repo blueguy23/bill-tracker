@@ -48,12 +48,12 @@ test.describe('Health API (GET /api/v1/health)', () => {
     expect(contentType).toContain('application/json');
   });
 
-  test('should return exactly the expected top-level keys (status, timestamp)', async ({ request }) => {
+  test('should return exactly the expected top-level keys', async ({ request }) => {
     const response = await request.get('/api/v1/health');
     const body = await response.json() as Record<string, unknown>;
 
     const keys = Object.keys(body).sort();
-    expect(keys).toEqual(['status', 'timestamp']);
+    expect(keys).toEqual(['checks', 'responseTimeMs', 'status', 'timestamp', 'uptime']);
   });
 });
 
