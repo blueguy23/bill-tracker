@@ -15,16 +15,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const db = await getDb();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const all = await db.queryMany<Transaction>(
+  const matches = await db.queryMany<Transaction>(
     'transactions',
-    { amount: { $lt: 0 }, pending: false } as any,
-    { sort: { posted: -1 }, limit: 5000 } as any,
+    {
+      amount: { $lt: 0 },
+      pending: false,
+      description: { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
+    } as any,
+    { sort: { posted: -1 }, limit } as any,
   );
-
-  const lower = q.toLowerCase();
-  const matches = all
-    .filter((t) => t.description.toLowerCase().includes(lower))
-    .slice(0, limit);
 
   return NextResponse.json({
     transactions: matches.map((t) => ({

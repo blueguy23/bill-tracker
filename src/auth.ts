@@ -26,7 +26,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Demo login — enabled only when DEMO_MODE=true
         if (process.env.DEMO_MODE === 'true') {
           const demoPassword = process.env.DEMO_PASSWORD ?? 'demo';
-          if (submitted === demoPassword) {
+          if (safeEqual(submitted, demoPassword)) {
             return { id: 'demo', name: 'Demo' };
           }
         }

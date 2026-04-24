@@ -48,7 +48,13 @@ export class SimpleFINClient {
 
     let res: Response;
     try {
-      res = await fetch(parsed.toString(), { headers });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      try {
+        res = await fetch(parsed.toString(), { headers, signal: controller.signal });
+      } finally {
+        clearTimeout(timeout);
+      }
     } catch (err) {
       throw new Error(`SimpleFIN network error: ${err instanceof Error ? err.message : String(err)}`);
     }

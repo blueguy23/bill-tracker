@@ -24,6 +24,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!pattern || typeof pattern !== 'string' || pattern.trim() === '') {
     return NextResponse.json({ error: 'pattern is required' }, { status: 400 });
   }
+  if (pattern.trim().length > 200) {
+    return NextResponse.json({ error: 'pattern must be 200 characters or fewer' }, { status: 400 });
+  }
   if (!category || !TRANSACTION_CATEGORIES.includes(category as TransactionCategory)) {
     return NextResponse.json(
       { error: `category must be one of: ${TRANSACTION_CATEGORIES.join(', ')}` },

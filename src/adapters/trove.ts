@@ -17,16 +17,24 @@ export async function enrichTransaction(
   if (!key || Math.abs(amount) === 0) return null;
 
   try {
-    const res = await fetch(`${TROVE_BASE}/transactions/enrich`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-API-KEY': key },
-      body: JSON.stringify({
-        description,
-        amount: Math.abs(amount),
-        date,
-        user_id: userId,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    let res: Response;
+    try {
+      res = await fetch(`${TROVE_BASE}/transactions/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-KEY': key },
+        body: JSON.stringify({
+          description,
+          amount: Math.abs(amount),
+          date,
+          user_id: userId,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!res.ok) return null;
 

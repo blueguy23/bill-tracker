@@ -15,11 +15,19 @@ export async function sendWebhook(payload: DiscordWebhookPayload): Promise<void>
   const url = process.env.DISCORD_WEBHOOK_URL;
   if (!url) return;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!res.ok) {
     throw new DiscordWebhookError(res.status, `Discord webhook returned ${res.status}`);
