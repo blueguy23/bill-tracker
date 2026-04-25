@@ -25,6 +25,7 @@
     "test:e2e:chromium": "pnpm test:kill-ports && playwright test --project=chromium",
     "test:e2e:report": "playwright show-report",
     "test:kill-ports": "lsof -ti:4000,4010,4020 | xargs kill -9 2>/dev/null || true",
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "db:query": "tsx scripts/db-query.ts",
     "db:query:list": "tsx scripts/db-query.ts --list",
     "db:migrate": "tsx scripts/migrate.ts up",

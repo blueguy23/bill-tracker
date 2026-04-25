@@ -6,8 +6,12 @@ let _instance: Promise<StrictDB> | null = null;
 
 export function getDb(): Promise<StrictDB> {
   if (!_instance) {
-    // StrictDB internally uses MONGODB_URI for pool lookups — bridge from STRICTDB_URI if needed.
-    const uri = process.env.MONGODB_URI ?? process.env.STRICTDB_URI;
+    // In demo mode, use DEMO_MONGODB_URI so demo data never touches the real database.
+    // Falls back to MONGODB_URI when DEMO_MONGODB_URI is not configured.
+    const isDemoMode = process.env.DEMO_MODE === 'true';
+    const uri = (isDemoMode && process.env.DEMO_MONGODB_URI)
+      ? process.env.DEMO_MONGODB_URI
+      : (process.env.MONGODB_URI ?? process.env.STRICTDB_URI);
     if (!uri) {
       throw new Error('MONGODB_URI environment variable is not set');
     }
