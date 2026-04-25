@@ -425,7 +425,7 @@ test.describe('Credit Health Page (/credit)', () => {
     test('should render the Recent Payments section when accounts exist', async ({ page }) => {
       await page.goto('/credit');
       const hasPayments = await page.locator('text=Recent Payments').isVisible().catch(() => false);
-      const hasEmpty = await page.locator('text=No credit accounts found').isVisible().catch(() => false);
+      const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
       expect(hasPayments || hasEmpty).toBe(true);
     });
   });
