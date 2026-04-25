@@ -1,4 +1,10 @@
 name: CI
+# Job execution order:
+#   [Security Audit, Lint, TypeScript]  ← parallel
+#          ↓ (all three must pass)
+#       [Unit Tests]
+#          ↓
+#       [E2E Tests]
 
 on:
   push:
@@ -76,7 +82,7 @@ jobs:
   unit:
     name: Unit Tests
     runs-on: self-hosted
-    needs: typecheck
+    needs: [audit, lint, typecheck]
     steps:
       - uses: actions/checkout@v4
 
