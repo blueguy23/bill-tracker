@@ -29,8 +29,8 @@ function emit(level: LogLevel, event: string, data?: Record<string, unknown>): v
   };
 
   if (process.env.NODE_ENV === 'production') {
-    // JSON lines — easy to ingest with any log aggregator
-    process.stdout.write(JSON.stringify(entry) + '\n');
+    // JSON lines — console.log works in both Node.js and Edge runtimes
+    console.log(JSON.stringify(entry)); // eslint-disable-line no-console
   } else {
     // Human-friendly for local dev
     const prefix = `[${level.toUpperCase().padEnd(5)}] [${event}]`;

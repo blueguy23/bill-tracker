@@ -115,7 +115,7 @@ jobs:
 
       - name: Check Playwright cache
         id: playwright-cache
-        run: test -d /home/garci/.cache/ms-playwright && echo "cache-hit=true" >> $GITHUB_OUTPUT || echo "cache-hit=false" >> $GITHUB_OUTPUT
+        run: find /home/garci/.cache/ms-playwright -name 'chrome-headless-shell' 2>/dev/null | grep -q . && echo "cache-hit=true" >> $GITHUB_OUTPUT || echo "cache-hit=false" >> $GITHUB_OUTPUT
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
