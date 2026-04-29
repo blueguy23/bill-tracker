@@ -37,6 +37,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [recategorizing, setRecategorizing] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
   const [accountFilter, setAccountFilter] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
   const [search, setSearch] = useState('');
@@ -173,15 +174,16 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
           {accounts.map(a => <option key={a._id} value={a._id}>{a.orgName} — {a.name}</option>)}
         </select>
         <div style={{ position: 'relative' }}>
-          <button style={{ ...ctrlBtn }} data-testid="overflow-btn">⋯</button>
-          <div style={{ display: 'none', position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'var(--raised)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 8, padding: 4, minWidth: 170, zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}
-            className="group-hover/overflow:block">
-            <button onClick={() => void handleRecategorize()} disabled={recategorizing} data-testid="auto-categorize-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: 'var(--text2)', background: 'none', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
-              {recategorizing ? 'Categorizing…' : 'Auto-Categorize all'}
-            </button>
-            <div style={{ height: 1, background: 'var(--border)', margin: '3px 0' }} />
-            <button onClick={() => void handleExport()} data-testid="export-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: 'var(--text2)', background: 'none', border: 'none', borderRadius: 5, cursor: 'pointer' }}>Export CSV</button>
-          </div>
+          <button onClick={() => setOverflowOpen(o => !o)} style={{ ...ctrlBtn }} data-testid="overflow-btn">⋯</button>
+          {overflowOpen && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, background: 'var(--raised)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 8, padding: 4, minWidth: 170, zIndex: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+              <button onClick={() => { setOverflowOpen(false); void handleRecategorize(); }} disabled={recategorizing} data-testid="auto-categorize-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: 'var(--text2)', background: 'none', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+                {recategorizing ? 'Categorizing…' : 'Auto-Categorize all'}
+              </button>
+              <div style={{ height: 1, background: 'var(--border)', margin: '3px 0' }} />
+              <button onClick={() => { setOverflowOpen(false); void handleExport(); }} data-testid="export-btn" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px', fontSize: 12, color: 'var(--text2)', background: 'none', border: 'none', borderRadius: 5, cursor: 'pointer' }}>Export CSV</button>
+            </div>
+          )}
         </div>
         <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#e8c97e', color: '#0b0b0f', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.6 }}>+ Add Transaction</button>
       </div>
