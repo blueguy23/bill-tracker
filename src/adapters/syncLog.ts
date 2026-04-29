@@ -17,6 +17,7 @@ export async function getTodayLog(db: StrictDB): Promise<SyncLog> {
     _id: randomUUID(),
     date,
     requestCount: 0,
+    urlUnits: {},
     lastSyncAt: null,
     lastSyncType: null,
     historicalImportDone: false,
@@ -45,6 +46,26 @@ export async function getLastSyncAt(db: StrictDB): Promise<Date | null> {
     { sort: { lastSyncAt: -1 }, limit: 1 },
   );
   return logs[0]?.lastSyncAt ?? null;
+}
+
+export async function incrementUrlUnits(
+  db: StrictDB,
+  urlHash: string,
+  units: number,
+  meta: { lastSyncType: SyncLog['lastSyncType'] },
+): Promise<void> {
+  const date = todayUTC();
+  const existing = await db.queryOne<SyncLog>(COLLECTION, { date });
+  if (!existing) return;
+
+  const urlUnits = { ...(existing.urlUnits ?? {}) };
+  urlUnits[urlHash] = (urlUnits[urlHash] ?? 0) + units;
+
+  await db.updateOne<SyncLog>(
+    COLLECTION,
+    { date },
+    { $set: { lastSyncAt: new Date(), lastSyncType: meta.lastSyncType, urlUnits }, $inc: { requestCount: 1 } },
+  );
 }
 
 export async function markHistoricalDone(db: StrictDB): Promise<void> {
