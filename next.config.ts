@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      { source: '/recurring',     destination: '/payments',                   permanent: true },
+      { source: '/subscriptions', destination: '/payments?tab=subscriptions', permanent: true },
+      { source: '/goals',         destination: '/budget?tab=goals',           permanent: true },
+      { source: '/credit',        destination: '/credit-health',              permanent: true },
+    ];
+  },
   // strictdb is ESM-only — tell Next.js to import it natively instead of bundling.
   // serverExternalPackages also prevents Turbopack from traversing strictdb's optional
   // peer deps (mysql2, pg, better-sqlite3, etc.) that aren't installed.

@@ -1,21 +1,30 @@
 import type { Metadata } from 'next';
 import type { CategoryBudgetSummary } from '@/types/budget';
 import { BudgetView } from '@/components/BudgetView';
+import { GoalsView } from '@/components/GoalsView';
 import { getDb } from '@/adapters/db';
 import { listBudgets } from '@/adapters/budgets';
 import { listUnmatchedQuickAdds } from '@/adapters/quickAdd';
 import { listTransactionsForMonth } from '@/adapters/transactions';
 import { computeSpending, computeEffectiveBudget, computeBurnRate, computeCategoryStatus } from '@/lib/budget/engine';
 import { BILL_CATEGORIES } from '@/types/bill';
+import { BudgetGoalsShell } from '@/components/BudgetGoalsShell';
 
-export const metadata: Metadata = { title: 'Budget' };
+export const metadata: Metadata = { title: 'Budget & Goals — Folio' };
 
 function currentMonth(): string {
   const now = new Date();
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-export default async function BudgetPage() {
+export default async function BudgetPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab: rawTab } = await searchParams;
+  const tab = rawTab === 'goals' ? 'goals' : 'budget';
+
   const db = await getDb();
   const month = currentMonth();
   const today = new Date();
@@ -46,7 +55,7 @@ export default async function BudgetPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <BudgetView initialData={{ month, budgets }} />
+      <BudgetGoalsShell initialTab={tab} budgetData={{ month, budgets }} />
     </div>
   );
 }

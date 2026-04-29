@@ -26,7 +26,7 @@ export function MatchBanner({ count }: Props) {
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <Link
-          href="/subscriptions"
+          href="/payments?tab=subscriptions"
           className="text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
         >
           Review →
