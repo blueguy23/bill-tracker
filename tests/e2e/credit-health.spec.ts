@@ -167,18 +167,18 @@ test.describe('Sync API (POST /api/v1/sync)', () => {
 test.describe('Credit Health Page (/credit)', () => {
   test.describe('page structure', () => {
     test('should render the correct heading and URL', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
 
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toBeVisible();
       await expect(page.locator('h1')).toContainText('Credit Health');
       await expect(page.locator('p').filter({ hasText: 'Credit utilization and payment activity' })).toBeVisible();
     });
 
     test('should render the sidebar with Credit Health nav item active', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
 
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('aside')).toBeVisible();
       const creditLink = page.locator('aside nav a', { hasText: 'Credit Health' });
       await expect(creditLink).toBeVisible();
@@ -186,18 +186,18 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render the Sync Now button in the sidebar', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
 
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
       const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
       await expect(syncBtn).toBeVisible();
       await expect(syncBtn).toBeEnabled();
     });
 
     test('should render a last-sync timestamp below the sync button', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
 
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
       // The timestamp line is in the sidebar footer — "LIVE · Never synced" or "LIVE · Xm ago" etc.
       const sidebar = page.locator('aside');
       const timestampEl = sidebar.locator('div').filter({ hasText: /LIVE/i }).first();
@@ -208,9 +208,9 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('credit data display', () => {
     test('should render credit accounts section or empty state', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
 
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
 
       // Either accounts are present, or the empty-state panel is shown
       // The Credit Health h1 is always rendered — verify the page loaded correctly
@@ -226,8 +226,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show credit account card with balance when credit accounts exist', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const accountsHeading = page.locator('p').filter({ hasText: /Credit Accounts \(/ });
       const hasAccounts = await accountsHeading.isVisible().catch(() => false);
@@ -243,8 +243,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show balance as a formatted dollar amount on each credit account card', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
       if (!hasAccounts) {
@@ -263,8 +263,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show credit limit or "No limit data" badge on each credit account card', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
       if (!hasAccounts) {
@@ -289,8 +289,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show utilization percentage on card when limit data is available', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
       if (!hasAccounts) {
@@ -331,8 +331,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show overall utilization panel with a percentage value', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
       if (!hasAccounts) {
@@ -354,8 +354,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render the Recent Payments panel', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const accountsHeading = page.locator('p').filter({ hasText: /Credit Accounts \(/ });
       const hasAccounts = await accountsHeading.isVisible().catch(() => false);
@@ -378,8 +378,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show transaction descriptions and amounts in Recent Payments when data exists', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       // Skip if no credit accounts at all (panel not rendered) or no payments in last 30 days
       const noAccounts = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
@@ -401,8 +401,8 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('sync button behavior', () => {
     test('should show "Syncing…" while sync is in progress then resolve', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       // Intercept the sync POST so we control timing
       let resolveSyncRequest!: () => void;
@@ -444,8 +444,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should trigger a Next.js RSC re-render after successful sync (router.refresh is called)', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       // Mock sync to succeed instantly
       await page.route('**/api/v1/sync', async (route) => {
@@ -491,13 +491,13 @@ test.describe('Credit Health Page (/credit)', () => {
       expect(rscRequest.url()).toContain('/credit');
 
       // Page must still be on /credit and showing the heading — refresh didn't break it
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
     });
 
     test('should show error state when sync fails', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       await page.route('**/api/v1/sync', async (route) => {
         if (route.request().method() === 'POST') {
@@ -523,8 +523,8 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show quota message when sync returns 429', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       await page.route('**/api/v1/sync', async (route) => {
         if (route.request().method() === 'POST') {
@@ -551,8 +551,8 @@ test.describe('Credit Health Page (/credit)', () => {
       // server-side so we cannot mock it via page.route(). Instead we verify the
       // full observable outcome: sync fires, page re-renders, real DB transactions appear.
 
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
 
       // Skip if no credit accounts are synced — can't assert transactions without data
@@ -596,7 +596,7 @@ test.describe('Credit Health Page (/credit)', () => {
       await rscRefreshPromise;
 
       // Page must still be on /credit with the correct heading
-      await expect(page).toHaveURL('/credit');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
 
       // Recent Payments panel must be visible with either transactions or the empty state
