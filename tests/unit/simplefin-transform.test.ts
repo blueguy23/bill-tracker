@@ -80,8 +80,8 @@ describe('transformAccount', () => {
     };
     const result = transformAccount(makeRawAccount({ holdings: [holding] }));
     expect(result.holdings).toHaveLength(1);
-    expect(result.holdings[0]!.symbol).toBe('AAPL');
-    expect(result.holdings[0]!.market_value).toBe('105884.8');
+    expect(result.holdings![0]!.symbol).toBe('AAPL');
+    expect(result.holdings![0]!.market_value).toBe('105884.8');
   });
 
   it('should pass through extra field', () => {

@@ -81,7 +81,7 @@ export interface Account {
   balanceDate: Date;
   accountType: AccountType;
   lastSyncedAt: Date;
-  holdings: Holding[];
+  holdings?: Holding[];
   extra?: Record<string, unknown>;
 }
 
