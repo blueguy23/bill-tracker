@@ -16,6 +16,8 @@ import { listBudgets } from '@/adapters/budgets';
 import { getCashFlowHistory } from '@/adapters/cashFlowHistory';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 import type { Budget } from '@/types/budget';
+import type { Holding } from '@/lib/simplefin/types';
+import { PortfolioWidget } from '@/components/PortfolioWidget';
 
 function periodToRange(p: Period): { start: Date; end: Date; historyMonths: number; label: string } {
   const now = new Date();
@@ -149,6 +151,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const bills   = rawBills.map(serializeBill);
   const matches: SuggestedMatch[] = findAutoMatches(recentTransactions, rawBills);
+
+  const portfolioHoldings: Holding[] = accounts
+    .filter(a => a.accountType === 'investment' && a.holdings && a.holdings.length > 0)
+    .flatMap(a => a.holdings ?? []);
   const summary = computeSummary(bills);
 
   const savingsRate = cashFlow.income > 0 ? ((cashFlow.income - cashFlow.expenses) / cashFlow.income) * 100 : 0;
@@ -237,6 +243,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div style={{ marginBottom: 20 }}>
           <DashboardCharts history={history} />
         </div>
+
+        {/* Portfolio widget — only renders when SimpleFIN GAP 3 holdings exist */}
+        <PortfolioWidget holdings={portfolioHoldings} />
 
         {/* Bottom row: Spend by Category + Budget + Recent Transactions */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 12 }}>

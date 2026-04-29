@@ -22,7 +22,7 @@ async function syncFetch(
   syncType: 'daily' | 'manual' | 'historical',
   balancesOnly = false,
 ): Promise<{ accountsUpdated: number; transactionsUpserted: number; warnings: string[]; unitCost: number }> {
-  const { accounts, transactions, errors } = await client.fetchAccounts({ startDate, balancesOnly });
+  const { accounts, transactions, errors } = await client.fetchAccounts({ startDate, balancesOnly, includeHoldings: !balancesOnly });
   const unitCost = balancesOnly ? 0.5 : 1.0;
 
   let accountsUpdated = 0;

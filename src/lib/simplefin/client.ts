@@ -132,6 +132,10 @@ export class SimpleFINClient {
       parsed.searchParams.set('pending', '1');
     }
 
+    if (options.includeHoldings) {
+      parsed.searchParams.set('holdings', '1');
+    }
+
     const headers: Record<string, string> = {};
     if (username || password) {
       headers['Authorization'] = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
