@@ -206,7 +206,8 @@ NextAuth v5 credentials provider. Required in `.env`:
 ## CI/CD
 
 - GitHub Actions workflow: `.github/workflows/ci.yml` — runs on push/PR to `master`
-- Self-hosted runner: `~/actions-runner/run.sh` — must be running for CI to pick up jobs
+- Self-hosted runner: runs in a Docker container under `.github/runner/`
+- Start the runner: `docker compose -f .github/runner/docker-compose.yml up -d`
 - Pipeline: typecheck → unit tests → E2E (Chromium only) → failure summary
 - E2E uses local MongoDB (`mongodb://localhost:27017/bill-tracker`)
 - Monitor: `gh run watch`
