@@ -6,18 +6,16 @@ import { useState, useEffect, useCallback } from 'react';
 
 const NAV_SECTIONS = [
   { label: 'Overview', items: [
-    { href: '/',              icon: '▦',  label: 'Dashboard' },
-    { href: '/transactions',  icon: '↕',  label: 'Transactions' },
-    { href: '/recurring',     icon: '↺',  label: 'Recurring Bills' },
+    { href: '/',              icon: '▦', label: 'Dashboard' },
+    { href: '/transactions',  icon: '↕', label: 'Transactions' },
+    { href: '/payments',      icon: '↺', label: 'Payments' },
   ]},
   { label: 'Planning', items: [
-    { href: '/budget',        icon: '◎',  label: 'Budget' },
-    { href: '/goals',         icon: '◈',  label: 'Goals' },
-    { href: '/subscriptions', icon: '⟳',  label: 'Subscriptions' },
+    { href: '/budget',        icon: '◎', label: 'Budget & Goals' },
   ]},
   { label: 'Insights', items: [
-    { href: '/credit',        icon: '◇',  label: 'Credit Health' },
-    { href: '/settings',      icon: '⚙',  label: 'Settings' },
+    { href: '/credit-health', icon: '◇', label: 'Credit Health' },
+    { href: '/settings',      icon: '⚙', label: 'Settings' },
   ]},
 ];
 
@@ -114,7 +112,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       .catch(() => {});
   }, [fetchStatus]);
 
-  const PREFETCH = ['/', '/recurring', '/transactions', '/budget', '/goals', '/subscriptions', '/credit', '/settings'];
+  const PREFETCH = ['/', '/transactions', '/payments', '/budget', '/credit-health', '/settings'];
   useEffect(() => { PREFETCH.forEach(r => router.prefetch(r)); }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {

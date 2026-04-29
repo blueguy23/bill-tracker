@@ -1,70 +1,47 @@
 import { test, expect } from '@playwright/test';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Recurring Bills Page — /recurring
+// Payments Page — /payments (merged Recurring Bills + Subscriptions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Recurring Bills Page (/recurring)', () => {
+test.describe('Payments Page (/payments)', () => {
   test.describe('page structure', () => {
-    test('should render the correct URL, heading, and subtitle', async ({ page }) => {
-      await page.goto('/recurring');
+    test('should render the correct URL and heading', async ({ page }) => {
+      await page.goto('/payments');
 
-      await expect(page).toHaveURL('/recurring');
+      await expect(page).toHaveURL('/payments');
       await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Recurring Bills');
+      await expect(page.locator('h1')).toContainText('Payments');
     });
 
-    test('should render a subtitle that reflects the recurring bill count', async ({ page }) => {
-      await page.goto('/recurring');
+    test('should render Bills, Subscriptions, and Recurring tabs', async ({ page }) => {
+      await page.goto('/payments');
 
-      // Subtitle is either "No recurring bills" or "{n} recurring bill(s)"
-      const subtitle = page.locator('h1 + p, h1 ~ p').first();
-      await expect(subtitle).toBeVisible();
-
-      const text = await subtitle.textContent();
-      const isValidSubtitle =
-        text?.trim() === 'No recurring bills' ||
-        /^\d+ recurring bills?$/.test(text?.trim() ?? '') ||
-        /\$[\d,]+(\.\d+)?\/mo total/.test(text?.trim() ?? '');
-
-      expect(isValidSubtitle, `Unexpected subtitle: "${text}"`).toBe(true);
+      await expect(page.locator('button', { hasText: 'Bills' })).toBeVisible();
+      await expect(page.locator('button', { hasText: 'Subscriptions' })).toBeVisible();
+      await expect(page.locator('button', { hasText: 'Recurring' })).toBeVisible();
     });
 
     test('should render the sidebar with navigation links', async ({ page }) => {
-      await page.goto('/recurring');
+      await page.goto('/payments');
 
       await expect(page.locator('aside')).toBeVisible();
       await expect(page.locator('aside nav a', { hasText: 'Dashboard' })).toBeVisible();
-      await expect(page.locator('aside nav a', { hasText: 'Recurring Bills' })).toBeVisible();
+      await expect(page.locator('aside nav a', { hasText: 'Payments' })).toBeVisible();
     });
 
-    test('should mark Recurring link as active in sidebar', async ({ page }) => {
-      await page.goto('/recurring');
+    test('should mark Payments link as active in sidebar', async ({ page }) => {
+      await page.goto('/payments');
 
-      const recurringLink = page.locator('aside nav a', { hasText: 'Recurring Bills' });
-      await expect(recurringLink).toBeVisible();
-      await expect(recurringLink).toHaveAttribute('aria-current', 'page');
+      const paymentsLink = page.locator('aside nav a', { hasText: 'Payments' });
+      await expect(paymentsLink).toBeVisible();
+      await expect(paymentsLink).toHaveAttribute('aria-current', 'page');
     });
   });
 
   test.describe('bills display', () => {
-    test('should render the All Bills section with heading and count text', async ({ page }) => {
-      await page.goto('/recurring');
-
-      // BillsView shows a bills-table div or "NO BILLS"/"N BILLS" count element
-      // Check for either the bills table container or a visible bills count/heading
-      const billsTable = page.locator('[data-testid="bills-table"]');
-      const countEl = page.locator('div').filter({ hasText: /^NO BILLS$|^\d+ BILLS?$/ }).first();
-      const emptyState = page.locator('p').filter({ hasText: 'No bills yet' });
-
-      const hasTable = await billsTable.isVisible().catch(() => false);
-      const hasCount = await countEl.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
-      expect(hasTable || hasCount || hasEmpty || true).toBe(true);
-    });
-
-    test('should render the Add Bill button', async ({ page }) => {
-      await page.goto('/recurring');
+    test('should render the Add Bill button on the Bills tab', async ({ page }) => {
+      await page.goto('/payments');
 
       const addBillBtn = page.locator('[data-testid="add-bill-btn"]');
       await expect(addBillBtn).toBeVisible();
@@ -72,41 +49,25 @@ test.describe('Recurring Bills Page (/recurring)', () => {
       await expect(addBillBtn).toBeEnabled();
     });
 
-    test('should show table with correct columns when bills exist, or empty state when not', async ({ page }) => {
-      await page.goto('/recurring');
+    test('should show bills table or empty state on Bills tab', async ({ page }) => {
+      await page.goto('/payments');
 
       const billsTable = page.locator('[data-testid="bills-table"]');
-      // BillTable empty state is a div with inline styles (not p.text-zinc-500)
       const emptyState = page.getByText('No bills yet', { exact: true });
 
       const hasTable = await billsTable.isVisible().catch(() => false);
 
       if (hasTable) {
-        // BillTable uses div rows — just verify the wrapper is visible
         await expect(billsTable).toBeVisible();
       } else {
         await expect(emptyState).toBeVisible();
-      }
-    });
-
-    test('should show only recurring bills (all rows must be recurring)', async ({ page }) => {
-      await page.goto('/recurring');
-
-      const billsTable = page.locator('[data-testid="bills-table"]');
-      const hasTable = await billsTable.isVisible().catch(() => false);
-
-      if (hasTable) {
-        // BillTable uses div rows (not tbody/tr) — just verify the table has content
-        await expect(billsTable).toBeVisible();
-        const divCount = await billsTable.locator('div').count();
-        expect(divCount).toBeGreaterThan(0);
       }
     });
   });
 
   test.describe('navigation back to dashboard', () => {
     test('should navigate to dashboard when Dashboard sidebar link is clicked', async ({ page }) => {
-      await page.goto('/recurring');
+      await page.goto('/payments');
 
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
 
@@ -286,8 +247,8 @@ test.describe('Budget Page (/budget)', () => {
       await page.goto('/budget');
 
       await expect(page).toHaveURL('/budget');
-      await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Budget');
+      await expect(page.locator('h1').first()).toBeVisible();
+      await expect(page.locator('h1').first()).toContainText('Budget');
     });
 
     test('should render a subtitle containing "spending by category"', async ({ page }) => {
@@ -298,10 +259,10 @@ test.describe('Budget Page (/budget)', () => {
       await expect(subtitle).toBeVisible();
     });
 
-    test('should set the document title to "Budget — Bill Tracker"', async ({ page }) => {
+    test('should set the document title to "Budget & Goals — Folio"', async ({ page }) => {
       await page.goto('/budget');
 
-      await expect(page).toHaveTitle('Budget — Folio');
+      await expect(page).toHaveTitle('Budget & Goals — Folio');
     });
 
     test('should mark Budget link as active in sidebar', async ({ page }) => {
@@ -320,7 +281,7 @@ test.describe('Budget Page (/budget)', () => {
       // BudgetView renders budget bars; even with no budgets set,
       // the handler returns all BILL_CATEGORIES so always has entries.
       // The redesigned BudgetView uses inline styles not Tailwind .grid class.
-      await expect(page.locator('h1')).toContainText('Budget');
+      await expect(page.locator('h1').first()).toContainText('Budget');
       // At least some div content should be present beyond the layout shell
       const divCount = await page.locator('div').count();
       expect(divCount).toBeGreaterThan(5);
@@ -371,22 +332,22 @@ test.describe('Budget Page (/budget)', () => {
 // Credit Health Page (/credit)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Credit Health Page (/credit)', () => {
+test.describe('Credit Health Page (/credit-health)', () => {
   test.describe('page structure', () => {
     test('should render correct URL, heading, and subtitle', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
       await expect(page.locator('p').filter({ hasText: 'Credit utilization and payment activity' })).toBeVisible();
     });
 
     test('should set the correct document title', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       await expect(page).toHaveTitle(/Credit Health/);
     });
 
     test('should mark Credit Health link as active in sidebar', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const link = page.locator('aside nav a', { hasText: 'Credit Health' });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('aria-current', 'page');
@@ -395,7 +356,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('score and overview', () => {
     test('should render a health score card or no-accounts message', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const scoreCard = page.locator('text=Score Factors');
       const emptyState = page.locator('text=No credit accounts synced');
       const hasScore = await scoreCard.isVisible().catch(() => false);
@@ -404,7 +365,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render overall utilization section when accounts exist', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       // "Score Factors" heading is unique to the with-accounts view; empty state shows "No credit accounts synced"
       const hasAccounts = await page.locator('text=Score Factors').isVisible().catch(() => false);
       const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
@@ -414,7 +375,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('accounts grid', () => {
     test('should render accounts grid or empty state', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const hasGrid = await page.locator('text=TOTAL ACCOUNTS').isVisible().catch(() => false);
       const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
       expect(hasGrid || hasEmpty).toBe(true);
@@ -423,7 +384,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('recent payments', () => {
     test('should render the Recent Payments section when accounts exist', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const hasPayments = await page.locator('text=Recent Payments').isVisible().catch(() => false);
       const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
       expect(hasPayments || hasEmpty).toBe(true);
@@ -432,7 +393,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('navigation', () => {
     test('should navigate to dashboard when Dashboard link is clicked', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
       await expect(page).toHaveURL('/');
     });
@@ -444,9 +405,9 @@ test.describe('Credit Health Page (/credit)', () => {
 test.describe('Active Navigation State', () => {
   const routes = [
     { path: '/', label: 'Dashboard' },
-    { path: '/recurring', label: 'Recurring Bills' },
-    { path: '/budget', label: 'Budget' },
-    { path: '/credit', label: 'Credit Health' },
+    { path: '/payments', label: 'Payments' },
+    { path: '/budget', label: 'Budget & Goals' },
+    { path: '/credit-health', label: 'Credit Health' },
   ];
 
   for (const { path, label } of routes) {
