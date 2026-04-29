@@ -445,12 +445,14 @@ test.describe('Export CSV', () => {
   test.describe('Export button on /transactions page', () => {
     test('renders Export CSV button', async ({ page }) => {
       await page.goto('/transactions');
+      await page.locator('[data-testid="overflow-btn"]').click();
       await expect(page.locator('[data-testid="export-btn"]')).toBeVisible();
       await expect(page.locator('[data-testid="export-btn"]')).toContainText(/export csv/i);
     });
 
     test('Export CSV button is enabled by default', async ({ page }) => {
       await page.goto('/transactions');
+      await page.locator('[data-testid="overflow-btn"]').click();
       await expect(page.locator('[data-testid="export-btn"]')).toBeEnabled();
     });
   });
