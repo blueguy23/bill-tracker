@@ -5,12 +5,26 @@ export interface RawSFINOrg {
   'sfin-url'?: string;
 }
 
+export interface Holding {
+  id: string;
+  created: number;
+  cost_basis: string;
+  currency: string;
+  description: string;
+  market_value: string;
+  purchase_price: string;
+  shares: string;
+  symbol: string;
+}
+
 export interface RawSFINTransaction {
   id: string;
   posted: number;         // unix timestamp
   amount: string;         // decimal string e.g. "-42.50"
   description: string;
+  payee?: string;
   memo?: string | null;
+  transacted_at?: number;
   extra?: {
     pending?: boolean;
     [key: string]: unknown;
@@ -26,6 +40,7 @@ export interface RawSFINAccount {
   'available-balance'?: string;      // decimal string, optional
   'balance-date': number;            // unix timestamp
   transactions?: RawSFINTransaction[];
+  holdings?: Holding[];
   extra?: {
     type?: string;
     [key: string]: unknown;
@@ -43,6 +58,7 @@ export interface RawSFINError {
 export interface RawSFINResponse {
   accounts: RawSFINAccount[];
   errors: RawSFINError[];
+  'x-api-message'?: string[];
 }
 
 // ── Normalized internal types ─────────────────────────────────────────────────
@@ -65,6 +81,8 @@ export interface Account {
   balanceDate: Date;
   accountType: AccountType;
   lastSyncedAt: Date;
+  holdings?: Holding[];
+  extra?: Record<string, unknown>;
 }
 
 export interface Transaction {
@@ -73,9 +91,12 @@ export interface Transaction {
   posted: Date;
   amount: number;
   description: string;
+  payee?: string;
   memo: string | null;
+  transactedAt?: Date;
   pending: boolean;
   importedAt: Date;
+  extra?: Record<string, unknown>;
   category?: import('@/lib/categorization/types').TransactionCategory;
   categorySource?: 'auto' | 'user' | 'trove';
   merchantName?: string | null;
@@ -88,6 +109,7 @@ export interface SyncLog {
   _id: string;
   date: string;           // YYYY-MM-DD UTC
   requestCount: number;
+  urlUnits?: Record<string, number>;  // hashed URL -> fractional units used today
   lastSyncAt: Date | null;
   lastSyncType: 'historical' | 'daily' | 'manual' | null;
   historicalImportDone: boolean;
@@ -99,9 +121,14 @@ export interface SyncResult {
   quotaUsed: number;
   warnings: string[];
   skipped?: boolean;
+  quotaWarning?: boolean;
+  unitsRemaining?: number;
 }
 
 export interface FetchAccountsOptions {
   startDate?: Date;
+  endDate?: Date;
   balancesOnly?: boolean;
+  accountIds?: string[];
+  includePending?: boolean;
 }

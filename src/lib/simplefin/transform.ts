@@ -8,6 +8,10 @@ import type {
   SFINError,
 } from './types';
 
+function stripHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, '');
+}
+
 export function inferAccountType(extra?: RawSFINAccount['extra'], name?: string): AccountType {
   const t = extra?.type?.toLowerCase() ?? '';
   if (t === 'checking') return 'checking';
@@ -85,6 +89,8 @@ export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): A
     balanceDate: new Date(raw['balance-date'] * 1000),
     accountType: inferAccountType(raw.extra, raw.name),
     lastSyncedAt: now,
+    holdings: raw.holdings ?? [],
+    extra: raw.extra,
   };
 }
 
@@ -95,9 +101,12 @@ export function transformTransaction(raw: RawSFINTransaction, accountId: string,
     posted: new Date(raw.posted * 1000),
     amount: parseFloat(raw.amount),
     description: raw.description,
+    payee: raw.payee,
     memo: raw.memo ?? null,
+    transactedAt: raw.transacted_at != null ? new Date(raw.transacted_at * 1000) : undefined,
     pending: raw.extra?.pending ?? false,
     importedAt: now,
+    extra: raw.extra,
   };
 }
 
@@ -105,6 +114,6 @@ export function transformError(raw: RawSFINError): SFINError {
   return {
     type: raw.type,
     accountId: raw['account-id'],
-    message: raw.message,
+    message: raw.message != null ? stripHtml(raw.message) : undefined,
   };
 }

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SimpleFINClient } from '@/lib/simplefin/client';
+import {
+  SimpleFINClient,
+  InvalidTokenError,
+  TokenCompromisedError,
+  SubscriptionLapsedError,
+  AuthFailedError,
+} from '@/lib/simplefin/client';
 
 const BASE_URL = 'https://user:token@bridge.simplefin.org/simplefin';
 
@@ -24,6 +30,7 @@ function mockFetch(body: unknown, status = 200) {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
+    text: () => Promise.resolve(typeof body === 'string' ? body : JSON.stringify(body)),
   });
 }
 
@@ -37,6 +44,71 @@ describe('SimpleFINClient', () => {
 
     it('should accept a valid SIMPLEFIN_URL', () => {
       expect(() => new SimpleFINClient({ url: BASE_URL })).not.toThrow();
+    });
+
+    it('should expose a urlHash derived from the URL', () => {
+      const client = new SimpleFINClient({ url: BASE_URL });
+      expect(typeof client.urlHash).toBe('string');
+      expect(client.urlHash.length).toBe(16);
+      // same URL => same hash
+      const client2 = new SimpleFINClient({ url: BASE_URL });
+      expect(client.urlHash).toBe(client2.urlHash);
+    });
+  });
+
+  describe('claimToken', () => {
+    it('should POST to decoded URL and return access URL on 200', async () => {
+      const accessUrl = 'https://user:secret@bridge.simplefin.org/simplefin';
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(accessUrl),
+      }));
+
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const claimUrl = 'https://beta-bridge.simplefin.org/simplefin/claim/abc123';
+      const setupToken = Buffer.from(claimUrl).toString('base64');
+
+      const result = await client.claimToken(setupToken);
+      expect(result).toBe(accessUrl);
+
+      const fetchMock = vi.mocked(globalThis.fetch);
+      expect(fetchMock).toHaveBeenCalledOnce();
+      const [calledUrl, calledInit] = fetchMock.mock.calls[0]!;
+      expect(calledUrl).toBe(claimUrl);
+      expect((calledInit as RequestInit).method).toBe('POST');
+    });
+
+    it('should throw TokenCompromisedError on 403', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        text: () => Promise.resolve(''),
+      }));
+
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const setupToken = Buffer.from('https://bridge.simplefin.org/claim/xyz').toString('base64');
+
+      await expect(client.claimToken(setupToken)).rejects.toThrow(TokenCompromisedError);
+      await expect(client.claimToken(setupToken)).rejects.toThrow('already been used');
+    });
+
+    it('should throw InvalidTokenError when decoded URL is HTTP (not HTTPS)', async () => {
+      const fetchSpy = vi.fn();
+      vi.stubGlobal('fetch', fetchSpy);
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const httpToken = Buffer.from('http://bridge.simplefin.org/claim/insecure').toString('base64');
+
+      await expect(client.claimToken(httpToken)).rejects.toThrow(InvalidTokenError);
+      await expect(client.claimToken(httpToken)).rejects.toThrow('HTTPS');
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('should throw InvalidTokenError when decoded value is not a URL', async () => {
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const badToken = Buffer.from('not-a-url').toString('base64');
+
+      await expect(client.claimToken(badToken)).rejects.toThrow(InvalidTokenError);
     });
   });
 
@@ -63,7 +135,45 @@ describe('SimpleFINClient', () => {
       expect(calledUrl).not.toContain('start-date');
     });
 
-    it('should return accounts and errors from v2 response', async () => {
+    it('should append end-date param when endDate is provided', async () => {
+      const fetchMock = mockFetch(makeRawResponse());
+      vi.stubGlobal('fetch', fetchMock);
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const endDate = new Date('2026-04-01T00:00:00.000Z');
+      await client.fetchAccounts({ endDate });
+      const calledUrl = fetchMock.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain(`end-date=${Math.floor(endDate.getTime() / 1000)}`);
+    });
+
+    it('should append repeated account= params for accountIds', async () => {
+      const fetchMock = mockFetch(makeRawResponse());
+      vi.stubGlobal('fetch', fetchMock);
+      const client = new SimpleFINClient({ url: BASE_URL });
+      await client.fetchAccounts({ accountIds: ['ACT-1', 'ACT-2'] });
+      const calledUrl = fetchMock.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('account=ACT-1');
+      expect(calledUrl).toContain('account=ACT-2');
+    });
+
+    it('should set pending=1 when includePending is true', async () => {
+      const fetchMock = mockFetch(makeRawResponse());
+      vi.stubGlobal('fetch', fetchMock);
+      const client = new SimpleFINClient({ url: BASE_URL });
+      await client.fetchAccounts({ includePending: true });
+      const calledUrl = fetchMock.mock.calls[0]![0] as string;
+      expect(calledUrl).toContain('pending=1');
+    });
+
+    it('should not set pending= when includePending is false or omitted', async () => {
+      const fetchMock = mockFetch(makeRawResponse());
+      vi.stubGlobal('fetch', fetchMock);
+      const client = new SimpleFINClient({ url: BASE_URL });
+      await client.fetchAccounts({});
+      const calledUrl = fetchMock.mock.calls[0]![0] as string;
+      expect(calledUrl).not.toContain('pending=');
+    });
+
+    it('should return accounts and errors from response', async () => {
       vi.stubGlobal('fetch', mockFetch(makeRawResponse()));
       const client = new SimpleFINClient({ url: BASE_URL });
       const result = await client.fetchAccounts({});
@@ -73,7 +183,21 @@ describe('SimpleFINClient', () => {
   });
 
   describe('error handling', () => {
-    it('should identify RATE_LIMIT errors from v2 error objects', async () => {
+    it('should throw SubscriptionLapsedError on 402', async () => {
+      vi.stubGlobal('fetch', mockFetch({}, 402));
+      const client = new SimpleFINClient({ url: BASE_URL });
+      await expect(client.fetchAccounts({})).rejects.toThrow(SubscriptionLapsedError);
+      await expect(client.fetchAccounts({})).rejects.toThrow('subscription has expired');
+    });
+
+    it('should throw AuthFailedError on 403', async () => {
+      vi.stubGlobal('fetch', mockFetch({}, 403));
+      const client = new SimpleFINClient({ url: BASE_URL });
+      await expect(client.fetchAccounts({})).rejects.toThrow(AuthFailedError);
+      await expect(client.fetchAccounts({})).rejects.toThrow('was denied');
+    });
+
+    it('should identify RATE_LIMIT errors from error objects', async () => {
       const body = makeRawResponse({ accounts: [], errors: [{ type: 'RATE_LIMIT', 'account-id': 'abc' }] });
       vi.stubGlobal('fetch', mockFetch(body));
       const client = new SimpleFINClient({ url: BASE_URL });

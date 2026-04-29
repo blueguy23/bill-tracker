@@ -47,6 +47,7 @@ export default {
         balanceDate: now,
         accountType: 'checking',
         lastSyncedAt: now,
+        holdings: [],
       },
       {
         _id: SAVINGS_ID,
@@ -58,6 +59,7 @@ export default {
         balanceDate: now,
         accountType: 'savings',
         lastSyncedAt: now,
+        holdings: [],
       },
       {
         _id: CREDIT_ID,
@@ -69,6 +71,7 @@ export default {
         balanceDate: now,
         accountType: 'credit',
         lastSyncedAt: now,
+        holdings: [],
       },
     ];
 

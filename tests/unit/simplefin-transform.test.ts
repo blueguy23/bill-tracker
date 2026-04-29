@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { transformAccount, transformTransaction, inferAccountType } from '@/lib/simplefin/transform';
-import type { RawSFINAccount, RawSFINTransaction } from '@/lib/simplefin/types';
+import { transformAccount, transformTransaction, transformError, inferAccountType } from '@/lib/simplefin/transform';
+import type { RawSFINAccount, RawSFINTransaction, RawSFINError } from '@/lib/simplefin/types';
 
 function makeRawAccount(overrides: Partial<RawSFINAccount> = {}): RawSFINAccount {
   return {
@@ -60,6 +60,34 @@ describe('transformAccount', () => {
     const result = transformAccount(makeRawAccount(), now);
     expect(result.lastSyncedAt).toBe(now);
   });
+
+  it('should default holdings to empty array when absent', () => {
+    const result = transformAccount(makeRawAccount());
+    expect(result.holdings).toEqual([]);
+  });
+
+  it('should map holdings when present', () => {
+    const holding = {
+      id: 'h-1',
+      created: 345427200,
+      cost_basis: '55.00',
+      currency: 'USD',
+      description: 'Shares of Apple',
+      market_value: '105884.8',
+      purchase_price: '0.10',
+      shares: '550.0',
+      symbol: 'AAPL',
+    };
+    const result = transformAccount(makeRawAccount({ holdings: [holding] }));
+    expect(result.holdings).toHaveLength(1);
+    expect(result.holdings![0]!.symbol).toBe('AAPL');
+    expect(result.holdings![0]!.market_value).toBe('105884.8');
+  });
+
+  it('should pass through extra field', () => {
+    const result = transformAccount(makeRawAccount({ extra: { type: 'checking', custom: true } }));
+    expect(result.extra).toEqual({ type: 'checking', custom: true });
+  });
 });
 
 describe('inferAccountType', () => {
@@ -110,5 +138,54 @@ describe('transformTransaction', () => {
   it('should set memo to null when not provided', () => {
     const result = transformTransaction(makeRawTxn(), 'acc-1');
     expect(result.memo).toBeNull();
+  });
+
+  it('should map payee when present', () => {
+    const result = transformTransaction(makeRawTxn({ payee: "John's Fishin Shack" }), 'acc-1');
+    expect(result.payee).toBe("John's Fishin Shack");
+  });
+
+  it('should set payee to undefined when absent', () => {
+    const result = transformTransaction(makeRawTxn(), 'acc-1');
+    expect(result.payee).toBeUndefined();
+  });
+
+  it('should convert transacted_at unix timestamp to a Date', () => {
+    const result = transformTransaction(makeRawTxn({ transacted_at: 1777363200 }), 'acc-1');
+    expect(result.transactedAt).toBeInstanceOf(Date);
+    expect(result.transactedAt!.getTime()).toBe(1777363200 * 1000);
+  });
+
+  it('should set transactedAt to undefined when transacted_at is absent', () => {
+    const result = transformTransaction(makeRawTxn(), 'acc-1');
+    expect(result.transactedAt).toBeUndefined();
+  });
+
+  it('should pass through extra field', () => {
+    const extra = { pending: false, category: 'food' };
+    const result = transformTransaction(makeRawTxn({ extra }), 'acc-1');
+    expect(result.extra).toEqual(extra);
+  });
+});
+
+describe('transformError', () => {
+  it('should map type and accountId', () => {
+    const raw: RawSFINError = { type: 'NO_DATA', 'account-id': 'acc-1' };
+    const result = transformError(raw);
+    expect(result.type).toBe('NO_DATA');
+    expect(result.accountId).toBe('acc-1');
+  });
+
+  it('should strip HTML tags from error messages while preserving text', () => {
+    const raw: RawSFINError = { type: 'UNAVAILABLE', message: '<b>Error:</b> please try again' };
+    const result = transformError(raw);
+    expect(result.message).toBe('Error: please try again');
+    expect(result.message).not.toContain('<');
+  });
+
+  it('should return undefined message when absent', () => {
+    const raw: RawSFINError = { type: 'RATE_LIMIT' };
+    const result = transformError(raw);
+    expect(result.message).toBeUndefined();
   });
 });

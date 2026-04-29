@@ -16,6 +16,7 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     balanceDate: new Date(),
     accountType: 'credit',
     lastSyncedAt: new Date(),
+    holdings: [],
     ...overrides,
   };
 }

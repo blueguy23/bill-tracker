@@ -206,11 +206,31 @@ NextAuth v5 credentials provider. Required in `.env`:
 ## CI/CD
 
 - GitHub Actions workflow: `.github/workflows/ci.yml` — runs on push/PR to `master`
-- Self-hosted runner: runs in a Docker container under `.github/runner/`
+- Self-hosted runner: containerized — config lives in `.github/runner/`
 - Start the runner: `docker compose -f .github/runner/docker-compose.yml up -d`
-- Pipeline: typecheck → unit tests → E2E (Chromium only) → failure summary
-- E2E uses local MongoDB (`mongodb://localhost:27017/bill-tracker`)
+- Pipeline: typecheck → lint → security audit → unit tests → E2E (Chromium only) → docker build
+- E2E uses MongoDB running inside the runner container (`localhost:27017`)
 - Monitor: `gh run watch`
+
+### Runner operations
+
+```bash
+# Start/restart
+cd .github/runner && docker compose up -d
+
+# View logs
+docker compose logs -f runner
+
+# Stop (deregisters from GitHub automatically)
+docker compose down
+```
+
+**Upgrading the runner binary:**
+1. Download new tarball: `curl -fsSL <url> -o .github/runner/actions-runner.tar.gz`
+2. Delete the config volume so it repopulates: `docker volume rm runner_runner-config`
+3. Rebuild: `docker compose build && docker compose up -d`
+
+**Runner requires:** `GITHUB_PAT` (repo scope) in `.github/runner/.env`
 
 ---
 
@@ -226,7 +246,6 @@ NextAuth v5 credentials provider. Required in `.env`:
 
 ## Next Session Ideas
 
-- **Runner auto-start** — configure as systemd/WSL background service
 - **Production deployment** — MongoDB Atlas (free tier) is set up; Dokploy config in `.env.example`
 - **Transfer UI** — manually mark transactions as "transfer" (edge cases the env-var heuristic misses)
 - **Goals page** — `src/app/goals/` already scaffolded, needs wiring

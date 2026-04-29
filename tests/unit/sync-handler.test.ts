@@ -27,9 +27,12 @@ function makeAccount(overrides: Partial<Account> = {}): Account {
     balanceDate: new Date(),
     accountType: 'checking',
     lastSyncedAt: new Date(),
+    holdings: [],
     ...overrides,
   };
 }
+
+const TEST_URL_HASH = 'test-hash-abcd1234';
 
 function makeMockDb(logOverrides: Partial<SyncLog> = {}): StrictDB {
   const log = makeSyncLog(logOverrides);
@@ -47,23 +50,46 @@ function makeMockDb(logOverrides: Partial<SyncLog> = {}): StrictDB {
 
 function makeMockClient(accounts: Account[] = [makeAccount()], txns: Transaction[] = []): SimpleFINClient {
   return {
+    urlHash: TEST_URL_HASH,
     fetchAccounts: vi.fn().mockResolvedValue({ accounts, transactions: txns, errors: [] }),
   } as unknown as SimpleFINClient;
 }
 
 describe('quota guard', () => {
-  it('should block sync when requestCount >= QUOTA_GUARD (20)', async () => {
-    const db = makeMockDb({ requestCount: 20 });
+  it('should block sync when url units >= QUOTA_GUARD (20)', async () => {
+    const db = makeMockDb({ urlUnits: { [TEST_URL_HASH]: 20 } });
     const client = makeMockClient();
     await expect(runDailySync(db, client)).rejects.toBeInstanceOf(QuotaExceededError);
     expect(client.fetchAccounts).not.toHaveBeenCalled();
   });
 
-  it('should allow sync when requestCount < QUOTA_GUARD', async () => {
-    const db = makeMockDb({ requestCount: 19 });
+  it('should allow sync when url units < QUOTA_GUARD', async () => {
+    const db = makeMockDb({ urlUnits: { [TEST_URL_HASH]: 5 } });
     const client = makeMockClient();
     await expect(runDailySync(db, client)).resolves.not.toThrow();
     expect(client.fetchAccounts).toHaveBeenCalledOnce();
+  });
+
+  it('should allow sync when url units are unset (new day)', async () => {
+    const db = makeMockDb();
+    const client = makeMockClient();
+    await expect(runDailySync(db, client)).resolves.not.toThrow();
+    expect(client.fetchAccounts).toHaveBeenCalledOnce();
+  });
+
+  it('should attach quotaWarning when units reach >= 15 after sync', async () => {
+    const db = makeMockDb({ urlUnits: { [TEST_URL_HASH]: 14 }, requestCount: 14 });
+    const client = makeMockClient();
+    const result = await runDailySync(db, client);
+    expect(result.quotaWarning).toBe(true);
+    expect(typeof result.unitsRemaining).toBe('number');
+  });
+
+  it('should not attach quotaWarning when units are well below 15', async () => {
+    const db = makeMockDb({ urlUnits: { [TEST_URL_HASH]: 3 }, requestCount: 3 });
+    const client = makeMockClient();
+    const result = await runDailySync(db, client);
+    expect(result.quotaWarning).toBeUndefined();
   });
 
   it('should increment requestCount by 1 after a successful sync', async () => {
