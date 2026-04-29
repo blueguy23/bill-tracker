@@ -12,27 +12,27 @@ export default async function TransactionsPage() {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [{ transactions, hasMore }, allAccounts, metaList] = await Promise.all([
+  const [{ transactions, hasMore }, allAccounts] = await Promise.all([
     listTransactions(db, { startDate, limit: 100 }),
     listAccounts(db),
-    listAccounts(db).then((accts) =>
-      accts.length > 0 ? listAccountMeta(db, accts.map((a) => a._id)) : [],
-    ),
   ]);
 
-  const metaMap = new Map(metaList.map((m) => [m._id, m]));
-  const accounts: Account[] = allAccounts.map((a) => {
+  const metaList = allAccounts.length > 0 ? await listAccountMeta(db, allAccounts.map(a => a._id)) : [];
+  const metaMap = new Map(metaList.map(m => [m._id, m]));
+  const accounts: Account[] = allAccounts.map(a => {
     const meta = metaMap.get(a._id);
     return meta?.customOrgName ? { ...a, orgName: meta.customOrgName } : a;
   });
 
+  const month = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)' }}>
-        <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Transactions</h1>
-        <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>{transactions.length} transactions</p>
-      </div>
-      <div style={{ padding: '24px 28px' }}>
+      <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Transactions</h1>
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{transactions.length} transactions · {month}</span>
+        </div>
         <TransactionsView
           initialTransactions={transactions as Transaction[]}
           initialHasMore={hasMore}
