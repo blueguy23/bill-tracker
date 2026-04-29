@@ -1,9 +1,11 @@
 import type {
   RawSFINAccount,
+  RawSFINHolding,
   RawSFINTransaction,
   RawSFINError,
   Account,
   AccountType,
+  Holding,
   Transaction,
   SFINError,
 } from './types';
@@ -76,8 +78,18 @@ export function inferOrgName(rawOrgName: string | undefined, accountName: string
   return 'Unknown';
 }
 
-export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): Account {
+export function transformHolding(raw: RawSFINHolding): Holding {
   return {
+    id: raw.id,
+    ticker: raw.ticker ?? null,
+    description: raw.description ?? null,
+    marketValue: raw['market-value'] ? parseFloat(raw['market-value']) : 0,
+    currency: raw.currency ?? 'USD',
+  };
+}
+
+export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): Account {
+  const account: Account = {
     _id: raw.id,
     orgName: inferOrgName(raw.org?.name, raw.name),
     name: raw.name,
@@ -89,9 +101,11 @@ export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): A
     balanceDate: new Date(raw['balance-date'] * 1000),
     accountType: inferAccountType(raw.extra, raw.name),
     lastSyncedAt: now,
-    holdings: raw.holdings ?? [],
+    holdings: raw.holdings?.map(transformHolding) ?? [],
     extra: raw.extra,
   };
+
+  return account;
 }
 
 export function transformTransaction(raw: RawSFINTransaction, accountId: string, now: Date = new Date()): Transaction {

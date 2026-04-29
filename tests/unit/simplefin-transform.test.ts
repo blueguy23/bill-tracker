@@ -69,19 +69,17 @@ describe('transformAccount', () => {
   it('should map holdings when present', () => {
     const holding = {
       id: 'h-1',
-      created: 345427200,
-      cost_basis: '55.00',
-      currency: 'USD',
+      ticker: 'AAPL',
       description: 'Shares of Apple',
-      market_value: '105884.8',
-      purchase_price: '0.10',
-      shares: '550.0',
-      symbol: 'AAPL',
+      'market-value': '105884.8',
+      'cost-basis': '55.00',
+      quantity: '550.0',
+      currency: 'USD',
     };
     const result = transformAccount(makeRawAccount({ holdings: [holding] }));
     expect(result.holdings).toHaveLength(1);
-    expect(result.holdings![0]!.symbol).toBe('AAPL');
-    expect(result.holdings![0]!.market_value).toBe('105884.8');
+    expect(result.holdings![0]!.ticker).toBe('AAPL');
+    expect(result.holdings![0]!.marketValue).toBe(105884.8);
   });
 
   it('should pass through extra field', () => {

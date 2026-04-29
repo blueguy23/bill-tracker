@@ -5,16 +5,15 @@ export interface RawSFINOrg {
   'sfin-url'?: string;
 }
 
-export interface Holding {
+export interface RawSFINHolding {
   id: string;
-  created: number;
-  cost_basis: string;
-  currency: string;
-  description: string;
-  market_value: string;
-  purchase_price: string;
-  shares: string;
-  symbol: string;
+  description?: string;
+  ticker?: string;
+  'market-value'?: string;  // decimal string
+  'cost-basis'?: string;    // decimal string
+  quantity?: string;        // decimal string
+  currency?: string;
+  'purchased-at'?: number;  // unix timestamp
 }
 
 export interface RawSFINTransaction {
@@ -40,7 +39,7 @@ export interface RawSFINAccount {
   'available-balance'?: string;      // decimal string, optional
   'balance-date': number;            // unix timestamp
   transactions?: RawSFINTransaction[];
-  holdings?: Holding[];
+  holdings?: RawSFINHolding[];
   extra?: {
     type?: string;
     [key: string]: unknown;
@@ -64,6 +63,14 @@ export interface RawSFINResponse {
 // ── Normalized internal types ─────────────────────────────────────────────────
 
 export type AccountType = 'checking' | 'savings' | 'credit' | 'investment' | 'other';
+
+export interface Holding {
+  id: string;
+  ticker: string | null;
+  description: string | null;
+  marketValue: number;
+  currency: string;
+}
 
 export interface SFINError {
   type: SFINErrorType;
@@ -131,4 +138,5 @@ export interface FetchAccountsOptions {
   balancesOnly?: boolean;
   accountIds?: string[];
   includePending?: boolean;
+  includeHoldings?: boolean;
 }
