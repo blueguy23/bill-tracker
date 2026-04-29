@@ -69,7 +69,7 @@ test.describe('Sidebar Navigation', () => {
     await expect(nav.locator('a', { hasText: 'Dashboard' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Payments' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Budget & Goals' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: /Budget.*Goals/ })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Credit Health' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Settings' })).toBeVisible();
   });
@@ -102,7 +102,7 @@ test.describe('Sidebar Navigation', () => {
   test('should navigate to /budget when Budget & Goals link is clicked', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('aside nav a', { hasText: 'Budget & Goals' }).click();
+    await page.locator('aside nav a', { hasText: /Budget.*Goals/ }).click();
 
     await expect(page).toHaveURL('/budget');
     await expect(page.locator('h1')).toContainText('Budget');

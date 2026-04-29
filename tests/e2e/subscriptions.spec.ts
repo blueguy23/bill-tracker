@@ -4,45 +4,35 @@ import { test, expect } from '@playwright/test';
 // Subscriptions Page (/subscriptions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Subscriptions Page (/subscriptions)', () => {
-  test('should load with correct title', async ({ page }) => {
-    await page.goto('/subscriptions');
+// /subscriptions now 308-redirects to /payments?tab=subscriptions
+test.describe('Subscriptions tab (/payments?tab=subscriptions)', () => {
+  test('should load at /payments with Payments heading', async ({ page }) => {
+    await page.goto('/payments?tab=subscriptions');
 
-    await expect(page).toHaveURL('/subscriptions');
+    await expect(page).toHaveURL('/payments?tab=subscriptions');
     await expect(page.locator('h1')).toBeVisible();
-    await expect(page.locator('h1')).toContainText('Subscriptions');
+    await expect(page.locator('h1')).toContainText('Payments');
   });
 
-  test('should render a subtitle', async ({ page }) => {
-    await page.goto('/subscriptions');
+  test('should render the Subscriptions tab button', async ({ page }) => {
+    await page.goto('/payments?tab=subscriptions');
 
-    const subtitle = page.locator('p').filter({ hasText: /pattern|detected|recurring/i }).first();
-    await expect(subtitle).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Subscriptions' })).toBeVisible();
   });
 
-  test('should show Subscriptions link in sidebar', async ({ page }) => {
-    await page.goto('/subscriptions');
+  test('should show Payments link as active in sidebar', async ({ page }) => {
+    await page.goto('/payments?tab=subscriptions');
 
     const nav = page.locator('aside nav');
-    const link = nav.locator('a', { hasText: 'Subscriptions' });
+    const link = nav.locator('a', { hasText: 'Payments' });
     await expect(link).toBeVisible();
-    await expect(link).toHaveAttribute('href', '/subscriptions');
-  });
-
-  test('should mark Subscriptions link as active when on /subscriptions', async ({ page }) => {
-    await page.goto('/subscriptions');
-
-    const nav = page.locator('aside nav');
-    const link = nav.locator('a', { hasText: 'Subscriptions' });
     await expect(link).toHaveAttribute('aria-current', 'page');
   });
 
-  test('should render empty state or subscription cards', async ({ page }) => {
-    await page.goto('/subscriptions');
+  test('should render subscription content or empty state', async ({ page }) => {
+    await page.goto('/payments?tab=subscriptions');
 
-    // SubscriptionsView uses inline borderRadius style (not Tailwind rounded-xl class)
-    // Verify the page always renders meaningful content
-    await expect(page.locator('h1')).toContainText('Subscriptions');
+    await expect(page.locator('h1')).toContainText('Payments');
     const divCount = await page.locator('div').count();
     expect(divCount).toBeGreaterThan(5);
   });

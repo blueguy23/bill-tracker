@@ -247,8 +247,8 @@ test.describe('Budget Page (/budget)', () => {
       await page.goto('/budget');
 
       await expect(page).toHaveURL('/budget');
-      await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Budget');
+      await expect(page.locator('h1').first()).toBeVisible();
+      await expect(page.locator('h1').first()).toContainText('Budget');
     });
 
     test('should render a subtitle containing "spending by category"', async ({ page }) => {
@@ -259,10 +259,10 @@ test.describe('Budget Page (/budget)', () => {
       await expect(subtitle).toBeVisible();
     });
 
-    test('should set the document title to "Budget — Bill Tracker"', async ({ page }) => {
+    test('should set the document title to "Budget & Goals — Folio"', async ({ page }) => {
       await page.goto('/budget');
 
-      await expect(page).toHaveTitle('Budget — Folio');
+      await expect(page).toHaveTitle('Budget & Goals — Folio');
     });
 
     test('should mark Budget link as active in sidebar', async ({ page }) => {
@@ -281,7 +281,7 @@ test.describe('Budget Page (/budget)', () => {
       // BudgetView renders budget bars; even with no budgets set,
       // the handler returns all BILL_CATEGORIES so always has entries.
       // The redesigned BudgetView uses inline styles not Tailwind .grid class.
-      await expect(page.locator('h1')).toContainText('Budget');
+      await expect(page.locator('h1').first()).toContainText('Budget');
       // At least some div content should be present beyond the layout shell
       const divCount = await page.locator('div').count();
       expect(divCount).toBeGreaterThan(5);
@@ -332,22 +332,22 @@ test.describe('Budget Page (/budget)', () => {
 // Credit Health Page (/credit)
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Credit Health Page (/credit)', () => {
+test.describe('Credit Health Page (/credit-health)', () => {
   test.describe('page structure', () => {
     test('should render correct URL, heading, and subtitle', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
       await expect(page.locator('p').filter({ hasText: 'Credit utilization and payment activity' })).toBeVisible();
     });
 
     test('should set the correct document title', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       await expect(page).toHaveTitle(/Credit Health/);
     });
 
     test('should mark Credit Health link as active in sidebar', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const link = page.locator('aside nav a', { hasText: 'Credit Health' });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('aria-current', 'page');
@@ -356,7 +356,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('score and overview', () => {
     test('should render a health score card or no-accounts message', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const scoreCard = page.locator('text=Score Factors');
       const emptyState = page.locator('text=No credit accounts synced');
       const hasScore = await scoreCard.isVisible().catch(() => false);
@@ -365,7 +365,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render overall utilization section when accounts exist', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       // "Score Factors" heading is unique to the with-accounts view; empty state shows "No credit accounts synced"
       const hasAccounts = await page.locator('text=Score Factors').isVisible().catch(() => false);
       const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
@@ -375,7 +375,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('accounts grid', () => {
     test('should render accounts grid or empty state', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const hasGrid = await page.locator('text=TOTAL ACCOUNTS').isVisible().catch(() => false);
       const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
       expect(hasGrid || hasEmpty).toBe(true);
@@ -384,7 +384,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('recent payments', () => {
     test('should render the Recent Payments section when accounts exist', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const hasPayments = await page.locator('text=Recent Payments').isVisible().catch(() => false);
       const hasEmpty = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
       expect(hasPayments || hasEmpty).toBe(true);
@@ -393,7 +393,7 @@ test.describe('Credit Health Page (/credit)', () => {
 
   test.describe('navigation', () => {
     test('should navigate to dashboard when Dashboard link is clicked', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
       await expect(page).toHaveURL('/');
     });
