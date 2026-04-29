@@ -68,8 +68,8 @@ test.describe('Sidebar Navigation', () => {
     const nav = page.locator('aside nav');
     await expect(nav.locator('a', { hasText: 'Dashboard' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Recurring Bills' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Budget' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Payments' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Budget & Goals' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Credit Health' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Settings' })).toBeVisible();
   });
@@ -90,19 +90,19 @@ test.describe('Sidebar Navigation', () => {
     await expect(dashboardLink).toHaveAttribute('aria-current', 'page');
   });
 
-  test('should navigate to /recurring when Recurring Bills link is clicked', async ({ page }) => {
+  test('should navigate to /payments when Payments link is clicked', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('aside nav a', { hasText: 'Recurring Bills' }).click();
+    await page.locator('aside nav a', { hasText: 'Payments' }).click();
 
-    await expect(page).toHaveURL('/recurring');
-    await expect(page.locator('h1')).toContainText('Recurring Bills');
+    await expect(page).toHaveURL('/payments');
+    await expect(page.locator('h1')).toContainText('Payments');
   });
 
-  test('should navigate to /budget when Budget link is clicked', async ({ page }) => {
+  test('should navigate to /budget when Budget & Goals link is clicked', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('aside nav a', { hasText: 'Budget' }).click();
+    await page.locator('aside nav a', { hasText: 'Budget & Goals' }).click();
 
     await expect(page).toHaveURL('/budget');
     await expect(page.locator('h1')).toContainText('Budget');
