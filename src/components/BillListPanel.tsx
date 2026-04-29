@@ -186,7 +186,9 @@ export function BillListPanel({ bills, onEdit, onDelete, onTogglePaid, onToggleA
           ))}
         </div>
         {filtered.length === 0 ? (
-          <div style={{ padding: '32px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>No bills match this filter</div>
+          <div style={{ padding: '32px 24px', textAlign: 'center', fontSize: 13, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>
+            {bills.length === 0 ? 'No bills yet' : 'No bills match this filter'}
+          </div>
         ) : filtered.map(bill => (
           <BillRowItem key={bill._id} bill={bill} today={today} mm={mm} monthAbbr={monthAbbr}
             onEdit={onEdit} onDelete={onDelete} onTogglePaid={onTogglePaid} onToggleAutoPay={onToggleAutoPay} />
