@@ -10,7 +10,7 @@ import { computeSpending, computeEffectiveBudget, computeBurnRate, computeCatego
 import { BILL_CATEGORIES } from '@/types/bill';
 import { BudgetGoalsShell } from '@/components/BudgetGoalsShell';
 
-export const metadata: Metadata = { title: 'Budget & Goals — Folio' };
+export const metadata: Metadata = { title: 'Budget & Goals' };
 
 function currentMonth(): string {
   const now = new Date();

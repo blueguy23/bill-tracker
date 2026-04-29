@@ -8,7 +8,7 @@ import { listTransactionsForDetection } from '@/adapters/accounts';
 import { listDismissedSubscriptions } from '@/adapters/subscriptions';
 import { detectSubscriptions } from '@/lib/subscriptions/detect';
 
-export const metadata: Metadata = { title: 'Payments — Folio' };
+export const metadata: Metadata = { title: 'Payments' };
 
 type Tab = 'bills' | 'subscriptions' | 'recurring';
 

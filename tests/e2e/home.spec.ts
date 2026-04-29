@@ -105,7 +105,7 @@ test.describe('Sidebar Navigation', () => {
     await page.locator('aside nav a', { hasText: /Budget.*Goals/ }).click();
 
     await expect(page).toHaveURL('/budget');
-    await expect(page.locator('h1')).toContainText('Budget');
+    await expect(page.locator('h1').first()).toContainText('Budget');
   });
 
   test('should navigate to /transactions when Transactions link is clicked', async ({ page }) => {
