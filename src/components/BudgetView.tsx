@@ -3,73 +3,128 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryBudgetSummary } from '@/types/budget';
+import type { BillCategory } from '@/types/bill';
 import { SetBudgetModal } from './SetBudgetModal';
 
 interface Props {
   initialData: { month: string; budgets: CategoryBudgetSummary[] };
 }
 
-const PERIODS = ['1W', '1M', '3M', 'YTD', '1Y'] as const;
-type Period = (typeof PERIODS)[number];
-const MULT: Record<Period, number> = { '1W': 0.23, '1M': 1, '3M': 3, 'YTD': 3.6, '1Y': 12 };
 const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const USD  = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
-function BudgetBar({
-  category, spent, limit, onEdit,
-}: { category: string; spent: number; limit: number | null; onEdit: () => void }) {
-  const hasLimit = limit !== null && limit > 0;
-  const pct      = hasLimit ? Math.min((spent / limit!) * 100, 100) : 0;
-  const over     = hasLimit && spent > limit!;
-  const warn     = hasLimit && !over && pct > 80;
-  const barColor = over ? 'var(--red)' : warn ? 'var(--gold)' : 'var(--accent)';
-  const [width, setWidth] = useState(0);
+const CAT_COLOR: Record<BillCategory, string> = {
+  utilities:     '#60a5fa',
+  subscriptions: '#6366f1',
+  insurance:     '#34d399',
+  rent:          '#a78bfa',
+  loans:         '#f97316',
+  other:         '#f59e0b',
+};
+
+const FLEXIBLE: BillCategory[] = ['utilities', 'other'];
+const FIXED: BillCategory[]    = ['rent', 'insurance', 'subscriptions', 'loans'];
+
+type PaceStatus = 'on-track' | 'watch-out' | 'over' | 'no-budget';
+
+const PACE_COLOR: Record<PaceStatus, string> = {
+  'on-track':  'var(--green)',
+  'watch-out': 'var(--gold)',
+  'over':      'var(--red)',
+  'no-budget': 'rgba(255,255,255,0.15)',
+};
+const PACE_ALPHA: Record<PaceStatus, string> = {
+  'on-track':  'rgba(34,197,94,0.85)',
+  'watch-out': 'rgba(245,158,11,0.85)',
+  'over':      'rgba(239,68,68,0.85)',
+  'no-budget': 'transparent',
+};
+const PACE_LABEL: Record<PaceStatus, string> = {
+  'on-track':  'On pace',
+  'watch-out': 'Watch out',
+  'over':      'Over budget',
+  'no-budget': 'No budget set',
+};
+const PACE_CHIP: Record<PaceStatus, React.CSSProperties> = {
+  'on-track':  { background: 'rgba(34,197,94,0.10)',   color: 'var(--green)', border: '1px solid rgba(34,197,94,0.2)' },
+  'watch-out': { background: 'rgba(245,158,11,0.10)',  color: 'var(--gold)',  border: '1px solid rgba(245,158,11,0.2)' },
+  'over':      { background: 'rgba(239,68,68,0.10)',   color: 'var(--red)',   border: '1px solid rgba(239,68,68,0.2)' },
+  'no-budget': { background: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: '1px solid var(--border)' },
+};
+
+function paceStatus(b: CategoryBudgetSummary, todayPct: number): PaceStatus {
+  if (!b.effectiveBudget || b.effectiveBudget === 0) return 'no-budget';
+  if (b.spent > b.effectiveBudget) return 'over';
+  const spentPct = (b.spent / b.effectiveBudget) * 100;
+  if (spentPct > todayPct + 10) return 'watch-out';
+  return 'on-track';
+}
+
+function BudgetChartRow({ b, todayPct, onEdit }: { b: CategoryBudgetSummary; todayPct: number; onEdit: () => void }) {
+  const [animPct, setAnimPct] = useState(0);
+  const hasLimit = b.effectiveBudget !== null && b.effectiveBudget > 0;
+  const rawPct   = hasLimit ? Math.min((b.spent / b.effectiveBudget!) * 100, 100) : 0;
+  const ps       = paceStatus(b, todayPct);
 
   useEffect(() => {
-    const t = setTimeout(() => setWidth(pct), 80);
+    const t = setTimeout(() => setAnimPct(rawPct), 80);
     return () => clearTimeout(t);
-  }, [pct]);
+  }, [rawPct]);
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 22px', marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)', marginBottom: 3 }}>{category}</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-            {!hasLimit ? 'No budget set' : over ? `OVER BY ${USD.format(spent - limit!)}` : `${USD.format(limit! - spent)} remaining`}
+    <div onClick={onEdit} style={{ display: 'grid', gridTemplateColumns: '130px 1fr 100px', alignItems: 'center', gap: 12, cursor: 'pointer', borderRadius: 5, padding: '3px 2px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: CAT_COLOR[b.category], flexShrink: 0, opacity: hasLimit ? 1 : 0.4 }} />
+        <span style={{ fontSize: 12, color: hasLimit ? 'var(--text2)' : 'var(--text3)' }}>{b.category.charAt(0).toUpperCase() + b.category.slice(1)}</span>
+      </div>
+
+      {hasLimit ? (
+        <div style={{ position: 'relative', height: 22, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'visible' }}>
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 5 }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${animPct}%`, background: PACE_ALPHA[ps], borderRadius: 5, transition: 'width 0.8s cubic-bezier(.4,0,.2,1)' }} />
           </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 400, color: over ? 'var(--red)' : 'var(--text)' }}>{USD0.format(spent)}</div>
-          {hasLimit && (
-            <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>of {USD0.format(limit!)}</div>
+          <div style={{ position: 'absolute', top: -3, bottom: -3, left: `${todayPct}%`, width: 2, background: 'rgba(255,255,255,0.45)', borderRadius: 1, zIndex: 2 }} />
+          {ps === 'watch-out' && b.effectiveBudget && (
+            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontFamily: 'var(--mono)', color: '#0b0b0f', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              {USD0.format(b.effectiveBudget - b.spent)} left
+            </div>
           )}
-          <button
-            onClick={onEdit}
-            style={{ fontSize: 10, color: 'var(--accent)', fontFamily: 'var(--mono)', background: 'none', border: 'none', cursor: 'pointer', marginTop: 4, letterSpacing: '.04em' }}
-          >
-            {hasLimit ? 'EDIT →' : 'SET →'}
-          </button>
+          {ps === 'over' && (
+            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontFamily: 'var(--mono)', color: '#0b0b0f', fontWeight: 600, whiteSpace: 'nowrap' }}>
+              OVER
+            </div>
+          )}
         </div>
+      ) : (
+        <div style={{ position: 'relative', height: 22, background: 'rgba(255,255,255,0.03)', borderRadius: 5, border: '1px dashed rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+          <span style={{ fontSize: 10, color: 'var(--text3)' }}>No budget set{b.spent > 0 ? ` — ${USD.format(b.spent)} spent` : ''}</span>
+        </div>
+      )}
+
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: ps === 'watch-out' || ps === 'over' ? PACE_COLOR[ps] : 'var(--text3)', textAlign: 'right', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+        {hasLimit ? `${USD0.format(b.spent)} / ${USD0.format(b.effectiveBudget!)}` : <span style={{ color: 'var(--gold)' }}>Set limit →</span>}
       </div>
-      <div style={{ height: 6, background: 'var(--raised)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', width: `${width}%`, background: barColor, borderRadius: 3,
-          transition: 'width 0.8s cubic-bezier(.4,0,.2,1)',
-          boxShadow: over ? '0 0 8px var(--red)' : warn ? '0 0 8px var(--gold)' : '0 0 8px oklch(0.68 0.22 265 / 0.4)',
-        }} />
+    </div>
+  );
+}
+
+function DetailCard({ title, total, rows }: { title: string; total: string; rows: { category: string; chip: PaceStatus; amount: string }[] }) {
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)' }}>{title}</span>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text2)' }}>{total}</span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-        {hasLimit && (
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, fontFamily: 'var(--mono)', background: over ? 'rgba(239,68,68,.15)' : warn ? 'rgba(234,179,8,.15)' : 'oklch(0.68 0.22 265 / 0.15)', color: barColor }}>
-            {Math.round(pct)}%
-          </span>
-        )}
-        {over && (
-          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, fontFamily: 'var(--mono)', background: 'rgba(239,68,68,.12)', color: 'var(--red)' }}>
-            ⚠ OVER BUDGET
-          </span>
-        )}
+      <div style={{ padding: '8px 0' }}>
+        {rows.map(({ category, chip, amount }, i) => (
+          <div key={category} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 16px', fontSize: 12, borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
+            <span style={{ color: 'var(--text2)' }}>{category}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 9, borderRadius: 4, padding: '1px 6px', fontFamily: 'var(--mono)', ...PACE_CHIP[chip] }}>{PACE_LABEL[chip]}</span>
+              <span style={{ fontFamily: 'var(--mono)', color: chip === 'watch-out' || chip === 'over' ? PACE_COLOR[chip] : 'var(--text2)' }}>{amount}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -77,93 +132,104 @@ function BudgetBar({
 
 export function BudgetView({ initialData }: Props) {
   const router = useRouter();
-  const [period, setPeriod] = useState<Period>('1M');
   const [editCategory, setEditCategory] = useState<string | null>(null);
-  const mul = MULT[period];
 
-  const budgets = initialData.budgets.map((b) => ({
-    ...b,
-    effectiveBudget: b.effectiveBudget !== null ? Math.round(b.effectiveBudget * mul) : null,
-    spent: Math.round(b.spent * mul),
-  }));
+  const now         = new Date();
+  const todayDay    = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const todayPct    = ((todayDay - 0.5) / daysInMonth) * 100;
+  const daysLeft    = daysInMonth - todayDay;
+  const monthLabel  = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  const totalLimit = budgets.reduce((s, b) => s + (b.effectiveBudget ?? 0), 0);
-  const totalSpent = budgets.reduce((s, b) => s + b.spent, 0);
-  const remaining  = totalLimit - totalSpent;
-  const overCount  = budgets.filter((b) => b.effectiveBudget !== null && b.spent > b.effectiveBudget).length;
+  const { budgets } = initialData;
+  const totalBudgeted = budgets.reduce((s, b) => s + (b.effectiveBudget ?? 0), 0);
+  const totalSpent    = budgets.reduce((s, b) => s + b.spent, 0);
+  const remaining     = totalBudgeted - totalSpent;
+
+  const flexBudgets    = budgets.filter(b => (FLEXIBLE as string[]).includes(b.category));
+  const fixedBudgets   = budgets.filter(b => (FIXED as string[]).includes(b.category));
+  const flexSpent      = flexBudgets.reduce((s, b) => s + b.spent, 0);
+  const flexBudgeted   = flexBudgets.reduce((s, b) => s + (b.effectiveBudget ?? 0), 0);
+  const fixedCommitted = fixedBudgets.reduce((s, b) => s + b.spent, 0);
 
   const currentBudget = editCategory
-    ? (initialData.budgets.find((b) => b.category === editCategory)?.monthlyAmount ?? null)
+    ? (initialData.budgets.find(b => b.category === editCategory)?.monthlyAmount ?? null)
     : null;
 
   async function handleSaveBudget(category: string, monthlyAmount: number) {
     const res = await fetch(`/api/v1/budgets/${category}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ monthlyAmount }),
     });
     if (!res.ok) {
       let msg = `Failed (${res.status})`;
-      try { const j = await res.json() as { error?: string }; msg = j.error ?? msg; } catch { /* empty body */ }
+      try { const j = await res.json() as { error?: string }; msg = j.error ?? msg; } catch { /* empty */ }
       throw new Error(msg);
     }
     router.refresh();
   }
 
   return (
-    <>
-      {/* Sticky header with period selector */}
-      <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Budget</h1>
-          <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>Spending limits by category</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      {remaining > 50 && (
+        <div data-testid="unallocated-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 16px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 600, color: 'var(--green)' }}>{USD0.format(remaining)} unallocated</div>
+              <div style={{ fontSize: 12, color: 'rgba(34,197,94,0.75)' }}>You have money that hasn&apos;t been assigned a job yet</div>
+              <div style={{ fontSize: 10, color: 'rgba(34,197,94,0.45)', marginTop: 1 }}>Add it to a budget category or send it to a goal</div>
+            </div>
+          </div>
+          <button data-testid="allocate-btn" style={{ fontSize: 11, color: 'var(--green)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 5, padding: '4px 10px', background: 'transparent', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            Allocate →
+          </button>
         </div>
-        <div style={{ display: 'flex', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 2 }}>
-          {PERIODS.map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              style={{
-                padding: '5px 11px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                cursor: 'pointer', border: 'none', fontFamily: 'var(--mono)',
-                background: period === p ? 'var(--surface)' : 'transparent',
-                color: period === p ? 'var(--text)' : 'var(--text3)',
-                transition: 'all .12s',
-                boxShadow: period === p ? '0 0 0 1px var(--border)' : 'none',
-              }}
-            >
-              {p}
-            </button>
+      )}
+
+      {/* ── CHART HERO ── */}
+      <div data-testid="budget-chart" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '20px 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Spending vs. Budget</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{monthLabel} · {daysLeft} days remaining · pace marker shows where you should be today</div>
+          </div>
+          <div style={{ display: 'flex', gap: 14, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: 'rgba(255,255,255,0.15)' }}/> Budget limit</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--green)' }}/> On pace</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--gold)' }}/> Watch out</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><div style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.4)', borderRadius: 1 }}/> Today&apos;s pace</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {budgets.map(b => (
+            <BudgetChartRow key={b.category} b={b} todayPct={todayPct} onEdit={() => setEditCategory(b.category)} />
           ))}
         </div>
       </div>
 
-      <div style={{ padding: '24px 28px' }}>
-      {/* 4 summary metric cards */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        {[
-          { label: 'TOTAL BUDGETED', value: USD0.format(totalLimit), color: 'var(--text)' },
-          { label: 'TOTAL SPENT', value: USD0.format(totalSpent), color: totalSpent > totalLimit && totalLimit > 0 ? 'var(--red)' : 'var(--text)' },
-          { label: 'REMAINING', value: `${remaining < 0 ? '-' : ''}${USD0.format(Math.abs(remaining))}`, color: remaining < 0 ? 'var(--red)' : 'var(--green)' },
-          { label: 'OVER BUDGET', value: overCount > 0 ? `${overCount} categor${overCount === 1 ? 'y' : 'ies'}` : 'None ✓', color: overCount > 0 ? 'var(--red)' : 'var(--green)' },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', flex: 1 }}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>{label}</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 300, color, letterSpacing: '.01em' }}>{value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Budget bars */}
-      {budgets.map((b) => (
-        <BudgetBar
-          key={b.category}
-          category={b.category}
-          spent={b.spent}
-          limit={b.effectiveBudget}
-          onEdit={() => setEditCategory(b.category)}
+      {/* ── DETAIL CARDS ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <DetailCard
+          title="Flexible spending"
+          total={`${USD0.format(flexSpent)} / ${USD0.format(flexBudgeted)}`}
+          rows={flexBudgets.map(b => ({
+            category: b.category.charAt(0).toUpperCase() + b.category.slice(1),
+            chip: paceStatus(b, todayPct),
+            amount: USD0.format(b.spent),
+          }))}
         />
-      ))}
+        <DetailCard
+          title="Fixed & Savings"
+          total={`${USD0.format(fixedCommitted)} committed`}
+          rows={fixedBudgets.map(b => ({
+            category: b.category.charAt(0).toUpperCase() + b.category.slice(1),
+            chip: paceStatus(b, todayPct),
+            amount: USD0.format(b.spent),
+          }))}
+        />
+      </div>
 
       <SetBudgetModal
         category={editCategory}
@@ -171,7 +237,6 @@ export function BudgetView({ initialData }: Props) {
         onClose={() => setEditCategory(null)}
         onSave={handleSaveBudget}
       />
-      </div>
-    </>
+    </div>
   );
 }

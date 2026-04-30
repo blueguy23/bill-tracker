@@ -2,192 +2,174 @@
 
 import { useState, useEffect } from 'react';
 
-interface Goal {
+export interface GoalData {
   id: string;
   name: string;
   target: number;
-  current: number;
-  emoji: string;
-  color: string;
-  deadline?: string;
-  isMonthly?: boolean;
+  saved: number;
+  dueDate: string;      // ISO date string e.g. "2026-12-01"
+  contribution: number; // monthly $ contribution
 }
 
-const DEFAULT_GOALS: Goal[] = [];
-const GOAL_COLORS = ['#3b82f6', '#22c55e', '#c084fc', '#f59e0b', '#ef4444', '#06b6d4'];
+interface Props {
+  goals?: GoalData[];
+  onGoalAdded?: (g: GoalData) => void;
+  onGoalDeleted?: (id: string) => void;
+  onGoalUpdated?: (id: string, saved: number) => void;
+  showAddModal?: boolean;
+  onCloseAddModal?: () => void;
+  onAddGoalClick?: () => void;
+}
+
 const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-const USD  = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const RING_CIRC = 2 * Math.PI * 58; // r=58 for 140px ring
 
-// ── Animated SVG arc ring ─────────────────────────────────────────────────
-function GoalRing({ pct, color, size = 120 }: { pct: number; color: string; size?: number }) {
+export function goalState(g: GoalData): 'green' | 'amber' | 'idle' {
+  if (g.contribution <= 0) return 'idle';
+  const monthsNeeded = (g.target - g.saved) / g.contribution;
+  const today = new Date();
+  const due = new Date(g.dueDate);
+  const monthsLeft = (due.getFullYear() - today.getFullYear()) * 12 + due.getMonth() - today.getMonth();
+  return monthsNeeded <= monthsLeft ? 'green' : 'amber';
+}
+
+function finishDate(g: GoalData): string {
+  if (g.contribution <= 0) return 'Never';
+  const months = Math.ceil((g.target - g.saved) / g.contribution);
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+function neededMonthly(g: GoalData): number {
+  const today = new Date();
+  const due = new Date(g.dueDate);
+  const monthsLeft = Math.max(1, (due.getFullYear() - today.getFullYear()) * 12 + due.getMonth() - today.getMonth());
+  return Math.ceil((g.target - g.saved) / monthsLeft);
+}
+
+// ── Goal card ────────────────────────────────────────────────────────────────
+
+function GoalCard({ goal, onBoost }: { goal: GoalData; onBoost: (g: GoalData) => void }) {
   const [animPct, setAnimPct] = useState(0);
-  useEffect(() => { requestAnimationFrame(() => setTimeout(() => setAnimPct(pct), 80)); }, [pct]);
-  const r    = (size - 12) / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = (animPct / 100) * circ;
+  const pct = Math.min((goal.saved / goal.target) * 100, 100);
+  const state = goalState(goal);
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimPct(pct), 80);
+    return () => clearTimeout(t);
+  }, [pct]);
+
+  const COLOR = { green: 'var(--green)', amber: 'var(--gold)', idle: 'rgba(255,255,255,0.15)' }[state];
+  const BADGE_STYLE: Record<string, React.CSSProperties> = {
+    green: { background: 'rgba(34,197,94,0.10)',  color: 'var(--green)', border: '1px solid rgba(74,222,128,0.2)' },
+    amber: { background: 'rgba(245,158,11,0.10)', color: 'var(--gold)',  border: '1px solid rgba(245,158,11,0.2)' },
+    idle:  { background: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: '1px solid var(--border)' },
+  };
+  const BADGE_LABEL = { green: '● On track', amber: '● Behind', idle: '● Idle' }[state];
+
+  const fill = (animPct / 100) * RING_CIRC;
+  const offset = RING_CIRC - fill;
+
+  const finish = finishDate(goal);
+  const needed = neededMonthly(goal);
+
+  const boostText =
+    state === 'green' ? `+$50/mo finishes earlier`
+    : state === 'amber' ? `Need $${needed}/mo to hit deadline`
+    : `Set $${needed}/mo to hit deadline`;
+
   return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--raised)" strokeWidth={8} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={8}
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        style={{ transition: 'stroke-dasharray 1s cubic-bezier(.4,0,.2,1)', filter: `drop-shadow(0 0 6px ${color}80)` }}
-      />
-    </svg>
-  );
-}
+    <div data-testid="goal-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', minHeight: 300, cursor: 'pointer' }}>
+      {/* Status stripe */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, borderRadius: '14px 14px 0 0', background: COLOR }} />
+      {/* Badge */}
+      <div style={{ position: 'absolute', top: 14, right: 14, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 4, fontSize: 9, fontFamily: 'var(--mono)', ...BADGE_STYLE[state] }}>
+        {BADGE_LABEL}
+      </div>
 
-// ── Goal card ─────────────────────────────────────────────────────────────
-function GoalCard({ goal, onDeposit, onEdit }: { goal: Goal; onDeposit: (g: Goal) => void; onEdit: (g: Goal) => void }) {
-  const [hov, setHov] = useState(false);
-  const pct       = Math.min((goal.current / goal.target) * 100, 100);
-  const remaining = goal.target - goal.current;
-  const deadline  = goal.deadline ? new Date(goal.deadline) : null;
-  const daysLeft  = deadline ? Math.ceil((deadline.getTime() - Date.now()) / 86400000) : null;
-
-  return (
-    <div
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        background: 'var(--surface)', border: `1px solid ${hov ? 'var(--border-l)' : 'var(--border)'}`,
-        borderRadius: 12, padding: '24px',
-        transition: 'border-color .15s, transform .15s, box-shadow .15s',
-        transform: hov ? 'translateY(-1px)' : 'none',
-        boxShadow: hov ? '0 8px 32px rgba(0,0,0,0.4)' : 'none',
-        position: 'relative', overflow: 'hidden',
-      }}
-    >
-      {/* Glow bg */}
-      <div style={{ position: 'absolute', top: -40, right: -40, width: 140, height: 140, borderRadius: '50%', background: `${goal.color}08`, pointerEvents: 'none' }} />
-
-      <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-        {/* Ring */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <GoalRing pct={pct} color={goal.color} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: goal.color, fontFamily: 'var(--mono)', letterSpacing: '.02em' }}>{Math.round(pct)}%</div>
-            <div style={{ fontSize: 18, lineHeight: 1 }}>{goal.emoji}</div>
-          </div>
-        </div>
-
-        {/* Info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-            <div>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)', marginBottom: 4 }}>{goal.name}</h3>
-              {daysLeft !== null && (
-                <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, fontFamily: 'var(--mono)', background: daysLeft < 30 ? 'rgba(239,68,68,.12)' : 'rgba(34,197,94,.12)', color: daysLeft < 30 ? 'var(--red)' : 'var(--green)' }}>
-                  {daysLeft}d left
-                </span>
-              )}
-            </div>
-            <div style={{ opacity: hov ? 1 : 0, transition: 'opacity .15s', display: 'flex', gap: 6 }}>
-              <button onClick={() => onEdit(goal)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: 'rgba(237,237,245,0.06)', color: 'var(--text2)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--sans)' }}>✎</button>
-              <button onClick={() => onDeposit(goal)} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(34,197,94,.3)', background: 'rgba(34,197,94,.1)', color: 'var(--green)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--sans)', fontWeight: 600 }}>+ Deposit</button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 24, marginBottom: 12 }}>
-            {[['SAVED', USD0.format(goal.current), 'var(--text)'], ['TARGET', USD0.format(goal.target), 'var(--text2)'], ['REMAINING', remaining <= 0 ? 'COMPLETE ✓' : USD0.format(remaining), remaining <= 0 ? 'var(--green)' : 'var(--text2)']].map(([lbl, val, clr]) => (
-              <div key={lbl}>
-                <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginBottom: 3 }}>{lbl}</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 17, fontWeight: 400, color: clr, letterSpacing: '.01em' }}>{val}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ height: 4, background: 'var(--raised)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: goal.color, borderRadius: 2, transition: 'width 1s ease', boxShadow: `0 0 8px ${goal.color}60` }} />
-          </div>
+      {/* Ring */}
+      <div style={{ position: 'relative', width: 140, height: 140, margin: '16px auto 8px', flexShrink: 0 }}>
+        <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+          <circle fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" cx="70" cy="70" r="58"/>
+          <circle fill="none" stroke={COLOR} strokeWidth="12" strokeLinecap="round" cx="70" cy="70" r="58"
+            strokeDasharray={String(RING_CIRC)} strokeDashoffset={String(offset)}
+            style={{ transition: 'stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)', filter: state !== 'idle' ? `drop-shadow(0 0 10px ${COLOR}60)` : 'none' }}/>
+        </svg>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 32, fontWeight: 700, color: COLOR, lineHeight: 1 }}>{Math.round(pct)}%</span>
+          <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>complete</span>
         </div>
       </div>
+
+      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', textAlign: 'center', marginTop: 12, marginBottom: 2 }}>{goal.name}</div>
+      <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', marginBottom: 16 }}>Target {USD0.format(goal.target)} · {new Date(goal.dueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>{USD0.format(goal.saved)}</div>
+      <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', marginBottom: 16 }}>of {USD0.format(goal.target)} saved</div>
+
+      <div style={{ width: '100%', height: 1, background: 'var(--border)', margin: '4px 0 14px' }} />
+
+      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+          <span style={{ color: 'var(--text3)' }}>Contributing</span>
+          <span style={{ fontFamily: 'var(--mono)', color: 'var(--text2)' }}>{goal.contribution > 0 ? `$${goal.contribution}/mo` : '$0/mo — nothing set'}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+          <span style={{ color: 'var(--text3)' }}>{state === 'green' ? 'Finish date' : 'At this rate'}</span>
+          <span style={{ fontFamily: 'var(--mono)', color: state === 'green' ? 'var(--green)' : 'var(--gold)' }}>
+            {state === 'green' ? `${finish} ✓` : goal.contribution <= 0 ? 'Deadline missed' : `${finish} — too late`}
+          </span>
+        </div>
+      </div>
+
+      <button data-testid="boost-goal-btn" onClick={() => onBoost(goal)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, padding: 8, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(232,201,126,0.2)', borderRadius: 8, fontSize: 11, color: 'var(--gold)', cursor: 'pointer' }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        {boostText}
+      </button>
     </div>
   );
 }
 
-// ── Deposit modal ──────────────────────────────────────────────────────────
-function DepositModal({ goal, onClose, onSave }: { goal: Goal | null; onClose: () => void; onSave: (id: string, amount: number) => void }) {
-  const [amount, setAmount] = useState('');
-  if (!goal) return null;
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', animation: 'btFadeIn .15s ease' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-l)', borderRadius: 16, width: '100%', maxWidth: 480, margin: '0 16px', boxShadow: '0 32px 80px rgba(0,0,0,.6)', animation: 'btSlideUp .18s ease' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Deposit to {goal.name}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
-        </div>
-        <div style={{ padding: '24px' }}>
-          <div style={{ fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--sans)', marginBottom: 12 }}>Current balance: {USD.format(goal.current)}</div>
-          <label style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--sans)', fontWeight: 600, display: 'block', marginBottom: 8 }}>Deposit amount</label>
-          <div style={{ position: 'relative', marginBottom: 16 }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: 13, fontFamily: 'var(--sans)' }}>$</span>
-            <input autoFocus value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" type="text"
-              style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px 9px 28px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--sans)', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            {[100, 250, 500, 1000].map(v => (
-              <button key={v} onClick={() => setAmount(String(v))} style={{ padding: '5px 14px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--raised)', color: 'var(--text2)', cursor: 'pointer', fontSize: 12, fontFamily: 'var(--sans)' }}>
-                ${v}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)' }}>Cancel</button>
-            <button onClick={() => { onSave(goal.id, parseFloat(amount) || 0); onClose(); }} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}>Deposit</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// ── Add Goal Modal ───────────────────────────────────────────────────────────
 
-// ── Add goal modal ─────────────────────────────────────────────────────────
-function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (g: Goal) => void }) {
-  const [form, setForm] = useState({ name: '', target: '', current: '', emoji: '🎯', color: '#3b82f6', deadline: '' });
-  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (g: GoalData) => void }) {
+  const [form, setForm] = useState({ name: '', target: '', saved: '', dueDate: '', contribution: '' });
+  const set = (k: keyof typeof form, v: string) => setForm(p => ({ ...p, [k]: v }));
   if (!open) return null;
+
+  function handleSubmit() {
+    if (!form.name || !form.target || !form.dueDate) return;
+    onSave({ id: `goal-${Date.now()}`, name: form.name, target: parseFloat(form.target) || 0, saved: parseFloat(form.saved) || 0, dueDate: form.dueDate, contribution: parseFloat(form.contribution) || 0 });
+    setForm({ name: '', target: '', saved: '', dueDate: '', contribution: '' });
+    onClose();
+  }
+
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)', animation: 'btFadeIn .15s ease' }}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-l)', borderRadius: 16, width: '100%', maxWidth: 520, margin: '0 16px', boxShadow: '0 32px 80px rgba(0,0,0,.6)', animation: 'btSlideUp .18s ease' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-l)', borderRadius: 16, width: '100%', maxWidth: 480, margin: '0 16px', boxShadow: '0 32px 80px rgba(0,0,0,.6)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>New Goal</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {([['Goal Name', 'name', 'e.g. New Car', 'text', ''], ['Emoji', 'emoji', '🎯', 'text', ''], ['Target Amount', 'target', '10000', 'text', '$'], ['Already Saved', 'current', '0', 'text', '$']] as [string,string,string,string,string][]).map(([lbl, key, ph, type, pfx]) => (
+            {([['Goal Name', 'name', 'e.g. Emergency Fund', ''], ['Target Amount ($)', 'target', '10000', '$'], ['Already Saved ($)', 'saved', '0', '$'], ['Monthly Contribution ($)', 'contribution', '200', '$']] as [string, keyof typeof form, string, string][]).map(([lbl, key, ph, pfx]) => (
               <div key={key}>
                 <label style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--sans)', fontWeight: 600, display: 'block', marginBottom: 6 }}>{lbl}</label>
-                <div style={{ position: 'relative' }}>
-                  {pfx && <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: 13, fontFamily: 'var(--sans)' }}>{pfx}</span>}
-                  <input autoFocus={key === 'name'} value={(form as Record<string, string>)[key]} onChange={e => set(key, e.target.value)} placeholder={ph} type={type}
-                    style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, padding: pfx ? '9px 12px 9px 28px' : '9px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--sans)', outline: 'none', boxSizing: 'border-box' }} />
-                </div>
+                <input value={form[key]} onChange={e => set(key, e.target.value)} placeholder={ph} type={pfx ? 'number' : 'text'}
+                  style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--sans)', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             ))}
           </div>
           <div>
-            <label style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--sans)', fontWeight: 600, display: 'block', marginBottom: 8 }}>Color</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {GOAL_COLORS.map(c => (
-                <button key={c} onClick={() => set('color', c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: form.color === c ? '3px solid var(--text)' : '3px solid transparent', cursor: 'pointer', boxShadow: `0 0 8px ${c}60`, transition: 'border .1s' }} />
-              ))}
-            </div>
+            <label style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--sans)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Target Date</label>
+            <input value={form.dueDate} onChange={e => set('dueDate', e.target.value)} type="date"
+              style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--sans)', outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
             <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)' }}>Cancel</button>
-            <button
-              onClick={() => {
-                if (!form.name || !form.target) return;
-                onSave({ id: `goal-${Date.now()}`, name: form.name, target: parseFloat(form.target) || 0, current: parseFloat(form.current) || 0, emoji: form.emoji || '🎯', color: form.color, deadline: form.deadline || undefined });
-                onClose();
-              }}
-              style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}
-            >
-              Create Goal
-            </button>
+            <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--green)', color: '#0b0b0f', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}>Create Goal</button>
           </div>
         </div>
       </div>
@@ -195,70 +177,58 @@ function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () =>
   );
 }
 
-// ── Main view ──────────────────────────────────────────────────────────────
-export function GoalsView() {
-  const [goals, setGoals]     = useState<Goal[]>(DEFAULT_GOALS);
-  const [deposit, setDeposit] = useState<Goal | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
+// ── Main view ────────────────────────────────────────────────────────────────
 
-  const totalSaved  = goals.reduce((s, g) => s + g.current, 0);
-  const totalTarget = goals.reduce((s, g) => s + g.target, 0);
-  const completed   = goals.filter(g => g.current >= g.target).length;
-  const overallPct  = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
+export function GoalsView({ goals: externalGoals, onGoalAdded, onGoalDeleted: _onGoalDeleted, onGoalUpdated: _onGoalUpdated, showAddModal: externalShowAdd, onCloseAddModal, onAddGoalClick }: Props = {}) {
+  const [localGoals, setLocalGoals] = useState<GoalData[]>([]);
+  const [localShowAdd, setLocalShowAdd] = useState(false);
 
-  function handleDeposit(id: string, amount: number) {
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, current: Math.min(g.current + amount, g.target) } : g));
+  const isControlled = externalGoals !== undefined;
+  const goals = isControlled ? externalGoals! : localGoals;
+  const showAdd = externalShowAdd ?? localShowAdd;
+
+  function handleAddGoal(g: GoalData) {
+    if (isControlled && onGoalAdded) {
+      onGoalAdded(g);
+    } else {
+      setLocalGoals(prev => [...prev, g]);
+    }
+  }
+
+  function handleCloseAdd() {
+    if (onCloseAddModal) onCloseAddModal();
+    else setLocalShowAdd(false);
+  }
+
+  function handleBoost(g: GoalData) {
+    if (!isControlled) {
+      const amount = parseFloat(prompt(`Deposit to ${g.name}:`) ?? '0') || 0;
+      if (amount > 0) setLocalGoals(prev => prev.map(x => x.id === g.id ? { ...x, saved: Math.min(x.saved + amount, x.target) } : x));
+    }
   }
 
   return (
     <>
-      {/* Summary strip */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        {[
-          { label: 'TOTAL SAVED', value: USD0.format(totalSaved), color: 'var(--green)' },
-          { label: 'TOTAL TARGET', value: USD0.format(totalTarget), color: 'var(--text)' },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', flex: 1 }}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginBottom: 6 }}>{label}</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 22, fontWeight: 300, color, letterSpacing: '.01em' }}>{value}</div>
+      <div data-testid="goals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {goals.map(g => <GoalCard key={g.id} goal={g} onBoost={handleBoost} />)}
+
+        <div data-testid="add-goal-card" onClick={() => onAddGoalClick ? onAddGoalClick() : setLocalShowAdd(true)}
+          style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 300, cursor: 'pointer' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(232,201,126,0.3)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--interactive-a)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}>
+          <div style={{ width: 44, height: 44, background: 'var(--raised)', border: '1px solid var(--border-l)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </div>
-        ))}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px', flex: 2 }}>
-          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginBottom: 6 }}>OVERALL PROGRESS</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ flex: 1, height: 6, background: 'var(--raised)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${overallPct}%`, background: 'var(--accent)', borderRadius: 3, transition: 'width 1s ease', boxShadow: '0 0 8px oklch(0.68 0.22 265 / 0.5)' }} />
-            </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{Math.round(overallPct)}%</div>
-          </div>
-          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 6 }}>{completed}/{goals.length} goals complete</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text3)' }}>New goal</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', opacity: 0.5 }}>house · retirement · holiday</div>
         </div>
       </div>
 
-      {/* Header + Add button */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', fontFamily: 'var(--mono)', letterSpacing: '.06em' }}>YOUR GOALS</div>
-        <button onClick={() => setShowAdd(true)} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}>+ New Goal</button>
-      </div>
-
-      {/* Goal cards */}
-      {goals.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--text3)' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🎯</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text2)', fontFamily: 'var(--sans)', marginBottom: 6 }}>No goals yet</div>
-          <div style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--sans)', marginBottom: 24 }}>Set a financial goal to start tracking your progress</div>
-          <button onClick={() => setShowAdd(true)} style={{ padding: '10px 22px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 14, fontFamily: 'var(--sans)', fontWeight: 600 }}>Create your first goal</button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {goals.map(g => (
-            <GoalCard key={g.id} goal={g} onDeposit={setDeposit} onEdit={() => {}} />
-          ))}
-        </div>
-      )}
-
-      <DepositModal goal={deposit} onClose={() => setDeposit(null)} onSave={handleDeposit} />
-      <AddGoalModal open={showAdd} onClose={() => setShowAdd(false)} onSave={g => setGoals(p => [...p, g])} />
+      <AddGoalModal
+        open={showAdd}
+        onClose={handleCloseAdd}
+        onSave={handleAddGoal}
+      />
     </>
   );
 }
