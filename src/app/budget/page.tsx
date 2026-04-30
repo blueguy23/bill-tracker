@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import type { CategoryBudgetSummary } from '@/types/budget';
-import { BudgetView } from '@/components/BudgetView';
-import { GoalsView } from '@/components/GoalsView';
 import { getDb } from '@/adapters/db';
 import { listBudgets } from '@/adapters/budgets';
 import { listUnmatchedQuickAdds } from '@/adapters/quickAdd';
