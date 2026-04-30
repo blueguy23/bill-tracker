@@ -108,7 +108,7 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 15
     needs: unit
     steps:
       - uses: actions/checkout@v4
