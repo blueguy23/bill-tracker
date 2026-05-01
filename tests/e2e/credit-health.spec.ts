@@ -22,7 +22,6 @@ test.describe('Credit Summary API (GET /api/v1/credit/summary)', () => {
     expect(Array.isArray(body.accounts)).toBe(true);
     expect(typeof body.overall).toBe('object');
     expect(Array.isArray(body.recentPayments)).toBe(true);
-    // score is a number or null
     expect(body.score === null || typeof body.score === 'number').toBe(true);
   });
 
@@ -49,9 +48,7 @@ test.describe('Credit Summary API (GET /api/v1/credit/summary)', () => {
 
   test('should return account objects with required fields when accounts exist', async ({ request }) => {
     const response = await request.get('/api/v1/credit/summary');
-    const body = await response.json() as {
-      accounts: Array<Record<string, unknown>>;
-    };
+    const body = await response.json() as { accounts: Array<Record<string, unknown>> };
 
     for (const account of body.accounts) {
       expect(typeof account.id).toBe('string');
@@ -60,16 +57,13 @@ test.describe('Credit Summary API (GET /api/v1/credit/summary)', () => {
       expect(typeof account.balance).toBe('number');
       expect(typeof account.hasLimitData).toBe('boolean');
       expect(typeof account.balanceDate).toBe('string');
-      const parsed = new Date(account.balanceDate as string);
-      expect(Number.isNaN(parsed.getTime())).toBe(false);
+      expect(Number.isNaN(new Date(account.balanceDate as string).getTime())).toBe(false);
     }
   });
 
   test('should return recentPayments with required fields when payments exist', async ({ request }) => {
     const response = await request.get('/api/v1/credit/summary');
-    const body = await response.json() as {
-      recentPayments: Array<Record<string, unknown>>;
-    };
+    const body = await response.json() as { recentPayments: Array<Record<string, unknown>> };
 
     for (const payment of body.recentPayments) {
       expect(typeof payment.id).toBe('string');
@@ -79,8 +73,7 @@ test.describe('Credit Summary API (GET /api/v1/credit/summary)', () => {
       expect(typeof payment.amount).toBe('number');
       expect(typeof payment.description).toBe('string');
       expect(typeof payment.posted).toBe('string');
-      const parsed = new Date(payment.posted as string);
-      expect(Number.isNaN(parsed.getTime())).toBe(false);
+      expect(Number.isNaN(new Date(payment.posted as string).getTime())).toBe(false);
     }
   });
 
@@ -124,9 +117,8 @@ test.describe('Credit Advisor API (GET /api/v1/credit/advisor)', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Sync API (POST /api/v1/sync)', () => {
-  test('should return HTTP 200 with synced:true when SimpleFIN is configured', async ({ request }) => {
+  test('should return 200, 429, or 503 depending on SimpleFIN config', async ({ request }) => {
     const response = await request.post('/api/v1/sync');
-    // 200 = success, 429 = quota exceeded, 503 = not configured
     expect([200, 429, 503]).toContain(response.status());
 
     const body = await response.json() as Record<string, unknown>;
@@ -139,9 +131,7 @@ test.describe('Sync API (POST /api/v1/sync)', () => {
     }
   });
 
-  test('should return 503 with error message when SimpleFIN is not configured', async ({ request }) => {
-    // If SIMPLEFIN_URL is not set the route returns 503.
-    // We only assert shape here since we can't control env in E2E.
+  test('should return 503 with simplefin error message when not configured', async ({ request }) => {
     const response = await request.post('/api/v1/sync');
     if (response.status() === 503) {
       const body = await response.json() as { error: string };
@@ -162,455 +152,270 @@ test.describe('Sync API (POST /api/v1/sync)', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Credit Health Page — /credit (UI)
+// Design reference: design/credit-health (1).html
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Credit Health Page (/credit)', () => {
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+  async function hasAccounts(page: import('@playwright/test').Page): Promise<boolean> {
+    return page.locator('[data-testid="verdict-card"]').isVisible().catch(() => false);
+  }
+
+  // ── page structure ────────────────────────────────────────────────────────
   test.describe('page structure', () => {
-    test('should render the correct heading and URL', async ({ page }) => {
+    test('should render the correct URL and heading', async ({ page }) => {
       await page.goto('/credit-health');
-
       await expect(page).toHaveURL('/credit-health');
+      await expect(page.locator('h1')).toContainText('Credit Health');
       await expect(page.locator('h1')).toBeVisible();
-      await expect(page.locator('h1')).toContainText('Credit Health');
-      await expect(page.locator('p').filter({ hasText: 'Credit utilization and payment activity' })).toBeVisible();
     });
 
-    test('should render the sidebar with Credit Health nav item active', async ({ page }) => {
+    test('should render the refresh score button', async ({ page }) => {
       await page.goto('/credit-health');
-
       await expect(page).toHaveURL('/credit-health');
-      await expect(page.locator('aside')).toBeVisible();
-      const creditLink = page.locator('aside nav a', { hasText: 'Credit Health' });
-      await expect(creditLink).toBeVisible();
-      await expect(creditLink).toHaveAttribute('aria-current', 'page');
+      const btn = page.locator('[data-testid="refresh-score-btn"]');
+      await expect(btn).toBeVisible();
+      await expect(btn).toContainText('Refresh');
     });
 
-    test('should render the Sync Now button in the sidebar', async ({ page }) => {
+    test('should set document title to "Credit Health"', async ({ page }) => {
       await page.goto('/credit-health');
-
-      await expect(page).toHaveURL('/credit-health');
-      const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
-      await expect(syncBtn).toBeVisible();
-      await expect(syncBtn).toBeEnabled();
+      await expect(page).toHaveTitle(/Credit Health/i);
     });
 
-    test('should render a last-sync timestamp below the sync button', async ({ page }) => {
+    test('should mark Credit Health nav link as active in sidebar', async ({ page }) => {
       await page.goto('/credit-health');
-
-      await expect(page).toHaveURL('/credit-health');
-      // The timestamp line is in the sidebar footer — "LIVE · Never synced" or "LIVE · Xm ago" etc.
-      const sidebar = page.locator('aside');
-      const timestampEl = sidebar.locator('div').filter({ hasText: /LIVE/i }).first();
-      await expect(timestampEl).toBeVisible();
-      await expect(timestampEl).not.toBeEmpty();
-    });
-  });
-
-  test.describe('credit data display', () => {
-    test('should render credit accounts section or empty state', async ({ page }) => {
-      await page.goto('/credit-health');
-
-      await expect(page).toHaveURL('/credit-health');
-
-      // Either accounts are present, or the empty-state panel is shown
-      // The Credit Health h1 is always rendered — verify the page loaded correctly
-      await expect(page.locator('h1')).toContainText('Credit Health');
-
-      const accountsHeading = page.locator('p, h2, h3').filter({ hasText: /Credit Accounts/i });
-      const emptyState = page.locator('p, div').filter({ hasText: /No credit accounts found/i });
-
-      const hasAccounts = await accountsHeading.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
-      // Page always renders; accept either data or empty state (or just the loaded page)
-      expect(hasAccounts || hasEmpty || true).toBe(true);
+      const link = page.locator('aside nav a', { hasText: 'Credit Health' });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute('aria-current', 'page');
     });
 
-    test('should show credit account card with balance when credit accounts exist', async ({ page }) => {
+    test('should render either the data zones or the empty state', async ({ page }) => {
       await page.goto('/credit-health');
       await expect(page).toHaveURL('/credit-health');
 
-      const accountsHeading = page.locator('p').filter({ hasText: /Credit Accounts \(/ });
-      const hasAccounts = await accountsHeading.isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
-      }
+      const verdictCard = page.locator('[data-testid="verdict-card"]');
+      const emptyState = page.locator('text=No credit accounts synced');
 
-      await expect(accountsHeading).toBeVisible();
-      // At least one account card should show the org name and a balance
-      const firstCard = page.locator('[class*="rounded-xl"]').filter({ hasText: /Chase|Capital One|Discover/i }).first();
-      await expect(firstCard).toBeVisible();
-    });
-
-    test('should show balance as a formatted dollar amount on each credit account card', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
-      }
-
-      // Each card has a "Balance" label and a bold dollar value below it
-      const balanceLabel = page.locator('p.text-xs').filter({ hasText: 'Balance' }).first();
-      await expect(balanceLabel).toBeVisible();
-
-      // The balance value sits in the sibling element — it must be a currency string
-      const balanceValue = balanceLabel.locator('+ p');
-      await expect(balanceValue).toBeVisible();
-      await expect(balanceValue).toContainText('$');
-    });
-
-    test('should show credit limit or "No limit data" badge on each credit account card', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
-      }
-
-      // Either "Limit" label with a dollar value is shown, or the "No limit data" badge
-      const limitLabel = page.locator('p.text-xs').filter({ hasText: 'Limit' }).first();
-      const noLimitBadge = page.locator('span').filter({ hasText: 'No limit data' }).first();
-
-      const hasLimit = await limitLabel.isVisible().catch(() => false);
-      const hasNoLimit = await noLimitBadge.isVisible().catch(() => false);
-      expect(hasLimit || hasNoLimit).toBe(true);
-
-      if (hasLimit) {
-        // The limit value must be a formatted dollar amount
-        const limitValue = limitLabel.locator('+ p');
-        await expect(limitValue).toBeVisible();
-        await expect(limitValue).toContainText('$');
-      }
-    });
-
-    test('should show utilization percentage on card when limit data is available', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
-      }
-
-      // Find the account card that has EXACTLY "Utilization" (not "Overall Utilization")
-      // using an anchored regex to avoid substring-matching the overall utilization panel
-      const cardWithUtilization = page.locator('div.rounded-xl').filter({
-        has: page.locator('p').filter({ hasText: /^Utilization$/ }),
-      }).first();
-
-      const hasUtilization = await cardWithUtilization.isVisible().catch(() => false);
-      if (!hasUtilization) {
-        // Card shows "No limit data" badge — skip rather than fail
-        const noLimitBadge = page.locator('span').filter({ hasText: 'No limit data' });
-        await expect(noLimitBadge).toBeVisible();
-        test.skip();
-        return;
-      }
-
-      // Utilization label must be visible within the card
-      await expect(cardWithUtilization.locator('p').filter({ hasText: /^Utilization$/ })).toBeVisible();
-
-      // Percentage value: p.font-semibold scoped inside the utilization row
-      const utilizationPct = cardWithUtilization.locator('p.font-semibold').filter({ hasText: '%' });
-      await expect(utilizationPct).toBeVisible();
-      const pctText = await utilizationPct.textContent();
-      expect(pctText).toMatch(/^\d+%$/);
-
-      // Progress bar container must be visible (the fill may be 0-width when utilization is 0%)
-      const progressContainer = cardWithUtilization.locator('div.overflow-hidden');
-      await expect(progressContainer).toBeVisible();
-      // Fill div must exist with an inline width attribute
-      const progressFill = cardWithUtilization.locator('div[style*="width"]');
-      await expect(progressFill).toHaveAttribute('style', /width/);
-    });
-
-    test('should show overall utilization panel with a percentage value', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
-      }
-
-      // Scope to the Overall Utilization card to avoid matching other large text
-      const overallCard = page.locator('div.rounded-xl').filter({
-        has: page.locator('p').filter({ hasText: 'Overall Utilization' }),
-      });
-      await expect(overallCard).toBeVisible();
-
-      // The large utilization number — either a % or an em dash when no data
-      const utilizationValue = overallCard.locator('p.text-4xl');
-      await expect(utilizationValue).toBeVisible();
-      const valueText = await utilizationValue.textContent();
-      expect(valueText).toMatch(/^\d+%$|^—$/);
-    });
-
-    test('should render the Recent Payments panel', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      const accountsHeading = page.locator('p').filter({ hasText: /Credit Accounts \(/ });
-      const hasAccounts = await accountsHeading.isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
-      }
-
-      // Panel heading must be visible
-      await expect(page.locator('p').filter({ hasText: 'Recent Payments' })).toBeVisible();
-      await expect(page.locator('p').filter({ hasText: 'Last 30 days' })).toBeVisible();
-
-      // Either shows transactions or the "no payments" empty state
-      const txnList = page.locator('ul').filter({ has: page.locator('li') });
-      const noPayments = page.locator('div').filter({ hasText: 'No payments in the last 30 days' });
-
-      const hasTxns = await txnList.isVisible().catch(() => false);
-      const hasEmpty = await noPayments.isVisible().catch(() => false);
-      expect(hasTxns || hasEmpty).toBe(true);
-    });
-
-    test('should show transaction descriptions and amounts in Recent Payments when data exists', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      // Skip if no credit accounts at all (panel not rendered) or no payments in last 30 days
-      const noAccounts = await page.locator('text=No credit accounts synced').isVisible().catch(() => false);
-      if (noAccounts) { test.skip(); return; }
-
-      const noPayments = page.locator('div').filter({ hasText: 'No payments in the last 30 days' });
-      const hasNoPayments = await noPayments.isVisible().catch(() => false);
-      if (hasNoPayments) {
-        test.skip();
-        return;
-      }
-
-      // Payment rows are div-based with inline styles (not li/p.text-sm — no Tailwind classes)
-      // Amount divs contain exactly "+$X,XXX.XX" — match with full-text regex
-      const firstAmount = page.getByText(/^\+\$[\d,]+\.\d{2}$/).first();
-      await expect(firstAmount).toBeVisible();
+      const hasData = await verdictCard.isVisible().catch(() => false);
+      const isEmpty = await emptyState.isVisible().catch(() => false);
+      expect(hasData || isEmpty).toBe(true);
     });
   });
 
-  test.describe('sync button behavior', () => {
-    test('should show "Syncing…" while sync is in progress then resolve', async ({ page }) => {
+  // ── empty state ───────────────────────────────────────────────────────────
+  test.describe('empty state', () => {
+    test('should show connect message when no credit accounts are synced', async ({ page }) => {
       await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
+      if (await hasAccounts(page)) { test.skip(); return; }
 
-      // Intercept the sync POST so we control timing
-      let resolveSyncRequest!: () => void;
-      const syncHeld = new Promise<void>((resolve) => { resolveSyncRequest = resolve; });
+      await expect(page.locator('text=No credit accounts synced')).toBeVisible();
+      await expect(page.locator('text=/SimpleFIN/i').first()).toBeVisible();
+      await expect(page.locator('[data-testid="verdict-card"]')).not.toBeVisible();
+    });
+  });
 
-      await page.route('**/api/v1/sync', async (route) => {
-        if (route.request().method() === 'POST') {
-          await syncHeld;
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              synced: true,
-              accountsUpdated: 6,
-              transactionsUpserted: 5,
-              quotaUsed: 1,
-              warnings: [],
-            }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
+  // ── Zone 1 — The Verdict ─────────────────────────────────────────────────
+  test.describe('Zone 1 — Verdict card', () => {
+    test('should render verdict-card with credit score', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
-      await syncBtn.scrollIntoViewIfNeeded();
-      // force:true bypasses pointer-event interception from the nav on narrow viewports
-      await syncBtn.click({ force: true });
-
-      // Button must show "Syncing…" immediately
-      await expect(page.locator('aside button', { hasText: /Syncing/i })).toBeVisible();
-      await expect(page.locator('aside button', { hasText: /Syncing/i })).toBeDisabled();
-
-      // Unblock the request
-      resolveSyncRequest();
-
-      // Button must settle to "Synced!" after completion
-      await expect(page.locator('aside button', { hasText: /Synced/i })).toBeVisible({ timeout: 10_000 });
+      await expect(page.locator('[data-testid="verdict-card"]')).toBeVisible();
+      const scoreEl = page.locator('[data-testid="credit-score"]');
+      await expect(scoreEl).toBeVisible();
+      const scoreText = await scoreEl.textContent();
+      expect(Number(scoreText?.trim())).toBeGreaterThanOrEqual(0);
     });
 
-    test('should trigger a Next.js RSC re-render after successful sync (router.refresh is called)', async ({ page }) => {
+    test('should render the score gauge SVG inside the verdict card', async ({ page }) => {
       await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      // Mock sync to succeed instantly
-      await page.route('**/api/v1/sync', async (route) => {
-        if (route.request().method() === 'POST') {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({
-              synced: true,
-              accountsUpdated: 6,
-              transactionsUpserted: 3,
-              quotaUsed: 1,
-              warnings: [],
-            }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
-
-      // router.refresh() causes Next.js to issue an RSC payload request — it shows
-      // up as a GET to the current route with an `RSC` or `Next-Router-*` header.
-      // We capture the first such request that arrives after clicking Sync.
-      const rscRefreshPromise = page.waitForRequest(
-        (req) =>
-          req.method() === 'GET' &&
-          req.url().includes('/credit') &&
-          (req.headers()['rsc'] === '1' || req.headers()['next-router-prefetch'] !== undefined || req.url().includes('_rsc')),
-        { timeout: 10_000 },
-      );
-
-      const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
-      await syncBtn.scrollIntoViewIfNeeded();
-      // force:true bypasses pointer-event interception from the nav on narrow viewports
-      await syncBtn.click({ force: true });
-
-      // Button must reach "Synced!" — proving the sync POST returned successfully
-      await expect(page.locator('aside button', { hasText: /Synced/i })).toBeVisible({ timeout: 10_000 });
-
-      // RSC refresh request must have fired — proving router.refresh() was called
-      const rscRequest = await rscRefreshPromise;
-      expect(rscRequest).toBeTruthy();
-      expect(rscRequest.url()).toContain('/credit');
-
-      // Page must still be on /credit and showing the heading — refresh didn't break it
-      await expect(page).toHaveURL('/credit-health');
-      await expect(page.locator('h1')).toContainText('Credit Health');
+      const card = page.locator('[data-testid="verdict-card"]');
+      await expect(card.locator('svg').first()).toBeVisible();
+      // Gauge track arc must be present
+      await expect(card.locator('path').first()).toBeVisible();
     });
 
-    test('should show error state when sync fails', async ({ page }) => {
+    test('should render factors-summary with all six factor labels', async ({ page }) => {
       await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      await page.route('**/api/v1/sync', async (route) => {
-        if (route.request().method() === 'POST') {
-          await route.fulfill({
-            status: 500,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'Internal server error' }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
+      const summary = page.locator('[data-testid="factors-summary"]');
+      await expect(summary).toBeVisible();
 
-      const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
-      await syncBtn.scrollIntoViewIfNeeded();
-      // force:true bypasses pointer-event interception from the nav on narrow viewports
-      await syncBtn.click({ force: true });
-
-      // Button should show an error state
-      await expect(page.locator('aside button', { hasText: /Sync failed|Error|failed/i })).toBeVisible({ timeout: 10_000 });
-      // Button should re-enable after error reset
-      await expect(page.locator('aside button', { hasText: /Sync|Error|failed/i })).toBeEnabled({ timeout: 8_000 });
-    });
-
-    test('should show quota message when sync returns 429', async ({ page }) => {
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-
-      await page.route('**/api/v1/sync', async (route) => {
-        if (route.request().method() === 'POST') {
-          await route.fulfill({
-            status: 429,
-            contentType: 'application/json',
-            body: JSON.stringify({ error: 'Daily quota nearly reached', used: 20, limit: 24 }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
-
-      const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
-      await syncBtn.scrollIntoViewIfNeeded();
-      // force:true bypasses pointer-event interception from the nav on narrow viewports
-      await syncBtn.click({ force: true });
-
-      await expect(page.locator('aside button', { hasText: /Quota/i })).toBeVisible({ timeout: 10_000 });
-    });
-
-    test('should display credit transactions in Recent Payments after sync completes', async ({ page }) => {
-      // router.refresh() re-renders server components — the credit summary is fetched
-      // server-side so we cannot mock it via page.route(). Instead we verify the
-      // full observable outcome: sync fires, page re-renders, real DB transactions appear.
-
-      await page.goto('/credit-health');
-      await expect(page).toHaveURL('/credit-health');
-      await expect(page.locator('h1')).toContainText('Credit Health');
-
-      // Skip if no credit accounts are synced — can't assert transactions without data
-      const hasAccounts = await page.locator('p').filter({ hasText: /Credit Accounts \(/ }).isVisible().catch(() => false);
-      if (!hasAccounts) {
-        test.skip();
-        return;
+      const factorLabels = ['Payment history', 'Utilization', 'Credit age', 'Accounts', 'Hard inquiries', 'Derogatory'];
+      for (const label of factorLabels) {
+        await expect(summary.getByText(label, { exact: false }).first()).toBeVisible();
       }
+    });
 
-      // Capture the RSC re-render request that router.refresh() fires
-      const rscRefreshPromise = page.waitForRequest(
-        (req) =>
-          req.method() === 'GET' &&
-          req.url().includes('/credit') &&
-          (req.headers()['rsc'] === '1' || req.url().includes('_rsc')),
-        { timeout: 10_000 },
-      );
+    test('should render exactly six factor mini-cards inside factors-summary', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      // Mock sync to avoid consuming real SimpleFIN quota during tests
-      await page.route('**/api/v1/sync', async (route) => {
-        if (route.request().method() === 'POST') {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json',
-            body: JSON.stringify({ synced: true, accountsUpdated: 6, transactionsUpserted: 0, quotaUsed: 1, warnings: [] }),
-          });
-        } else {
-          await route.continue();
-        }
-      });
+      const miniCards = page.locator('[data-testid="factors-summary"] > div');
+      await expect(miniCards).toHaveCount(6);
+    });
 
-      const syncBtn = page.locator('aside button', { hasText: /Sync Now/i });
-      await syncBtn.scrollIntoViewIfNeeded();
-      // force:true bypasses pointer-event interception from the nav on narrow viewports
-      await syncBtn.click({ force: true });
+    test('should show score-change pill when trend data spans at least two months', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      // Sync must complete successfully
-      await expect(page.locator('aside button', { hasText: /Synced/i })).toBeVisible({ timeout: 10_000 });
+      const pill = page.locator('[data-testid="score-change"]');
+      const hasChange = await pill.isVisible().catch(() => false);
+      if (hasChange) {
+        await expect(pill).toContainText(/pts/i);
+      }
+    });
 
-      // RSC re-render must have fired — proves router.refresh() ran
-      await rscRefreshPromise;
+    test('should show sparkline SVG when utilization history is available', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      // Page must still be on /credit with the correct heading
-      await expect(page).toHaveURL('/credit-health');
-      await expect(page.locator('h1')).toContainText('Credit Health');
+      const sparkline = page.locator('[data-testid="score-sparkline"]');
+      const hasSparkline = await sparkline.isVisible().catch(() => false);
+      if (hasSparkline) {
+        await expect(sparkline.locator('svg')).toBeVisible();
+        // Must show a date range label
+        await expect(sparkline.locator('span').first()).not.toBeEmpty();
+      }
+    });
+  });
 
-      // Recent Payments panel must be visible with either transactions or the empty state
-      await expect(page.locator('p').filter({ hasText: 'Recent Payments' })).toBeVisible();
-      const txnList = page.locator('ul li').first();
-      const emptyState = page.locator('div').filter({ hasText: 'No payments in the last 30 days' });
-      const hasTxns = await txnList.isVisible().catch(() => false);
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
-      expect(hasTxns || hasEmpty).toBe(true);
+  // ── Zone 2 — Lender Lens ─────────────────────────────────────────────────
+  test.describe('Zone 2 — Lender lens', () => {
+    test('should render the lender-lens section with all three cards', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
 
-      // If transactions are present, each row must show a description and a $ amount
-      if (hasTxns) {
-        await expect(txnList.locator('p.text-sm').first()).not.toBeEmpty();
-        await expect(txnList.locator('p.font-semibold')).toContainText('$');
+      await expect(page.locator('[data-testid="lender-lens"]')).toBeVisible();
+      await expect(page.locator('[data-testid="lender-card-mortgage"]')).toBeVisible();
+      await expect(page.locator('[data-testid="lender-card-auto"]')).toBeVisible();
+      await expect(page.locator('[data-testid="lender-card-cards"]')).toBeVisible();
+    });
+
+    test('should show a rate or odds value on the mortgage card', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const card = page.locator('[data-testid="lender-card-mortgage"]');
+      await expect(card).toBeVisible();
+      // Rate div contains a % value — e.g. "~6.4%" or "N/A"
+      await expect(card.getByText(/\d+\.?\d*%|N\/A/).first()).toBeVisible();
+    });
+
+    test('should show a rate or odds value on the auto loan card', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const card = page.locator('[data-testid="lender-card-auto"]');
+      await expect(card).toBeVisible();
+      await expect(card.getByText(/\d+\.?\d*%/).first()).toBeVisible();
+    });
+
+    test('should show approval odds on the credit cards card', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const card = page.locator('[data-testid="lender-card-cards"]');
+      await expect(card).toBeVisible();
+      await expect(card.getByText(/\d+%/).first()).toBeVisible();
+    });
+
+    test('should show a verdict label on each lender card', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      for (const testId of ['lender-card-mortgage', 'lender-card-auto', 'lender-card-cards']) {
+        const card = page.locator(`[data-testid="${testId}"]`);
+        // Each card shows "Eligible", "Not eligible", or similar verdict text
+        await expect(card.getByText(/Eligible|not eligible/i).first()).toBeVisible();
+      }
+    });
+  });
+
+  // ── Zone 3 — Actions Grid ─────────────────────────────────────────────────
+  test.describe('Zone 3 — Actions grid', () => {
+    test('should render actions-grid with both columns', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      await expect(page.locator('[data-testid="actions-grid"]')).toBeVisible();
+      await expect(page.locator('[data-testid="actions-now"]')).toBeVisible();
+      await expect(page.locator('[data-testid="actions-habit"]')).toBeVisible();
+    });
+
+    test('should render "Do this now" column with amber header', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const nowCol = page.locator('[data-testid="actions-now"]');
+      await expect(nowCol).toBeVisible();
+      await expect(nowCol.getByText('Do this now')).toBeVisible();
+      await expect(nowCol.getByText('High-impact, can action today')).toBeVisible();
+    });
+
+    test('should render "Build this habit" column with three static items', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const habitCol = page.locator('[data-testid="actions-habit"]');
+      await expect(habitCol).toBeVisible();
+      await expect(habitCol.getByText('Build this habit')).toBeVisible();
+
+      const habitItems = habitCol.locator('[data-testid="action-item"]');
+      await expect(habitItems).toHaveCount(3);
+    });
+
+    test('should show "+" impact values on habit action items', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const habitItems = page.locator('[data-testid="actions-habit"] [data-testid="action-item"]');
+      const count = await habitItems.count();
+      expect(count).toBeGreaterThanOrEqual(1);
+
+      // Each item must show a +N impact value
+      for (let i = 0; i < count; i++) {
+        const item = habitItems.nth(i);
+        await expect(item.getByText(/^\+\d+$/).first()).toBeVisible();
+      }
+    });
+
+    test('should show payment habits action in the habit column', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const habitCol = page.locator('[data-testid="actions-habit"]');
+      await expect(habitCol.getByText(/payments on time/i).first()).toBeVisible();
+    });
+
+    test('should show utilization or limit increase action in "Do this now" when util is high', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const nowCol = page.locator('[data-testid="actions-now"]');
+      const hasItems = await nowCol.locator('[data-testid="action-item"]').count();
+
+      // If there are "Do this now" items, each must have an impact value and a title
+      if (hasItems > 0) {
+        const firstItem = nowCol.locator('[data-testid="action-item"]').first();
+        await expect(firstItem.getByText(/^\+\d+$/).first()).toBeVisible();
+        await expect(firstItem.locator('div').filter({ hasText: /\w{5,}/ }).first()).toBeVisible();
+      }
+    });
+
+    test('should show "nothing urgent" message in Do this now when utilization is healthy', async ({ page }) => {
+      await page.goto('/credit-health');
+      if (!await hasAccounts(page)) { test.skip(); return; }
+
+      const nowCol = page.locator('[data-testid="actions-now"]');
+      const itemCount = await nowCol.locator('[data-testid="action-item"]').count();
+      if (itemCount === 0) {
+        await expect(nowCol.getByText(/nothing urgent|healthy/i)).toBeVisible();
       }
     });
   });

@@ -338,7 +338,7 @@ test.describe('Credit Health Page (/credit-health)', () => {
       await page.goto('/credit-health');
       await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
-      await expect(page.locator('p').filter({ hasText: 'Credit utilization and payment activity' })).toBeVisible();
+      await expect(page.locator('span').filter({ hasText: 'Utilization, payments, and score tracking' })).toBeVisible();
     });
 
     test('should set the correct document title', async ({ page }) => {
