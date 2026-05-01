@@ -165,35 +165,35 @@ test.describe('Credit Health Page (/credit)', () => {
   // ── page structure ────────────────────────────────────────────────────────
   test.describe('page structure', () => {
     test('should render the correct URL and heading', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
       await expect(page.locator('h1')).toContainText('Credit Health');
       await expect(page.locator('h1')).toBeVisible();
     });
 
     test('should render the refresh score button', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
       const btn = page.locator('[data-testid="refresh-score-btn"]');
       await expect(btn).toBeVisible();
       await expect(btn).toContainText('Refresh');
     });
 
     test('should set document title to "Credit Health"', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       await expect(page).toHaveTitle(/Credit Health/i);
     });
 
     test('should mark Credit Health nav link as active in sidebar', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       const link = page.locator('aside nav a', { hasText: 'Credit Health' });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('aria-current', 'page');
     });
 
     test('should render either the data zones or the empty state', async ({ page }) => {
-      await page.goto('/credit');
-      await expect(page).toHaveURL('/credit');
+      await page.goto('/credit-health');
+      await expect(page).toHaveURL('/credit-health');
 
       const verdictCard = page.locator('[data-testid="verdict-card"]');
       const emptyState = page.locator('text=No credit accounts synced');
@@ -207,7 +207,7 @@ test.describe('Credit Health Page (/credit)', () => {
   // ── empty state ───────────────────────────────────────────────────────────
   test.describe('empty state', () => {
     test('should show connect message when no credit accounts are synced', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (await hasAccounts(page)) { test.skip(); return; }
 
       await expect(page.locator('text=No credit accounts synced')).toBeVisible();
@@ -219,7 +219,7 @@ test.describe('Credit Health Page (/credit)', () => {
   // ── Zone 1 — The Verdict ─────────────────────────────────────────────────
   test.describe('Zone 1 — Verdict card', () => {
     test('should render verdict-card with credit score', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       await expect(page.locator('[data-testid="verdict-card"]')).toBeVisible();
@@ -230,7 +230,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render the score gauge SVG inside the verdict card', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const card = page.locator('[data-testid="verdict-card"]');
@@ -240,7 +240,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render factors-summary with all six factor labels', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const summary = page.locator('[data-testid="factors-summary"]');
@@ -253,7 +253,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render exactly six factor mini-cards inside factors-summary', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const miniCards = page.locator('[data-testid="factors-summary"] > div');
@@ -261,7 +261,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show score-change pill when trend data spans at least two months', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const pill = page.locator('[data-testid="score-change"]');
@@ -272,7 +272,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show sparkline SVG when utilization history is available', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const sparkline = page.locator('[data-testid="score-sparkline"]');
@@ -288,7 +288,7 @@ test.describe('Credit Health Page (/credit)', () => {
   // ── Zone 2 — Lender Lens ─────────────────────────────────────────────────
   test.describe('Zone 2 — Lender lens', () => {
     test('should render the lender-lens section with all three cards', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       await expect(page.locator('[data-testid="lender-lens"]')).toBeVisible();
@@ -298,7 +298,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show a rate or odds value on the mortgage card', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const card = page.locator('[data-testid="lender-card-mortgage"]');
@@ -308,7 +308,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show a rate or odds value on the auto loan card', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const card = page.locator('[data-testid="lender-card-auto"]');
@@ -317,7 +317,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show approval odds on the credit cards card', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const card = page.locator('[data-testid="lender-card-cards"]');
@@ -326,7 +326,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show a verdict label on each lender card', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       for (const testId of ['lender-card-mortgage', 'lender-card-auto', 'lender-card-cards']) {
@@ -340,7 +340,7 @@ test.describe('Credit Health Page (/credit)', () => {
   // ── Zone 3 — Actions Grid ─────────────────────────────────────────────────
   test.describe('Zone 3 — Actions grid', () => {
     test('should render actions-grid with both columns', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       await expect(page.locator('[data-testid="actions-grid"]')).toBeVisible();
@@ -349,7 +349,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render "Do this now" column with amber header', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const nowCol = page.locator('[data-testid="actions-now"]');
@@ -359,7 +359,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should render "Build this habit" column with three static items', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const habitCol = page.locator('[data-testid="actions-habit"]');
@@ -371,7 +371,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show "+" impact values on habit action items', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const habitItems = page.locator('[data-testid="actions-habit"] [data-testid="action-item"]');
@@ -386,7 +386,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show payment habits action in the habit column', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const habitCol = page.locator('[data-testid="actions-habit"]');
@@ -394,7 +394,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show utilization or limit increase action in "Do this now" when util is high', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const nowCol = page.locator('[data-testid="actions-now"]');
@@ -409,7 +409,7 @@ test.describe('Credit Health Page (/credit)', () => {
     });
 
     test('should show "nothing urgent" message in Do this now when utilization is healthy', async ({ page }) => {
-      await page.goto('/credit');
+      await page.goto('/credit-health');
       if (!await hasAccounts(page)) { test.skip(); return; }
 
       const nowCol = page.locator('[data-testid="actions-now"]');
