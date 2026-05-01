@@ -11,7 +11,7 @@ test.describe('Settings Page (/settings)', () => {
     await expect(page).toHaveURL('/settings');
     await expect(page.locator('h1')).toBeVisible();
     await expect(page.locator('h1')).toContainText('Settings');
-    await expect(page.getByText('Discord Notifications')).toBeVisible();
+    await expect(page.locator('[data-testid="section-notifications"]')).toBeVisible();
   });
 
   test('should show "Not configured" badge when webhook env var is absent', async ({ page }) => {
