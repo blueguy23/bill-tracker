@@ -2,30 +2,7 @@ import type { StrictDB } from 'strictdb';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 import { categorize } from '@/lib/categorization/engine';
 import { listCategoryRules } from '@/adapters/categoryRules';
-
-// Descriptions that indicate inter-account transfers (not real income/expense)
-const TRANSFER_DESCRIPTION_RE = /^(deposit from |transfer from |transfer to |online transfer|account transfer)/i;
-
-function buildTransferRe(): RegExp {
-  const ownerName = process.env.TRANSFER_OWNER_NAME?.trim();
-  if (!ownerName) return TRANSFER_DESCRIPTION_RE;
-  const escaped = ownerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(
-    `^(deposit from |transfer from |transfer to |online transfer|account transfer)` +
-    `|zelle.*${escaped}|${escaped}.*zelle`,
-    'i'
-  );
-}
-
-let _transferRe: RegExp | null = null;
-function getTransferRe(): RegExp {
-  return (_transferRe ??= buildTransferRe());
-}
-
-function isTransfer(txn: Transaction, creditAccountIds: Set<string>): boolean {
-  if (creditAccountIds.has(txn.accountId) && txn.amount > 0) return true;
-  return getTransferRe().test(txn.description);
-}
+import { classifyTransfer } from '@/lib/classifyTransfer';
 
 const ACCOUNTS = 'accounts';
 const TRANSACTIONS = 'transactions';
@@ -34,16 +11,18 @@ export async function upsertAccount(db: StrictDB, account: Account): Promise<voi
   await db.updateOne<Account>(ACCOUNTS, { _id: account._id }, { $set: account }, true);
 }
 
-export async function upsertTransaction(db: StrictDB, txn: Transaction): Promise<boolean> {
+export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAccountIds: Set<string>): Promise<boolean> {
   // Skip settled transactions that are already in the DB
   const existing = await db.queryOne<Transaction>(TRANSACTIONS, { _id: txn._id });
   if (existing && !existing.pending) return false; // already settled, skip
 
   // Auto-categorize only if the user hasn't manually set a category
   const preserveCategory = existing?.categorySource === 'user';
-  const toSave: Transaction = preserveCategory
+  const categorized: Transaction = preserveCategory
     ? { ...txn, category: existing.category, categorySource: 'user' }
     : { ...txn, category: categorize(txn.description, txn.memo, await listCategoryRules(db)), categorySource: 'auto' };
+
+  const toSave: Transaction = { ...categorized, isTransfer: classifyTransfer(txn, creditAccountIds) };
 
   await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: toSave }, true);
   return true;
@@ -110,7 +89,7 @@ export async function getCashFlowThisMonth(db: StrictDB): Promise<CashFlow> {
   let expenses = 0;
   for (const txn of transactions) {
     if (txn.pending) continue;
-    if (isTransfer(txn, creditAccountIds)) continue;
+    if (txn.isTransfer ?? classifyTransfer(txn, creditAccountIds)) continue;
     const amt = Number(txn.amount);
     if (amt > 0) income   += amt;
     else         expenses += Math.abs(amt);
@@ -129,7 +108,7 @@ export async function getCashFlowForRange(db: StrictDB, startDate: Date, endDate
   let income = 0, expenses = 0;
   for (const txn of transactions) {
     if (txn.pending) continue;
-    if (isTransfer(txn, creditAccountIds)) continue;
+    if (txn.isTransfer ?? classifyTransfer(txn, creditAccountIds)) continue;
     const amt = Number(txn.amount);
     if (amt > 0) income += amt;
     else expenses += Math.abs(amt);

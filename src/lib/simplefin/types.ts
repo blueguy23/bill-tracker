@@ -110,6 +110,7 @@ export interface Transaction {
   merchantDomain?: string | null;
   tags?: string[];
   notes?: string | null;
+  isTransfer?: boolean;
 }
 
 export interface SyncLog {
