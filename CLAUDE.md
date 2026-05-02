@@ -254,5 +254,18 @@ docker compose down
 
 ## Known Pre-Launch Gaps
 
-- Add `TRANSFER_OWNER_NAME=<your name>` to `.env` for self-Zelle filtering
+- Add `TRANSFER_OWNER_NAME=<your name>` to `.env` for self-Zelle filtering, then run `pnpm db:query backfill-is-transfer` to re-stamp existing transactions
 - Auth requires `AUTH_SECRET` + `AUTH_PASSWORD` in `.env`
+
+---
+
+## Cash Flow — isTransfer Architecture
+
+`isTransfer` is stamped on every transaction **at write time** (in `upsertTransaction`) using `src/lib/classifyTransfer.ts` — the single source of truth. All cash flow queries (`getCashFlowThisMonth`, `getCashFlowForRange`, `getCashFlowHistory`) read the stored field and fall back to live classification only for legacy rows.
+
+**Rules (in priority order):**
+1. Positive amount on a `credit`-type account → transfer (credit card payment)
+2. Description matches `^(deposit from|transfer from|transfer to|online transfer|account transfer)` → transfer
+3. Description matches `zelle.*<TRANSFER_OWNER_NAME>` or `<TRANSFER_OWNER_NAME>.*zelle` → self-transfer (requires env var)
+
+**After any change to `TRANSFER_OWNER_NAME`:** run `pnpm db:query backfill-is-transfer` to re-classify existing transactions.
