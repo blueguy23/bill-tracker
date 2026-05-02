@@ -7,7 +7,9 @@ export async function register() {
     const { StrictDB } = await import('strictdb');
 
     // Get or create the shared StrictDB instance
-    const db = await StrictDB.create({ uri: process.env.STRICTDB_URI! });
+    const uri = process.env.STRICTDB_URI || process.env.MONGODB_URI;
+    if (!uri) throw new Error('MONGODB_URI environment variable is not set');
+    const db = await StrictDB.create({ uri });
 
     process.on('SIGTERM', () => db.gracefulShutdown(0));
     process.on('SIGINT', () => db.gracefulShutdown(0));

@@ -66,8 +66,9 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'cashflow-filtered': () => import('./queries/cashflow-filtered.js'),
   'txn-fields':        () => import('./queries/txn-fields.js'),
   'trove-test':        () => import('./queries/trove-test.js'),
-  'trove-enrich-all':  () => import('./queries/trove-enrich-all.js'),
-  'autopay-detect':    () => import('./queries/autopay-detect.js'),
+  'trove-enrich-all':       () => import('./queries/trove-enrich-all.js'),
+  'backfill-is-transfer':   () => import('./queries/backfill-is-transfer.js'),
+  'autopay-detect':         () => import('./queries/autopay-detect.js'),
   'debug-bills':       () => import('./queries/debug-bills.js'),
   'seed-demo':         () => import('./queries/seed-demo.js'),
 };

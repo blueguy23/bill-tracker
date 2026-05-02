@@ -31,9 +31,11 @@ async function syncFetch(
     accountsUpdated++;
   }
 
+  const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
+
   let transactionsUpserted = 0;
   for (const txn of transactions) {
-    const inserted = await upsertTransaction(db, txn);
+    const inserted = await upsertTransaction(db, txn, creditAccountIds);
     if (inserted) transactionsUpserted++;
   }
 
