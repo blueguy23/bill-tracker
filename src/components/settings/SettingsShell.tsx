@@ -40,7 +40,7 @@ export function SettingsShell({ profile, lastSyncAt, discordConfigured, dueSoonD
           />
 
           <div id="section-account">
-            <SectionAccount initial={{ displayName: profile.displayName, payday: profile.payday, currency: profile.currency, timezone: profile.timezone }} />
+            <SectionAccount initial={{ displayName: profile.displayName, ownerName: profile.ownerName, payday: profile.payday, currency: profile.currency, timezone: profile.timezone }} />
           </div>
 
           <div id="section-connections">

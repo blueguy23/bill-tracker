@@ -11,7 +11,7 @@ export async function upsertAccount(db: StrictDB, account: Account): Promise<voi
   await db.updateOne<Account>(ACCOUNTS, { _id: account._id }, { $set: account }, true);
 }
 
-export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAccountIds: Set<string>): Promise<boolean> {
+export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAccountIds: Set<string>, transferRe?: RegExp): Promise<boolean> {
   // Skip settled transactions that are already in the DB
   const existing = await db.queryOne<Transaction>(TRANSACTIONS, { _id: txn._id });
   if (existing && !existing.pending) return false; // already settled, skip
@@ -22,7 +22,7 @@ export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAc
     ? { ...txn, category: existing.category, categorySource: 'user' }
     : { ...txn, category: categorize(txn.description, txn.memo, await listCategoryRules(db)), categorySource: 'auto' };
 
-  const toSave: Transaction = { ...categorized, isTransfer: classifyTransfer(txn, creditAccountIds) };
+  const toSave: Transaction = { ...categorized, isTransfer: classifyTransfer(txn, creditAccountIds, transferRe) };
 
   await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: toSave }, true);
   return true;
@@ -114,6 +114,12 @@ export async function getCashFlowForRange(db: StrictDB, startDate: Date, endDate
     else expenses += Math.abs(amt);
   }
   return { income, expenses, net: income - expenses };
+}
+
+export async function markTransfersById(db: StrictDB, ids: string[]): Promise<void> {
+  for (const id of ids) {
+    await db.updateOne<Transaction>(TRANSACTIONS, { _id: id }, { $set: { isTransfer: true } });
+  }
 }
 
 export async function listTransactionsForDetection(
