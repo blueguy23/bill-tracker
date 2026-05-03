@@ -6,6 +6,7 @@ const SINGLETON_ID = 'singleton' as const;
 
 const DEFAULTS: Omit<UserProfile, '_id'> = {
   displayName: '',
+  ownerName: '',
   payday: null,
   currency: 'USD',
   timezone: 'America/Chicago',

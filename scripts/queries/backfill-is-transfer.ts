@@ -1,16 +1,21 @@
 import 'dotenv/config';
 import type { StrictDB } from 'strictdb';
 import type { Transaction, Account } from '../../src/lib/simplefin/types.js';
-import { classifyTransfer, buildTransferRe } from '../../src/lib/classifyTransfer.js';
+import type { UserProfile } from '../../src/types/userProfile.js';
+import { buildTransferRe, classifyTransfer } from '../../src/lib/classifyTransfer.js';
 
 export default {
   name: 'backfill-is-transfer',
-  description: 'Stamp isTransfer on all existing transactions using current TRANSFER_OWNER_NAME config',
+  description: 'Stamp isTransfer on all existing transactions using ownerName from user profile',
   async run(db: StrictDB) {
+    const profile = await db.queryOne<UserProfile>('userProfile', { _id: 'singleton' });
+    const ownerName = profile?.ownerName?.trim() || null;
+
     const accounts = await db.queryMany<Account>('accounts', {}, { limit: 500 });
     const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
 
-    const re = buildTransferRe();
+    const re = buildTransferRe(ownerName);
+    console.log(`  Owner name    : ${ownerName ?? '(not set — Zelle name detection disabled)'}`);
     console.log(`  Transfer regex: ${re}`);
     console.log(`  Credit accounts: ${creditAccountIds.size}`);
 
@@ -21,12 +26,12 @@ export default {
     let updated = 0;
 
     for (const txn of allTxns) {
-      const flag = classifyTransfer(txn, creditAccountIds);
+      const flag = classifyTransfer(txn, creditAccountIds, re);
       if (flag) transfers++;
 
-      // Only write when the stored value differs or is missing
-      if (txn.isTransfer !== flag) {
-        await db.updateOne<Transaction>('transactions', { _id: txn._id }, { $set: { isTransfer: flag } });
+      // Never downgrade true → false: paired detection or other methods may have set it
+      if (flag && !txn.isTransfer) {
+        await db.updateOne<Transaction>('transactions', { _id: txn._id }, { $set: { isTransfer: true } });
         updated++;
       }
     }

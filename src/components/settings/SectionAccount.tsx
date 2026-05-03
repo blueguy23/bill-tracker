@@ -7,7 +7,7 @@ import { sectionCard, sectionHeader, sectionHeaderIcon, formRow, formInput, form
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface Props {
-  initial: Pick<UserProfile, 'displayName' | 'payday' | 'currency' | 'timezone'>;
+  initial: Pick<UserProfile, 'displayName' | 'ownerName' | 'payday' | 'currency' | 'timezone'>;
 }
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'MXN'];
@@ -19,6 +19,7 @@ const TIMEZONES = [
 
 export function SectionAccount({ initial }: Props) {
   const [displayName, setDisplayName] = useState(initial.displayName);
+  const [ownerName, setOwnerName]     = useState(initial.ownerName);
   const [payday, setPayday]           = useState<string>(initial.payday?.toString() ?? '');
   const [currency, setCurrency]       = useState(initial.currency);
   const [timezone, setTimezone]       = useState(initial.timezone);
@@ -32,6 +33,7 @@ export function SectionAccount({ initial }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           displayName,
+          ownerName,
           payday: payday ? Number(payday) : null,
           currency,
           timezone,
@@ -66,6 +68,21 @@ export function SectionAccount({ initial }: Props) {
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder="Your name"
+          style={formInput}
+        />
+      </div>
+
+      <div style={formRow}>
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--text)' }}>Your full name</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Used to detect self-transfers in Zelle descriptions</div>
+        </div>
+        <input
+          data-testid="owner-name-input"
+          type="text"
+          value={ownerName}
+          onChange={(e) => setOwnerName(e.target.value)}
+          placeholder="e.g. Glenn Garcia"
           style={formInput}
         />
       </div>
