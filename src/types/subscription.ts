@@ -33,6 +33,19 @@ export interface DismissedSubscription {
   dismissedAt: Date;
 }
 
+/** A subscription the user has explicitly confirmed as recurring */
+export interface AnchoredSubscription {
+  _id: string;           // same as detection id (sha1 of name:interval)
+  name: string;
+  anchoredAmount: number;
+  interval: SubscriptionInterval;
+  category: BillCategory;
+  rawDescriptions: string[];
+  anchoredAt: Date;
+  lastSeenAmount: number;
+  priceChangedAt: Date | null;
+}
+
 /** Serialized shape returned from the API (dates as ISO strings) */
 export interface DetectedSubscriptionResponse {
   id: string;
@@ -48,11 +61,25 @@ export interface DetectedSubscriptionResponse {
   confidence: SubscriptionConfidence;
   suggestedCategory: BillCategory;
   matchedBillId: string | null;
+  /** Set when user has confirmed this as a subscription */
+  isAnchored: boolean;
+  /** Original amount when user confirmed — present only when isAnchored */
+  anchoredAmount: number | null;
+  /** True when current amount differs from anchoredAmount by more than $0.50 */
+  priceIncreased: boolean;
+  anchoredAt: string | null;
 }
 
 export interface SuggestedMatch {
   transactionId: string;
   billId: string;
   billName: string;
+  billAmount: number;
   confidence: 'high' | 'medium';
+}
+
+export interface EnrichedMatch extends SuggestedMatch {
+  txnDescription: string;
+  txnAmount: number;
+  txnDate: string;
 }

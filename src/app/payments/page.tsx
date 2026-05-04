@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import type { BillResponse, Bill } from '@/types/bill';
-import type { DetectedSubscription, DetectedSubscriptionResponse } from '@/types/subscription';
+import type { DetectedSubscription, DetectedSubscriptionResponse, AnchoredSubscription } from '@/types/subscription';
 import { PaymentsShell } from '@/components/PaymentsShell';
 import { getDb } from '@/adapters/db';
 import { listBills } from '@/adapters/bills';
 import { listTransactionsForDetection } from '@/adapters/accounts';
 import { listDismissedSubscriptions } from '@/adapters/subscriptions';
+import { listAnchoredSubscriptions } from '@/adapters/anchoredSubscriptions';
 import { detectSubscriptions } from '@/lib/subscriptions/detect';
 
 export const metadata: Metadata = { title: 'Payments' };
@@ -24,7 +25,11 @@ function serializeBill(bill: Bill): BillResponse {
   };
 }
 
-function serializeDetected(d: DetectedSubscription): DetectedSubscriptionResponse {
+function serializeDetected(
+  d: DetectedSubscription,
+  anchored: AnchoredSubscription | undefined,
+): DetectedSubscriptionResponse {
+  const priceIncreased = anchored !== undefined && Math.abs(anchored.anchoredAmount - d.amount) > 0.5;
   return {
     id: d.id,
     normalizedName: d.normalizedName,
@@ -39,6 +44,10 @@ function serializeDetected(d: DetectedSubscription): DetectedSubscriptionRespons
     confidence: d.confidence,
     suggestedCategory: d.suggestedCategory,
     matchedBillId: d.matchedBillId,
+    isAnchored: anchored !== undefined,
+    anchoredAmount: anchored?.anchoredAmount ?? null,
+    priceIncreased,
+    anchoredAt: anchored?.anchoredAt.toISOString() ?? null,
   };
 }
 
@@ -58,12 +67,14 @@ export default async function PaymentsPage({
 
   const db = await getDb();
 
-  const [rawBills, transactions, dismissed] = await Promise.all([
+  const [rawBills, transactions, dismissed, anchored] = await Promise.all([
     listBills(db),
     listTransactionsForDetection(db),
     listDismissedSubscriptions(db),
+    listAnchoredSubscriptions(db),
   ]);
 
+  const anchoredMap = new Map(anchored.map((a) => [a._id, a]));
   const allBills      = rawBills.map(serializeBill);
   const recurringBills = rawBills.filter(b => b.isRecurring).map(serializeBill);
   const totalMonthly  = recurringBills.reduce((s, b) => s + b.amount, 0);
@@ -74,7 +85,7 @@ export default async function PaymentsPage({
   const dismissedIds = new Set(dismissed.map(d => d._id));
   const subscriptions: DetectedSubscriptionResponse[] = detected
     .filter(s => !dismissedIds.has(s.id))
-    .map(serializeDetected);
+    .map((s) => serializeDetected(s, anchoredMap.get(s.id)));
 
   return (
     <PaymentsShell
