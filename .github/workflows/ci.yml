@@ -249,7 +249,7 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 5
     needs: [dora-start, e2e]
-    if: always()
+    if: ${{ !cancelled() }}
     steps:
       - name: Write metrics to MongoDB
         run: |
@@ -289,7 +289,7 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 5
     needs: [dora-start, dora-emit]
-    if: always()
+    if: ${{ !cancelled() }}
     steps:
       - name: Generate DORA Job Summary
         run: |
