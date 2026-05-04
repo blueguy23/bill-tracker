@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import type { StrictDB, StrictFilter } from 'strictdb';
 import type { Bill, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import { createPayment } from '@/adapters/payments';
+import type { ClassificationMeta } from '@/types/bill';
 
 const COLLECTION = 'bills';
 
@@ -13,12 +14,35 @@ export async function listBills(db: StrictDB): Promise<Bill[]> {
   return db.queryMany<Bill>(COLLECTION, {}, { sort: { dueDate: 1 }, limit: 500 });
 }
 
+export async function listSubscriptionBills(db: StrictDB): Promise<Bill[]> {
+  return db.queryMany<Bill>(COLLECTION, { isSubscription: true }, { sort: { name: 1 }, limit: 500 });
+}
+
+export async function updateLastChargedAmount(
+  db: StrictDB,
+  id: string,
+  lastChargedAmount: number,
+): Promise<void> {
+  await db.updateOne<Bill>(COLLECTION, { _id: id }, { $set: { lastChargedAmount, updatedAt: new Date() } });
+}
+
 export async function getBillById(db: StrictDB, id: string): Promise<Bill | null> {
   return db.queryOne<Bill>(COLLECTION, byId(id));
 }
 
 export async function createBill(db: StrictDB, data: CreateBillDto): Promise<Bill> {
   const now = new Date();
+  const meta: ClassificationMeta | undefined = data.classificationMeta
+    ? {
+        recurringType: data.classificationMeta.recurringType,
+        billScore: data.classificationMeta.billScore,
+        subScore: data.classificationMeta.subScore,
+        signals: data.classificationMeta.signals,
+        userOverride: false,
+        classifiedAt: now,
+      }
+    : undefined;
+
   const bill: Bill = {
     _id: randomUUID(),
     name: data.name,
@@ -32,6 +56,9 @@ export async function createBill(db: StrictDB, data: CreateBillDto): Promise<Bil
     url: data.url,
     notes: data.notes,
     paymentDescriptionHint: data.paymentDescriptionHint,
+    isSubscription: data.isSubscription,
+    detectionId: data.detectionId,
+    classificationMeta: meta,
     createdAt: now,
     updatedAt: now,
   };

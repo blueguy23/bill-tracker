@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
+import { ThemeToggle } from './ThemeToggle';
 
 const NAV_SECTIONS = [
   { label: 'Overview', items: [
@@ -67,7 +68,7 @@ function NavItem({ href, icon, label, active, hasAlert, collapsed }: NavItemProp
       <span style={{ fontSize: 14, opacity: active ? 1 : 0.65, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
       {!collapsed && <span style={{ flex: 1 }}>{label}</span>}
       {!collapsed && hasAlert && (
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
       )}
       {!collapsed && active && !hasAlert && (
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
@@ -142,6 +143,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       )}
       <aside
         className="sidebar-overlay"
+        data-theme="dark"
         style={{
           width: w, minHeight: '100vh',
           background: 'linear-gradient(180deg, #0f0f14 0%, var(--bg) 100%)',
@@ -227,8 +229,9 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
           ))}
         </nav>
 
-        {/* Footer sync */}
+        {/* Footer sync + theme */}
         <div style={{ padding: collapsed ? '12px 8px' : '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+          {collapsed && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><ThemeToggle /></div>}
           <button
             onClick={handleSync}
             disabled={syncState === 'syncing'}
@@ -248,9 +251,12 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
             {!collapsed && syncLabel}
           </button>
           {!collapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-              <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', animation: 'btPulse 2s infinite', flexShrink: 0 }} />
-              LIVE · {formatLastSync(lastSyncAt).toUpperCase()}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+                <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', animation: 'btPulse 2s infinite', flexShrink: 0 }} />
+                LIVE · {formatLastSync(lastSyncAt).toUpperCase()}
+              </div>
+              <ThemeToggle />
             </div>
           )}
         </div>

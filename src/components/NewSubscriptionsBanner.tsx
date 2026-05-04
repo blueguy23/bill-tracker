@@ -14,7 +14,7 @@ export function NewSubscriptionsBanner() {
     fetch('/api/v1/subscriptions')
       .then(r => r.json() as Promise<{ subscriptions: DetectedSubscriptionResponse[] }>)
       .then(d => {
-        setPending((d.subscriptions ?? []).filter(s => !s.isAnchored));
+        setPending(d.subscriptions ?? []);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));

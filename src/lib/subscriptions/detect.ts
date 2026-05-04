@@ -107,7 +107,7 @@ export function detectSubscriptions(
 
     const confidence: 'high' | 'medium' = (txns.length >= 3 && maxHits >= 2) ? 'high' : 'medium';
 
-    const { type: recurringType, confidence: typeConfidence } = classifyRecurringType(txns, nameKey, amountVariance);
+    const { type: recurringType, confidence: typeConfidence, signals } = classifyRecurringType(txns, nameKey, amountVariance);
 
     const lastCharged    = lastTxn.posted;
     const midpoint       = INTERVAL_WINDOWS[winningInterval].midpoint;
@@ -131,6 +131,7 @@ export function detectSubscriptions(
       matchedBillId: null,
       recurringType,
       typeConfidence,
+      signals,
     });
   }
 

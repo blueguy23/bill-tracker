@@ -90,7 +90,7 @@ export function SectionConnections({ unknownCount }: Props) {
     <div data-testid="section-connections" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
       {unknownCount > 0 && (
-        <div style={{ background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ background: 'oklch(0.67 0.13 40 / .07)', border: '1px solid oklch(0.67 0.13 40 / .3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <span style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 1 }}>⚠</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>
@@ -100,7 +100,7 @@ export function SectionConnections({ unknownCount }: Props) {
               Their names show as &ldquo;Unknown&rdquo;. Try syncing again, or rename them below.
             </div>
           </div>
-          <button onClick={handleSync} disabled={syncing} style={{ ...btnGhost, flexShrink: 0, background: 'rgba(245,158,11,.2)', color: 'var(--gold)', border: 'none', opacity: syncing ? 0.5 : 1, cursor: syncing ? 'not-allowed' : 'pointer' }}>
+          <button onClick={handleSync} disabled={syncing} style={{ ...btnGhost, flexShrink: 0, background: 'oklch(0.67 0.13 40 / .2)', color: 'var(--gold)', border: 'none', opacity: syncing ? 0.5 : 1, cursor: syncing ? 'not-allowed' : 'pointer' }}>
             {syncing ? 'Syncing…' : 'Sync Now'}
           </button>
         </div>

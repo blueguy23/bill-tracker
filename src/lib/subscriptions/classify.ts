@@ -1,13 +1,15 @@
 import type { Transaction } from '@/lib/simplefin/types';
+import type { RecurringType } from '@/types/bill';
 import { CATEGORY_KEYWORDS } from './normalize';
 
-export type RecurringType = 'bill' | 'subscription' | 'recurring';
+export type { RecurringType };
 
 interface ClassifyResult {
   type: RecurringType;
   confidence: 'high' | 'medium' | 'low';
   billScore: number;
   subScore: number;
+  signals: string[];
 }
 
 // Category signal weights — mirrors what MCC ranges would give us but via Trove enrichment
@@ -24,7 +26,7 @@ const CATEGORY_WEIGHTS: Partial<Record<string, { bill: number; sub: number }>> =
   other:          { bill: 0, sub: 0 },
 };
 
-// Keyword override — checked against normalizedName if category signal is weak
+// Keyword override — checked against normalizedName when Trove hasn't enriched any txn in the group
 const BILL_KEYWORDS = [
   ...CATEGORY_KEYWORDS.utilities,
   ...CATEGORY_KEYWORDS.insurance,
@@ -41,29 +43,42 @@ export function classifyRecurringType(
 ): ClassifyResult {
   let billScore = 0;
   let subScore  = 0;
+  const signals: string[] = [];
 
   // ── Signal 1: dominant category across the transaction group ──────────────
   const enrichedCount = txns.filter((t) => t.category !== undefined).length;
+  const seenCategories = new Set<string>();
   for (const txn of txns) {
     if (!txn.category) continue;
     const w = CATEGORY_WEIGHTS[txn.category];
-    if (w) {
-      billScore += w.bill;
-      subScore  += w.sub;
+    if (!w) continue;
+    billScore += w.bill;
+    subScore  += w.sub;
+    if (!seenCategories.has(txn.category)) {
+      seenCategories.add(txn.category);
+      if (w.bill > 0 || w.sub > 0) signals.push(`${txn.category}_category`);
     }
   }
 
   // ── Signal 2: amount variance ─────────────────────────────────────────────
   if (amountVariance) {
     billScore += 2;
+    signals.push('variable_amount');
   } else {
     subScore += 1;
+    signals.push('fixed_amount');
   }
 
-  // ── Signal 3: keyword list (fallback when Trove hasn't enriched) ──────────
+  // ── Signal 3: keyword list (fallback when Trove hasn't enriched any txn) ──
   if (enrichedCount === 0) {
-    if (BILL_KEYWORDS.some((kw) => normalizedName.includes(kw))) billScore += 2;
-    if (SUB_KEYWORDS.some((kw)  => normalizedName.includes(kw))) subScore  += 2;
+    if (BILL_KEYWORDS.some((kw) => normalizedName.includes(kw))) {
+      billScore += 2;
+      signals.push('bill_keyword');
+    }
+    if (SUB_KEYWORDS.some((kw) => normalizedName.includes(kw))) {
+      subScore += 2;
+      signals.push('subscription_keyword');
+    }
   }
 
   // ── Classification ────────────────────────────────────────────────────────
@@ -78,5 +93,5 @@ export function classifyRecurringType(
   else if (subScore > billScore) type = 'subscription';
   else                           type = 'recurring';
 
-  return { type, confidence, billScore, subScore };
+  return { type, confidence, billScore, subScore, signals };
 }

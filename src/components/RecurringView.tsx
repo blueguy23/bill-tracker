@@ -58,8 +58,8 @@ export function RecurringView({ bills, totalMonthly, totalPaid, autoPayCount }: 
           <button key={f} onClick={() => setFilter(f)} style={{
             padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
             fontSize: 11, fontWeight: 600, fontFamily: 'var(--mono)', letterSpacing: '.04em', textTransform: 'uppercase',
-            background: filter === f ? 'rgba(232,201,126,0.12)' : 'var(--raised)',
-            color: filter === f ? 'var(--gold)' : 'var(--text3)',
+            background: filter === f ? 'var(--accent-a)' : 'var(--raised)',
+            color: filter === f ? 'var(--accent)' : 'var(--text3)',
             transition: 'all .12s',
           }}>
             {f}

@@ -19,7 +19,7 @@ const CAT_COLOR: Record<BillCategory, string> = {
   insurance:     '#34d399',
   rent:          '#a78bfa',
   loans:         '#f97316',
-  other:         '#f59e0b',
+  other:         'var(--gold)',
 };
 
 const FLEXIBLE: BillCategory[] = ['utilities', 'other'];
@@ -35,7 +35,7 @@ const PACE_COLOR: Record<PaceStatus, string> = {
 };
 const PACE_ALPHA: Record<PaceStatus, string> = {
   'on-track':  'rgba(34,197,94,0.85)',
-  'watch-out': 'rgba(245,158,11,0.85)',
+  'watch-out': 'oklch(0.67 0.13 40 / 0.85)',
   'over':      'rgba(239,68,68,0.85)',
   'no-budget': 'transparent',
 };
@@ -47,7 +47,7 @@ const PACE_LABEL: Record<PaceStatus, string> = {
 };
 const PACE_CHIP: Record<PaceStatus, React.CSSProperties> = {
   'on-track':  { background: 'rgba(34,197,94,0.10)',   color: 'var(--green)', border: '1px solid rgba(34,197,94,0.2)' },
-  'watch-out': { background: 'rgba(245,158,11,0.10)',  color: 'var(--gold)',  border: '1px solid rgba(245,158,11,0.2)' },
+  'watch-out': { background: 'oklch(0.67 0.13 40 / 0.10)',  color: 'var(--gold)',  border: '1px solid oklch(0.67 0.13 40 / 0.2)' },
   'over':      { background: 'rgba(239,68,68,0.10)',   color: 'var(--red)',   border: '1px solid rgba(239,68,68,0.2)' },
   'no-budget': { background: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: '1px solid var(--border)' },
 };

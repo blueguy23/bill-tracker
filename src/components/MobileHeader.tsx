@@ -1,5 +1,7 @@
 'use client';
 
+import { ThemeToggle } from './ThemeToggle';
+
 interface MobileHeaderProps {
   onMenuOpen: () => void;
 }
@@ -30,7 +32,7 @@ export function MobileHeader({ onMenuOpen }: MobileHeaderProps) {
         <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--sans)', letterSpacing: '-.03em' }}>Folio</span>
       </div>
 
-      <div style={{ width: 36 }} />
+      <ThemeToggle />
     </header>
   );
 }

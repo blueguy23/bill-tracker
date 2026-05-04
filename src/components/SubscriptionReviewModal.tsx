@@ -39,30 +39,18 @@ function ReviewRow({ sub, onResolved }: { sub: DetectedSubscriptionResponse; onR
   async function confirm() {
     setBusy('confirm');
     try {
-      if (sub.recurringType === 'bill') {
-        await fetch('/api/v1/bills', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: sub.normalizedName, amount: sub.amount,
-            dueDate: new Date(sub.lastCharged).getDate(),
-            category: sub.suggestedCategory, isRecurring: true,
-            recurrenceInterval: sub.interval, isAutoPay: true, isPaid: false,
-          }),
-        });
-        // Also dismiss from subscription detection so it doesn't resurface
-        await fetch('/api/v1/subscriptions/dismiss', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: sub.id }),
-        });
-      } else {
-        await fetch('/api/v1/subscriptions/anchor', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: sub.id, name: sub.normalizedName, amount: sub.amount,
-            interval: sub.interval, category: sub.suggestedCategory,
-            rawDescriptions: sub.rawDescriptions,
-          }),
-        });
-      }
+      await fetch('/api/v1/subscriptions/anchor', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: sub.id, name: sub.normalizedName, amount: sub.amount,
+          interval: sub.interval, category: sub.suggestedCategory,
+          rawDescriptions: sub.rawDescriptions, recurringType: sub.recurringType,
+          lastCharged: sub.lastCharged,
+          classificationMeta: {
+            recurringType: sub.recurringType, billScore: 0, subScore: 0, signals: sub.signals,
+          },
+        }),
+      });
       onResolved(sub.id);
     } finally {
       setBusy(null);

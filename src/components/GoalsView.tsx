@@ -63,7 +63,7 @@ function GoalCard({ goal, onBoost }: { goal: GoalData; onBoost: (g: GoalData) =>
   const COLOR = { green: 'var(--green)', amber: 'var(--gold)', idle: 'rgba(255,255,255,0.15)' }[state];
   const BADGE_STYLE: Record<string, React.CSSProperties> = {
     green: { background: 'rgba(34,197,94,0.10)',  color: 'var(--green)', border: '1px solid rgba(74,222,128,0.2)' },
-    amber: { background: 'rgba(245,158,11,0.10)', color: 'var(--gold)',  border: '1px solid rgba(245,158,11,0.2)' },
+    amber: { background: 'oklch(0.67 0.13 40 / 0.10)', color: 'var(--gold)',  border: '1px solid oklch(0.67 0.13 40 / 0.2)' },
     idle:  { background: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: '1px solid var(--border)' },
   };
   const BADGE_LABEL = { green: '● On track', amber: '● Behind', idle: '● Idle' }[state];
@@ -122,7 +122,7 @@ function GoalCard({ goal, onBoost }: { goal: GoalData; onBoost: (g: GoalData) =>
         </div>
       </div>
 
-      <button data-testid="boost-goal-btn" onClick={() => onBoost(goal)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, padding: 8, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(232,201,126,0.2)', borderRadius: 8, fontSize: 11, color: 'var(--gold)', cursor: 'pointer' }}>
+      <button data-testid="boost-goal-btn" onClick={() => onBoost(goal)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, padding: 8, background: 'oklch(0.67 0.13 40 / 0.10)', border: '1px solid oklch(0.67 0.13 40 / 0.2)', borderRadius: 8, fontSize: 11, color: 'var(--gold)', cursor: 'pointer' }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
         {boostText}
       </button>
@@ -214,7 +214,7 @@ export function GoalsView({ goals: externalGoals, onGoalAdded, onGoalDeleted: _o
 
         <div data-testid="add-goal-card" onClick={() => onAddGoalClick ? onAddGoalClick() : setLocalShowAdd(true)}
           style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 14, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 300, cursor: 'pointer' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(232,201,126,0.3)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--interactive-a)'; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'oklch(0.67 0.13 40 / 0.3)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--interactive-a)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.1)'; (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}>
           <div style={{ width: 44, height: 44, background: 'var(--raised)', border: '1px solid var(--border-l)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
