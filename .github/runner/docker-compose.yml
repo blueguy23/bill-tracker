@@ -31,7 +31,7 @@ services:
     # Resource caps — prevent runaway jobs from starving the host
     mem_limit: 6g
     memswap_limit: 6g
-    cpus: 3.0
+    cpus: ${RUNNER_CPUS:-3.0}
 
     healthcheck:
       test: ["CMD", "pgrep", "-f", "Runner.Listener"]
@@ -43,21 +43,21 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "50m"     # Cap log size — uncapped logs can fill disk on long-running runners
+        max-size: "50m"
         max-file: "5"
 
   # ── Autoheal — restarts unhealthy containers automatically ───────────────────
   # Catches zombie runner processes that pass pgrep but are stuck accepting no jobs
   autoheal:
-    image: willfarrell/autoheal:latest
+    image: willfarrell/autoheal:v0.9.0
     container_name: autoheal
     restart: always
     init: true
 
     environment:
-      AUTOHEAL_CONTAINER_LABEL: all     # Watch all containers with healthchecks
+      AUTOHEAL_CONTAINER_LABEL: all
       AUTOHEAL_INTERVAL: 30
-      AUTOHEAL_START_PERIOD: 120        # Grace period on startup
+      AUTOHEAL_START_PERIOD: 120
       CURL_TIMEOUT: 30
 
     volumes:
@@ -65,7 +65,7 @@ services:
 
   # ── Disk watcher — prunes Docker artifacts before disk fills ─────────────────
   disk-watcher:
-    image: docker:24-cli
+    image: docker:27-cli
     container_name: disk-watcher
     restart: always
     init: true

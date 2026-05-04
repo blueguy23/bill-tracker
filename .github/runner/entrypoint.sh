@@ -40,7 +40,13 @@ mongod \
   --fork \
   --logpath /tmp/mongod.log \
   --quiet
-log "MongoDB started"
+log "MongoDB started — waiting for readiness..."
+for i in $(seq 1 30); do
+  mongosh --eval "db.adminCommand('ping')" --quiet 2>/dev/null && break
+  sleep 1
+  [ "$i" = "30" ] && { log "ERROR: MongoDB not ready after 30s"; exit 1; }
+done
+log "MongoDB ready"
 
 cd /home/garci/actions-runner
 
