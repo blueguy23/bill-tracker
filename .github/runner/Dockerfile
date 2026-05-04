@@ -52,13 +52,17 @@ RUN mkdir -p /home/garci/actions-runner \
 # ── Config files + entrypoint ─────────────────────────────────────────────────
 COPY chrony.conf /etc/chrony/chrony.conf
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY deep-healthcheck.sh /deep-healthcheck.sh
+RUN chmod +x /entrypoint.sh /deep-healthcheck.sh
 
-HEALTHCHECK --interval=30s \
-            --timeout=10s \
+# Readiness check — queries GitHub API to confirm the runner is actually online,
+# not just that the process exists. autoheal restarts on unhealthy, so this
+# catches disconnections that pgrep would miss.
+HEALTHCHECK --interval=60s \
+            --timeout=15s \
             --start-period=90s \
-            --retries=3 \
-  CMD pgrep -f "Runner.Listener" || exit 1
+            --retries=2 \
+  CMD ["/deep-healthcheck.sh"]
 
 # HOME is explicit so pnpm/Playwright caches land at paths hardcoded in ci.yml
 ENV HOME=/home/garci
