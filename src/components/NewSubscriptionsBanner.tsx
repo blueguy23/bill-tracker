@@ -1,20 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import type { EnrichedMatch } from '@/types/subscription';
-import { MatchReviewModal } from './MatchReviewModal';
+import { useEffect, useState } from 'react';
+import type { DetectedSubscriptionResponse } from '@/types/subscription';
+import { SubscriptionReviewModal } from './SubscriptionReviewModal';
 
-interface Props {
-  matches: EnrichedMatch[];
-}
-
-export function MatchBanner({ matches }: Props) {
-  const [open, setOpen] = useState(false);
+export function NewSubscriptionsBanner() {
+  const [pending, setPending]     = useState<DetectedSubscriptionResponse[]>([]);
+  const [loaded, setLoaded]       = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [open, setOpen]           = useState(false);
 
-  if (matches.length === 0 || dismissed) return null;
+  useEffect(() => {
+    fetch('/api/v1/subscriptions')
+      .then(r => r.json() as Promise<{ subscriptions: DetectedSubscriptionResponse[] }>)
+      .then(d => {
+        setPending(d.subscriptions ?? []);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
 
-  const count = matches.length;
+  if (!loaded || pending.length === 0 || dismissed) return null;
+
+  const count = pending.length;
 
   return (
     <>
@@ -25,10 +33,10 @@ export function MatchBanner({ matches }: Props) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           <span style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--sans)' }}>
-            <strong>{count} transaction{count !== 1 ? 's' : ''}</strong> may match your unpaid bills
+            <strong>{count} recurring charge{count !== 1 ? 's' : ''}</strong> detected — confirm or ignore
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -41,7 +49,7 @@ export function MatchBanner({ matches }: Props) {
           <button
             onClick={() => setDismissed(true)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex', padding: 0 }}
-            aria-label="Dismiss"
+            aria-label="Dismiss banner"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
@@ -49,9 +57,14 @@ export function MatchBanner({ matches }: Props) {
       </div>
 
       {open && (
-        <MatchReviewModal
-          matches={matches}
+        <SubscriptionReviewModal
+          subscriptions={pending}
           onClose={() => setOpen(false)}
+          onResolved={(id) => {
+            const next = pending.filter(s => s.id !== id);
+            setPending(next);
+            if (next.length === 0) setOpen(false);
+          }}
         />
       )}
     </>

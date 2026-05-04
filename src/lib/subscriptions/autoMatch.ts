@@ -42,6 +42,7 @@ export function findAutoMatches(
         transactionId: txn._id,
         billId: bill._id,
         billName: bill.name,
+        billAmount: bill.amount,
         confidence,
       });
       break; // one transaction per bill

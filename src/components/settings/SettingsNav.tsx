@@ -67,7 +67,7 @@ export function SettingsNav() {
           <button
             key={id}
             onClick={() => scrollTo(id)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, fontSize: 12, color: on ? 'var(--interactive)' : 'var(--text3)', background: on ? 'rgba(232,201,126,0.10)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'background 0.1s, color 0.1s' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, fontSize: 12, color: on ? 'var(--accent)' : 'var(--text3)', background: on ? 'var(--accent-a)' : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'background 0.1s, color 0.1s' }}
           >
             {icon}
             {label}

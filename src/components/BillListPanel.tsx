@@ -50,7 +50,7 @@ function dueDateLabel(bill: BillResponse, today: number, mm: string, monthAbbr: 
 
 const STATUS_STYLE: Record<BillStatus, { bg: string; color: string; border: string; label: string }> = {
   overdue:   { bg: 'rgba(239,68,68,0.10)',   color: 'var(--red)',   border: 'rgba(239,68,68,0.20)',   label: '● Overdue'   },
-  'due-soon':{ bg: 'rgba(245,158,11,0.10)',  color: 'var(--gold)',  border: 'rgba(245,158,11,0.20)',  label: '● Due Soon'  },
+  'due-soon':{ bg: 'oklch(0.67 0.13 40 / 0.10)',  color: 'var(--gold)',  border: 'oklch(0.67 0.13 40 / 0.20)',  label: '● Due Soon'  },
   paid:      { bg: 'rgba(34,197,94,0.10)',   color: 'var(--green)', border: 'rgba(34,197,94,0.20)',   label: '● Paid'      },
   scheduled: { bg: 'rgba(96,165,250,0.10)',  color: 'var(--accent)',border: 'rgba(96,165,250,0.20)',  label: '● Scheduled' },
   upcoming:  { bg: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: 'rgba(255,255,255,0.07)', label: '● Upcoming'  },
@@ -60,7 +60,7 @@ const LEFT_BORDER: Partial<Record<BillStatus, string>> = {
   overdue: 'var(--red)', 'due-soon': 'var(--gold)',
 };
 
-function BillRowItem({ bill, today, mm, monthAbbr, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: {
+function BillRowItem({ bill, today, mm, monthAbbr, onEdit, onDelete, onTogglePaid, onToggleAutoPay: _onToggleAutoPay }: {
   bill: BillResponse; today: number; mm: string; monthAbbr: string;
   onEdit: (b: BillResponse) => void;
   onDelete: (id: string) => void;
@@ -169,8 +169,8 @@ export function BillListPanel({ bills, onEdit, onDelete, onTogglePaid, onToggleA
           <button key={id} onClick={() => setFilter(id)} style={{
             display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6,
             fontSize: 11, cursor: 'pointer', fontFamily: 'var(--sans)',
-            border: filter === id ? '1px solid rgba(232,201,126,0.25)' : '1px solid rgba(255,255,255,0.07)',
-            background: filter === id ? 'rgba(232,201,126,0.08)' : 'transparent',
+            border: filter === id ? '1px solid oklch(0.67 0.13 40 / 0.25)' : '1px solid rgba(255,255,255,0.07)',
+            background: filter === id ? 'oklch(0.67 0.13 40 / 0.08)' : 'transparent',
             color: filter === id ? 'var(--gold)' : 'var(--text3)',
           }}>
             {dot && <div style={{ width: 5, height: 5, borderRadius: '50%', background: dot }} />}

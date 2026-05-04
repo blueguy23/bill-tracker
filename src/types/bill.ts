@@ -1,3 +1,23 @@
+export type RecurringType = 'bill' | 'subscription' | 'recurring';
+
+export interface ClassificationMeta {
+  recurringType: RecurringType;
+  billScore: number;
+  subScore: number;
+  signals: string[];
+  userOverride: boolean;
+  classifiedAt: Date;
+}
+
+export interface ClassificationMetaResponse {
+  recurringType: RecurringType;
+  billScore: number;
+  subScore: number;
+  signals: string[];
+  userOverride: boolean;
+  classifiedAt: string;
+}
+
 export type BillCategory =
   | 'utilities'
   | 'subscriptions'
@@ -48,6 +68,12 @@ export interface Bill {
   lastChargedAmount?: number;
   /** Exact transaction description to match instead of bill name — for ambiguous bills like loans */
   paymentDescriptionHint?: string;
+  /** True for auto-detected subscriptions; false/absent for manually added bills */
+  isSubscription?: boolean;
+  /** Detection ID (sha1 of normalizedName:interval) — links back to the recurring pattern */
+  detectionId?: string;
+  /** Classifier output at the time the user confirmed — for audit and re-evaluation */
+  classificationMeta?: ClassificationMeta;
   url?: string;
   notes?: string;
   createdAt: Date;
@@ -65,6 +91,9 @@ export interface CreateBillDto {
   isRecurring: boolean;
   recurrenceInterval?: RecurrenceInterval;
   paymentDescriptionHint?: string;
+  isSubscription?: boolean;
+  detectionId?: string;
+  classificationMeta?: Omit<ClassificationMeta, 'classifiedAt' | 'userOverride'>;
   url?: string;
   notes?: string;
 }
@@ -85,6 +114,9 @@ export interface BillResponse {
   paidMonth?: string;
   lastChargedAmount?: number;
   paymentDescriptionHint?: string;
+  isSubscription?: boolean;
+  detectionId?: string;
+  classificationMeta?: ClassificationMetaResponse;
   url?: string;
   notes?: string;
   createdAt: string;

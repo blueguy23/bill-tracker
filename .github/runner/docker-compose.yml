@@ -1,32 +1,91 @@
 services:
+
+  # ── GitHub Actions Runner ────────────────────────────────────────────────────
   runner:
     build:
       context: .
-      args:
-        RUNNER_VERSION: "2.334.0"
     image: bill-tracker-runner:latest
     restart: unless-stopped
+    # init: true is intentionally absent — the Dockerfile ENTRYPOINT already invokes
+    # tini explicitly. Adding init: true here would inject a second tini as PID 1,
+    # demoting our tini to a child process and triggering subreaper warnings.
+
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
       RUNNER_NAME: ${RUNNER_NAME:-ci-docker}
-    # Add the host Docker socket's group GID so the runner user can call docker CLI.
-    # Default 1001 matches this machine; override via DOCKER_GID in .env if yours differs.
+      DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME:-}
+      DOCKERHUB_TOKEN: ${DOCKERHUB_TOKEN:-}
+
+    # GID of the host Docker socket — lets runner user call docker CLI without root.
+    # Correct for WSL2: matches GID 1001 of /var/run/docker.sock on this machine.
+    # (usermod -aG docker approach uses the container's docker GID which differs)
+    # SYS_TIME allows clock adjustment inside the container.
+    # Without it, ntpdate/chronyd can't set the kernel clock and WSL2 drift
+    # causes TLS connection failures after host sleep/wake cycles.
+    cap_add:
+      - SYS_TIME
+
     group_add:
       - "${DOCKER_GID:-1001}"
+
     volumes:
-      # Docker socket — lets CI jobs run `docker build` without a nested daemon
       - /var/run/docker.sock:/var/run/docker.sock
-      # Persist runner registration (.runner, .credentials) so restarts don't re-register
       - runner-config:/home/garci/actions-runner
-      # Persist job workspaces across container restarts
       - runner-work:/home/garci/actions-runner/_work
-      # Cache Playwright Chromium binary (ci.yml checks this exact path)
       - playwright-cache:/home/garci/.cache/ms-playwright
-      # Cache pnpm store so `pnpm install` hits disk instead of re-downloading
       - pnpm-store:/home/garci/.local/share/pnpm/store
-      # MongoDB data — survives container restarts
       - mongo-data:/data/db
-      # No host home dir mount — intentionally isolated from .env files
+
+    # Resource caps — prevent runaway jobs from starving the host
+    mem_limit: 6g
+    memswap_limit: 6g
+    cpus: ${RUNNER_CPUS:-3.0}
+
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "Runner.Listener"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── Autoheal — restarts unhealthy containers automatically ───────────────────
+  # Catches zombie runner processes that pass pgrep but are stuck accepting no jobs
+  autoheal:
+    image: willfarrell/autoheal@sha256:5c714bcf53e70c24329060b85477623cc2a0b05a065095c04785e0afb179c8be
+    container_name: autoheal
+    restart: always
+    init: true
+
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+      AUTOHEAL_INTERVAL: 30
+      AUTOHEAL_START_PERIOD: 120
+      CURL_TIMEOUT: 30
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # ── Disk watcher — prunes Docker artifacts before disk fills ─────────────────
+  disk-watcher:
+    image: docker:27-cli
+    container_name: disk-watcher
+    restart: always
+    init: true
+
+    environment:
+      PRUNE_THRESHOLD_GB: ${PRUNE_THRESHOLD_GB:-10}
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./disk-watch.sh:/disk-watch.sh:ro
+
+    entrypoint: ["sh", "/disk-watch.sh"]
 
 volumes:
   runner-config:

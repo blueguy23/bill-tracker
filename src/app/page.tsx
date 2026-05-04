@@ -1,9 +1,10 @@
 import type { BillResponse, BillSummary, Bill, BillCategory } from '@/types/bill';
-import type { SuggestedMatch } from '@/types/subscription';
+import type { EnrichedMatch } from '@/types/subscription';
 import type { Account } from '@/lib/simplefin/types';
 import { Suspense } from 'react';
 import { MatchBanner } from '@/components/MatchBanner';
 import { OnboardingBanner } from '@/components/OnboardingBanner';
+import { NewSubscriptionsBanner } from '@/components/NewSubscriptionsBanner';
 import { DashboardCharts, SpendByCategoryCard } from '@/components/DashboardCharts';
 import { PeriodSelector } from '@/components/PeriodSelector';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -150,7 +151,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   });
 
   const bills   = rawBills.map(serializeBill);
-  const matches: SuggestedMatch[] = findAutoMatches(recentTransactions, rawBills);
+  const txnMap  = new Map(recentTransactions.map(t => [t._id, t]));
+  const enrichedMatches: EnrichedMatch[] = findAutoMatches(recentTransactions, rawBills).flatMap(m => {
+    const txn = txnMap.get(m.transactionId);
+    if (!txn) return [];
+    const posted = txn.posted instanceof Date ? txn.posted : new Date(Number(txn.posted) * 1000);
+    return [{
+      ...m,
+      txnDescription: txn.description,
+      txnAmount: Number(txn.amount),
+      txnDate: posted.toISOString(),
+    }];
+  });
 
   const portfolioHoldings: Holding[] = accounts
     .filter(a => a.accountType === 'investment' && a.holdings && a.holdings.length > 0)
@@ -214,7 +226,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           billCount={rawBills.length}
           hasBudget={budgets.length > 0}
         />
-        <MatchBanner count={matches.length} />
+        <NewSubscriptionsBanner />
+        <MatchBanner matches={enrichedMatches} />
 
         {/* Metric strip */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
@@ -247,29 +260,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* Portfolio widget — only renders when SimpleFIN GAP 3 holdings exist */}
         <PortfolioWidget holdings={portfolioHoldings} />
 
-        {/* Bottom row: Spend by Category + Budget + Recent Transactions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 12 }}>
-
-          {/* Spend by Category donut */}
-          <SpendByCategoryCard data={categorySpendData} />
-
-          {/* Budget mini */}
-          <FolioCard style={{ padding: '20px' }}>
-            <CardHeader
-              title="Budget"
-              subtitle={`${new Date().getDate()} days in`}
-              action={
-                <a href="/budget" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', fontFamily: 'var(--mono)', textDecoration: 'none', letterSpacing: '.04em', padding: '4px 0' }}>View →</a>
-              }
-            />
-            {budgets.length === 0 ? (
-              <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', padding: '24px 0' }}>No budgets set</p>
-            ) : (
-              budgets.slice(0, 6).map(b => (
-                <BudgetMiniRow key={b.category} label={b.category} spent={spendByCat.get(b.category as BillCategory) ?? 0} limit={b.monthlyAmount} />
-              ))
-            )}
-          </FolioCard>
+        {/* Bottom row: Recent + Budget + Spend by Category */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
 
           {/* Recent transactions */}
           <FolioCard style={{ padding: '20px' }}>
@@ -304,6 +296,28 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               })
             )}
           </FolioCard>
+
+          {/* Budget mini */}
+          <FolioCard style={{ padding: '20px' }}>
+            <CardHeader
+              title="Budget"
+              subtitle={`${new Date().getDate()} days in`}
+              action={
+                <a href="/budget" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', fontFamily: 'var(--mono)', textDecoration: 'none', letterSpacing: '.04em', padding: '4px 0' }}>View →</a>
+              }
+            />
+            {budgets.length === 0 ? (
+              <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', padding: '24px 0' }}>No budgets set</p>
+            ) : (
+              budgets.slice(0, 6).map(b => (
+                <BudgetMiniRow key={b.category} label={b.category} spent={spendByCat.get(b.category as BillCategory) ?? 0} limit={b.monthlyAmount} />
+              ))
+            )}
+          </FolioCard>
+
+          {/* Spend by Category donut */}
+          <SpendByCategoryCard data={categorySpendData} />
+
         </div>
 
       </div>

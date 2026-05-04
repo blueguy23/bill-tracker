@@ -18,8 +18,8 @@ function AZEOCardRow({ card }: { card: AZEOCard }) {
 
   return (
     <div style={{
-      borderRadius: 10, border: card.alertActive ? '1px solid rgba(245,158,11,.4)' : '1px solid var(--border)',
-      background: card.alertActive ? 'rgba(245,158,11,.04)' : 'var(--raised)',
+      borderRadius: 10, border: card.alertActive ? '1px solid oklch(0.67 0.13 40 / .4)' : '1px solid var(--border)',
+      background: card.alertActive ? 'oklch(0.67 0.13 40 / .04)' : 'var(--raised)',
       padding: '16px', display: 'flex', flexDirection: 'column', gap: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>

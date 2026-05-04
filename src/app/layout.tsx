@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { AppShell } from '@/components/AppShell';
 import { DemoBanner } from '@/components/DemoBanner';
+import { ThemeProvider } from '@/components/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,8 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" style={{ background: '#0b0b0f' }}>
       <body suppressHydrationWarning style={{ background: '#0b0b0f' }}>
-        <DemoBanner />
-        <AppShell>{children}</AppShell>
+        <ThemeProvider>
+          <DemoBanner />
+          <AppShell>{children}</AppShell>
+        </ThemeProvider>
         {process.env.NEXT_PUBLIC_RYBBIT_SITE_ID && (
           <Script
             src={`${process.env.NEXT_PUBLIC_RYBBIT_URL || 'https://app.rybbit.io'}/api/script.js`}
