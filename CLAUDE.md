@@ -244,6 +244,14 @@ docker compose down
 
 ---
 
+## Subscription Detection — Remaining Gaps
+
+- [ ] **Late-fee prompt for `recurring` items** — when classifier returns `recurringType: 'recurring'` (tied score), surface a single-question prompt in the review UI: "Does this charge a late fee if you miss it?" Yes → routes to bills, No → routes to subscriptions. Resolves ~90% of ambiguous cases. `SubscriptionsView` pending rows already show a "Recurring?" badge as the hook point.
+- [ ] **Annual interval detection** — `INTERVAL_WINDOWS` in `src/lib/subscriptions/detect.ts` only covers weekly/biweekly/monthly/quarterly. Add `yearly: { min: 350, max: 380, midpoint: 365 }`. Amazon Prime, domain renewals, car registration, HOA dues are all invisible to detection today.
+- [ ] **Reclassification toggle** — once a recurring item is confirmed it can't be moved. Add a UI control in the tracked row (Payments > Subscriptions) to flip `isSubscription` and/or update `classificationMeta.userOverride = true` on the bill. Critical escape hatch for misclassifications.
+
+---
+
 ## Next Session Ideas
 
 - **Production deployment** — MongoDB Atlas (free tier) is set up; Dokploy config in `.env.example`
