@@ -1,10 +1,15 @@
 name: CI
 # Job execution order:
-#   [Security Audit, Lint, TypeScript]  ← parallel
-#          ↓ (all three must pass)
-#       [Unit Tests]
+#   dora-start ──────────────────────────────────────┐
+#   [Security Audit, Lint, TypeScript]  (parallel)   │
+#          ↓ (all three must pass)                   │
+#       [Unit Tests]                                 │
+#          ↓                                         │
+#       [E2E Tests] ──────────────────────────────── ┤
+#          ↓                                         │
+#       [dora-emit] ◄────────────────────────────────┘
 #          ↓
-#       [E2E Tests]
+#       [dora-summary]
 
 on:
   push:
@@ -13,6 +18,33 @@ on:
     branches: [master]
 
 jobs:
+  # ── DORA: capture pipeline start + commit timestamp ───────────────────────────
+  # Runs in parallel with the first validation tier — no critical-path cost.
+  # commit-epoch comes from the event payload so no checkout is needed.
+  dora-start:
+    name: DORA Start
+    runs-on: self-hosted
+    timeout-minutes: 2
+    outputs:
+      start-epoch: ${{ steps.ts.outputs.start-epoch }}
+      commit-epoch: ${{ steps.ts.outputs.commit-epoch }}
+    steps:
+      - id: ts
+        run: |
+          set -euo pipefail
+          echo "start-epoch=$(date -u +%s)" >> "$GITHUB_OUTPUT"
+
+          # Push events carry the commit timestamp in the event payload.
+          # PRs don't produce deployments so we fall back to now — those
+          # runs are excluded from the master-only aggregations in dora-summary.
+          COMMIT_TS="${{ github.event.head_commit.timestamp }}"
+          if [ -n "$COMMIT_TS" ]; then
+            EPOCH=$(date -d "$COMMIT_TS" +%s 2>/dev/null || date -u +%s)
+          else
+            EPOCH=$(date -u +%s)
+          fi
+          echo "commit-epoch=$EPOCH" >> "$GITHUB_OUTPUT"
+
   # ── 1. TypeScript typecheck ───────────────────────────────────────────────────
   typecheck:
     name: TypeScript
@@ -141,6 +173,7 @@ jobs:
       - name: Print E2E failures
         if: failure()
         run: |
+          set -euo pipefail
           if [ -f test-results/results.json ]; then
             node -e "
               const r = require('./test-results/results.json');
@@ -193,18 +226,143 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      # docker/setup-buildx-action creates a separate buildkitd container which
+      # cannot inherit the runner's Docker socket group permissions — permission
+      # denied on self-hosted runners. Plain docker build uses the daemon's own
+      # layer cache which persists across runs without needing GHA cache.
       - name: Build image (verify only — no push)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: bill-tracker:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          # NEXT_PUBLIC_* build args — blank in CI so analytics is simply disabled
-          build-args: |
-            NEXT_PUBLIC_RYBBIT_SITE_ID=
-            NEXT_PUBLIC_RYBBIT_URL=
+        run: |
+          set -euo pipefail
+          docker build \
+            --tag bill-tracker:ci \
+            --build-arg NEXT_PUBLIC_RYBBIT_SITE_ID= \
+            --build-arg NEXT_PUBLIC_RYBBIT_URL= \
+            .
+
+  # ── DORA: write metrics to MongoDB after the pipeline completes ───────────────
+  # Runs regardless of outcome — failure rate is itself a DORA metric.
+  # e2e is the last required job; skipped means an upstream job failed first.
+  # Only master pushes count as "deployments" for Deployment Frequency and
+  # Lead Time — PR runs are stored but excluded from those aggregations.
+  dora-emit:
+    name: DORA Emit
+    runs-on: self-hosted
+    timeout-minutes: 5
+    needs: [dora-start, e2e]
+    if: always()
+    steps:
+      - name: Write metrics to MongoDB
+        run: |
+          set -euo pipefail
+
+          START="${{ needs.dora-start.outputs.start-epoch }}"
+          COMMIT="${{ needs.dora-start.outputs.commit-epoch }}"
+          NOW=$(date -u +%s)
+
+          E2E_RESULT="${{ needs.e2e.result }}"
+          # skipped means an upstream job failed before e2e could run
+          [ "$E2E_RESULT" = "skipped" ] && OUTCOME="failure" || OUTCOME="$E2E_RESULT"
+
+          PIPELINE_DURATION=$(( NOW - START ))
+          LEAD_TIME=$(( NOW - COMMIT ))
+
+          mongosh mongodb://localhost:27017/bill-tracker --quiet --eval "
+            db.dora_runs.insertOne({
+              sha:               '${{ github.sha }}',
+              branch:            '${{ github.ref_name }}',
+              outcome:           '${OUTCOME}',
+              pipelineDurationS: ${PIPELINE_DURATION},
+              leadTimeS:         ${LEAD_TIME},
+              runId:             '${{ github.run_id }}',
+              runNumber:         ${{ github.run_number }},
+              timestamp:         new Date(${NOW} * 1000)
+            });
+          "
+
+  # ── DORA: write Job Summary ───────────────────────────────────────────────────
+  # Visible by clicking any workflow run in the GitHub Actions tab.
+  # Aggregates the last 30 days from MongoDB — no external tooling needed.
+  # CFR uses CI pipeline failures as a proxy; true CFR requires marking
+  # production incidents separately (not yet implemented).
+  dora-summary:
+    name: DORA Summary
+    runs-on: self-hosted
+    timeout-minutes: 5
+    needs: [dora-start, dora-emit]
+    if: always()
+    steps:
+      - name: Generate DORA Job Summary
+        run: |
+          set -euo pipefail
+          DAYS=30
+
+          RECORDS=$(mongosh mongodb://localhost:27017/bill-tracker --quiet --eval "
+            JSON.stringify(
+              db.dora_runs
+                .find({ timestamp: { \$gte: new Date(Date.now() - ${DAYS} * 86400000) } })
+                .toArray()
+            );
+          ")
+
+          TOTAL=$(echo "$RECORDS" | jq 'length')
+
+          # Deployments = successful pushes to master only
+          DEPLOYS=$(echo "$RECORDS" | jq '[.[] | select(.outcome == "success" and .branch == "master")] | length')
+          FAILURES=$(echo "$RECORDS" | jq '[.[] | select(.outcome == "failure")] | length')
+
+          DEPLOYS_PER_DAY=$(awk "BEGIN { printf \"%.2f\", ${DEPLOYS} / ${DAYS} }")
+
+          # Lead time over master successes only (PRs aren't deployments)
+          AVG_LEAD_S=$(echo "$RECORDS" | jq '[.[] | select(.outcome == "success" and .branch == "master") | .leadTimeS] | if length > 0 then (add / length | floor) else 0 end')
+          AVG_LEAD_MIN=$(awk "BEGIN { printf \"%.1f\", ${AVG_LEAD_S} / 60 }")
+
+          AVG_DUR_S=$(echo "$RECORDS" | jq '[.[].pipelineDurationS] | if length > 0 then (add / length | floor) else 0 end')
+          AVG_DUR_MIN=$(awk "BEGIN { printf \"%.1f\", ${AVG_DUR_S} / 60 }")
+
+          if [ "$TOTAL" -gt 0 ]; then
+            CFR=$(awk "BEGIN { printf \"%.1f\", ${FAILURES} * 100 / ${TOTAL} }")
+          else
+            CFR="0.0"
+          fi
+
+          # Ratings vs DORA elite benchmarks — all arithmetic via awk, no bc needed
+          FREQ_RATING=$(awk "BEGIN { print (${DEPLOYS_PER_DAY} >= 1)   ? \"🟢 Elite\" : (${DEPLOYS_PER_DAY} >= 0.14) ? \"🟡 High\" : \"🔴 Low\" }")
+          LEAD_RATING=$(awk "BEGIN { print (${AVG_LEAD_MIN}    < 60)   ? \"🟢 Elite\" : (${AVG_LEAD_MIN}    < 1440)  ? \"🟡 High\" : \"🔴 Low\" }")
+          CFR_RATING=$( awk "BEGIN { print (${CFR}             < 5)    ? \"🟢 Elite\" : (${CFR}             < 15)    ? \"🟡 Medium\" : \"🔴 High\" }")
+
+          # Pull this run's record from MongoDB (written by dora-emit above)
+          THIS_RUN=$(echo "$RECORDS" | jq --arg rid "${{ github.run_id }}" '.[] | select(.runId == $rid)')
+          THIS_OUTCOME=$(echo "$THIS_RUN" | jq -r '.outcome // "unknown"')
+          case "$THIS_OUTCOME" in
+            success)   THIS_BADGE="✅ passed" ;;
+            failure)   THIS_BADGE="❌ failed" ;;
+            cancelled) THIS_BADGE="⚠️ cancelled" ;;
+            *)         THIS_BADGE="⚠️ ${THIS_OUTCOME}" ;;
+          esac
+
+          cat >> "$GITHUB_STEP_SUMMARY" << SUMMARY
+          ## DORA Metrics — Last ${DAYS} Days
+
+          | Metric | Value | vs Elite Benchmark |
+          |--------|-------|--------------------|
+          | 🚀 Deployment Frequency | ${DEPLOYS_PER_DAY}/day (${DEPLOYS} deploys) | ${FREQ_RATING} |
+          | ⏱ Lead Time for Changes | ${AVG_LEAD_MIN} min avg | ${LEAD_RATING} |
+          | 💥 Change Failure Rate | ${CFR}% (${FAILURES} of ${TOTAL} runs failed) | ${CFR_RATING} |
+          | 🔧 Avg Pipeline Duration | ${AVG_DUR_MIN} min | — |
+
+          > **CFR** uses CI failures as a proxy — true change failure rate requires marking production incidents separately.
+          > **MTTR** not yet tracked — requires a separate incident-marking workflow.
+
+          ---
+
+          ### This Run
+          | | |
+          |---|---|
+          | Result | ${THIS_BADGE} |
+          | SHA | \`${{ github.sha }}\` |
+          | Branch | \`${{ github.ref_name }}\` |
+          | Run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |
+
+          ---
+          *${TOTAL} pipeline runs in last ${DAYS} days · Updates automatically on every run*
+          SUMMARY

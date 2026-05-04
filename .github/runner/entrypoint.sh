@@ -14,6 +14,16 @@ if [ "$(id -u)" = "0" ]; then
   # Start cron as root before dropping privileges — needs /var/run/crond.pid
   cron
 
+  # TCP keepalive — WSL2 default is 7200s; dead connections go undetected for 2h.
+  # 60/10/6 = detect dead connection within ~60s + 6 probes × 10s = ~2 min max.
+  # Requires NET_ADMIN cap in docker-compose.yml.
+  sysctl -w net.ipv4.tcp_keepalive_time=60  2>/dev/null || echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: tcp_keepalive_time not settable"
+  sysctl -w net.ipv4.tcp_keepalive_intvl=10 2>/dev/null || echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: tcp_keepalive_intvl not settable"
+  sysctl -w net.ipv4.tcp_keepalive_probes=6 2>/dev/null || echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: tcp_keepalive_probes not settable"
+
+  # DNS fallback — WSL2 DNS breaks silently after network changes or VPN cycles.
+  grep -q '8.8.8.8' /etc/resolv.conf || echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
+
   mkdir -p /home/garci/actions-runner/_work /data/db
   chown -R garci:garci /home/garci /data/db
   exec gosu garci "$0" "$@"
@@ -155,10 +165,43 @@ trap _cleanup TERM INT
 renew_token_loop &
 
 log "Starting runner..."
-./run.sh &
+RUNNER_LOG=/tmp/runner-output.log
+: > "$RUNNER_LOG"
+
+# Capture runner output to file; stream it to Docker logs in parallel.
+# We need RUNNER_PID from run.sh directly — can't use a pipeline (gives tee's PID).
+./run.sh >> "$RUNNER_LOG" 2>&1 &
 RUNNER_PID=$!
+tail -F "$RUNNER_LOG" &
+TAIL_PID=$!
+
+# Watchdog: WSL2 silently drops long-poll connections. The runner enters a
+# "Retrying until reconnected" loop that never recovers on its own.
+# Detect it early and kill the process — Docker restarts the container cleanly.
+(
+  sleep 120  # grace period for initial startup
+  while kill -0 "$RUNNER_PID" 2>/dev/null; do
+    sleep 30
+    if tail -3 "$RUNNER_LOG" 2>/dev/null | grep -q "Retrying until reconnected"; then
+      log "Watchdog: runner stuck in retry loop — waiting 30s before forcing exit"
+      sleep 30
+      # Stand down if it recovered while we were waiting
+      if tail -5 "$RUNNER_LOG" 2>/dev/null | grep -qE "reconnected\.|Listening for Jobs"; then
+        log "Watchdog: runner recovered — standing down"
+        continue
+      fi
+      log "Watchdog: still stuck — exiting to trigger container restart"
+      kill "$RUNNER_PID" 2>/dev/null || true
+      break
+    fi
+  done
+) &
+WATCHDOG_PID=$!
 
 wait "${RUNNER_PID}"
 EXIT_CODE=$?
+
+kill "$TAIL_PID" 2>/dev/null || true
+kill "$WATCHDOG_PID" 2>/dev/null || true
 log "Runner process exited with code ${EXIT_CODE}"
 exit "${EXIT_CODE}"
