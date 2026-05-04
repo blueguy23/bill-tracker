@@ -13,6 +13,8 @@ services:
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
       RUNNER_NAME: ${RUNNER_NAME:-ci-docker}
+      REPO_OWNER: ${REPO_OWNER:-blueguy23}
+      REPO_NAME: ${REPO_NAME:-bill-tracker}
       DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME:-}
       DOCKERHUB_TOKEN: ${DOCKERHUB_TOKEN:-}
 
@@ -23,7 +25,12 @@ services:
     # Without it, ntpdate/chronyd can't set the kernel clock and WSL2 drift
     # causes TLS connection failures after host sleep/wake cycles.
     cap_add:
-      - SYS_TIME
+      - SYS_TIME    # clock adjustment (chrony/ntpdate for WSL2 drift)
+      - NET_ADMIN   # Required for sysctl tcp_keepalive tuning in entrypoint.sh.
+                    # Allows kernel network parameter changes inside the container
+                    # without full --privileged. Scoped to network stack only.
+                    # Removing this silently disables keepalive tuning and reintroduces
+                    # the WSL2 idle-disconnect root cause (connections hang for 2h undetected).
 
     group_add:
       - "${DOCKER_GID:-1001}"
@@ -42,11 +49,11 @@ services:
     cpus: ${RUNNER_CPUS:-3.0}
 
     healthcheck:
-      test: ["CMD", "pgrep", "-f", "Runner.Listener"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "/deep-healthcheck.sh"]
+      interval: 90s
+      timeout: 15s
       start_period: 90s
-      retries: 3
+      retries: 1
 
     logging:
       driver: "json-file"
