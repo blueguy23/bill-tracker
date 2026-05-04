@@ -25,10 +25,11 @@ interface Props {
   totalMonthly: number;
   totalPaid: number;
   autoPayCount: number;
-  subscriptions: DetectedSubscriptionResponse[];
+  pendingSubscriptions: DetectedSubscriptionResponse[];
+  trackedBills: BillResponse[];
 }
 
-export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonthly, totalPaid, autoPayCount, subscriptions }: Props) {
+export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonthly, totalPaid, autoPayCount, pendingSubscriptions, trackedBills }: Props) {
   const [tab, setTab]             = useState<Tab>(initialTab);
   const [isModalOpen, setModal]   = useState(false);
   const [editingBill, setEditing] = useState<BillResponse | undefined>();
@@ -91,9 +92,9 @@ export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonth
             <button key={t.id} onClick={() => switchTab(t.id)} style={{
               padding: '8px 16px', fontSize: 13, fontWeight: tab === t.id ? 600 : 500,
               fontFamily: 'var(--sans)',
-              color: tab === t.id ? 'var(--gold)' : 'var(--text3)',
+              color: tab === t.id ? 'var(--accent)' : 'var(--text3)',
               background: 'transparent', border: 'none',
-              borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
+              borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
               cursor: 'pointer', transition: 'all .1s', marginBottom: -1,
             }}>
               {t.label}
@@ -118,7 +119,7 @@ export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonth
             onToggleAutoPay={(id, isAutoPay) => void handleToggleAutoPay(id, isAutoPay)}
           />
         )}
-        {tab === 'subscriptions' && <SubscriptionsView initialSubscriptions={subscriptions} />}
+        {tab === 'subscriptions' && <SubscriptionsView pendingSubscriptions={pendingSubscriptions} trackedBills={trackedBills} />}
         {tab === 'recurring' && (
           <RecurringView bills={recurringBills} totalMonthly={totalMonthly} totalPaid={totalPaid} autoPayCount={autoPayCount} />
         )}

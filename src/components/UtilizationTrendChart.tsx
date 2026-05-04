@@ -14,7 +14,7 @@ const CHART_H = H - PAD.top - PAD.bottom;
 
 const THRESHOLDS = [
   { pct: 0.10, color: '#10b981', label: '10%' },
-  { pct: 0.30, color: '#f59e0b', label: '30%' },
+  { pct: 0.30, color: 'var(--gold)', label: '30%' },
   { pct: 0.70, color: '#ef4444', label: '70%' },
 ];
 
@@ -37,7 +37,7 @@ export function UtilizationTrendChart({ data }: UtilizationTrendChartProps) {
 
   // Color of the line based on latest utilization
   const latest = data[data.length - 1]!.utilization;
-  const lineColor = latest < 0.10 ? '#10b981' : latest < 0.30 ? '#22c55e' : latest < 0.70 ? '#f59e0b' : '#ef4444';
+  const lineColor = latest < 0.10 ? '#10b981' : latest < 0.30 ? '#22c55e' : latest < 0.70 ? 'var(--gold)' : '#ef4444';
 
   // X-axis: show first, middle, last date labels
   const labelIndices = [0, Math.floor(data.length / 2), data.length - 1];

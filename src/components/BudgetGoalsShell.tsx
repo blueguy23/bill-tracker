@@ -187,7 +187,7 @@ export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
                   </div>
                 )}
                 {behindCount > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 6, fontSize: 11, color: 'var(--gold)', fontFamily: 'var(--mono)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'oklch(0.67 0.13 40 / 0.10)', border: '1px solid oklch(0.67 0.13 40 / 0.15)', borderRadius: 6, fontSize: 11, color: 'var(--gold)', fontFamily: 'var(--mono)' }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gold)' }} />{behindCount} behind
                   </div>
                 )}
@@ -232,8 +232,8 @@ export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
           <button key={t} data-testid={`tab-${t}`} onClick={() => switchTab(t)} style={{
             padding: '8px 16px', fontSize: 12, fontWeight: 500, fontFamily: 'var(--sans)',
             cursor: 'pointer', background: 'transparent', border: 'none',
-            borderBottom: tab === t ? '2px solid var(--gold)' : '2px solid transparent',
-            color: tab === t ? 'var(--gold)' : 'var(--text3)',
+            borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
+            color: tab === t ? 'var(--accent)' : 'var(--text3)',
             marginBottom: -1, transition: 'all .1s',
           }}>
             {t === 'budget' ? 'Budget' : 'Goals'}

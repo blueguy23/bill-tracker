@@ -1,4 +1,6 @@
-import type { BillCategory } from './bill';
+import type { BillCategory, RecurringType } from './bill';
+
+export type { RecurringType } from './bill';
 
 export type SubscriptionInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
 export type SubscriptionConfidence = 'high' | 'medium' | 'low';
@@ -26,6 +28,9 @@ export interface DetectedSubscription {
   confidence: SubscriptionConfidence;
   suggestedCategory: BillCategory;
   matchedBillId: string | null;
+  recurringType: RecurringType;
+  typeConfidence: SubscriptionConfidence;
+  signals: string[];
 }
 
 export interface DismissedSubscription {
@@ -48,11 +53,21 @@ export interface DetectedSubscriptionResponse {
   confidence: SubscriptionConfidence;
   suggestedCategory: BillCategory;
   matchedBillId: string | null;
+  recurringType: RecurringType;
+  typeConfidence: SubscriptionConfidence;
+  signals: string[];
 }
 
 export interface SuggestedMatch {
   transactionId: string;
   billId: string;
   billName: string;
+  billAmount: number;
   confidence: 'high' | 'medium';
+}
+
+export interface EnrichedMatch extends SuggestedMatch {
+  txnDescription: string;
+  txnAmount: number;
+  txnDate: string;
 }

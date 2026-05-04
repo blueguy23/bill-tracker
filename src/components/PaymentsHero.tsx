@@ -79,7 +79,7 @@ export function PaymentsHero({ allBills, onAddBill }: Props) {
     <div data-testid="payments-hero" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: '2px solid var(--gold)', borderRadius: 12, padding: '22px 28px 20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(245,158,11,0.5)', fontFamily: 'var(--mono)', marginBottom: 6 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'oklch(0.67 0.13 40 / 0.5)', fontFamily: 'var(--mono)', marginBottom: 6 }}>
             Still owed this month
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>

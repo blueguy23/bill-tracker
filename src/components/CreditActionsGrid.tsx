@@ -96,7 +96,7 @@ const HABIT_ACTIONS: ActionItem[] = [
 ];
 
 function ActionRow({ item, col }: { item: ActionItem; col: 'now' | 'habit' }) {
-  const color = col === 'now' ? '#e8c97e' : '#60a5fa';
+  const color = col === 'now' ? 'var(--gold)' : '#60a5fa';
   return (
     <div data-testid="action-item" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0, width: 36 }}>
@@ -127,9 +127,9 @@ export function CreditActionsGrid({ overall, azeo, displayScore }: Props) {
       </div>
       <div data-testid="actions-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
-        <div data-testid="actions-now" style={{ background: 'var(--surface)', border: '1px solid rgba(232,201,126,0.15)', borderTop: '2px solid #e8c97e', borderRadius: 10, overflow: 'hidden' }}>
+        <div data-testid="actions-now" style={{ background: 'var(--surface)', border: '1px solid oklch(0.67 0.13 40 / 0.15)', borderTop: '2px solid var(--gold)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(232,201,126,0.10)', color: '#e8c97e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: 'oklch(0.67 0.13 40 / 0.10)', color: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div>

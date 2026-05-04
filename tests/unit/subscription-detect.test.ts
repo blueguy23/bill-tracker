@@ -85,12 +85,13 @@ describe('detectSubscriptions', () => {
     expect(result[0]?.confidence).toBe('medium');
   });
 
-  it('sets amountVariance true when amounts differ by more than 10%', () => {
+  it('sets amountVariance true when amounts in same bucket differ by more than 5%', () => {
+    // $4.80, $5.10, $5.20 all bucket to $5.00 but span a 7.7% range
     const start = new Date('2026-01-01');
     const txns = [
-      makeTxn({ _id: 't1', description: 'ELECTRIC', amount: -100, posted: new Date(start.getTime()) }),
-      makeTxn({ _id: 't2', description: 'ELECTRIC', amount: -120, posted: new Date(start.getTime() + 30 * MS_PER_DAY) }),
-      makeTxn({ _id: 't3', description: 'ELECTRIC', amount: -115, posted: new Date(start.getTime() + 60 * MS_PER_DAY) }),
+      makeTxn({ _id: 't1', description: 'ELECTRIC', amount: -4.80, posted: new Date(start.getTime()) }),
+      makeTxn({ _id: 't2', description: 'ELECTRIC', amount: -5.10, posted: new Date(start.getTime() + 30 * MS_PER_DAY) }),
+      makeTxn({ _id: 't3', description: 'ELECTRIC', amount: -5.20, posted: new Date(start.getTime() + 60 * MS_PER_DAY) }),
     ];
     const result = detectSubscriptions(txns, NO_BILLS);
     expect(result[0]?.amountVariance).toBe(true);

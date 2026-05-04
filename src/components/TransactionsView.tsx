@@ -123,9 +123,9 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   // ── Styles ──
   const chip = (on: boolean): React.CSSProperties => ({
     padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer',
-    border: `1px solid ${on ? 'rgba(232,201,126,0.25)' : 'rgba(255,255,255,0.07)'}`,
-    background: on ? 'rgba(232,201,126,0.1)' : 'transparent',
-    color: on ? '#e8c97e' : 'var(--text3)', whiteSpace: 'nowrap' as const,
+    border: `1px solid ${on ? 'var(--accent-a)' : 'rgba(255,255,255,0.07)'}`,
+    background: on ? 'var(--accent-a)' : 'transparent',
+    color: on ? 'var(--accent)' : 'var(--text3)', whiteSpace: 'nowrap' as const,
   });
   const ctrlBtn: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 5, padding: '7px 11px', background: 'transparent', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 7, fontSize: 11.5, color: 'var(--text2)', cursor: 'pointer', whiteSpace: 'nowrap' };
 
@@ -185,7 +185,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             </div>
           )}
         </div>
-        <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#e8c97e', color: '#0b0b0f', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.6 }}>+ Add Transaction</button>
+        <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>+ Add Transaction</button>
       </div>
 
       {/* Filter rows */}

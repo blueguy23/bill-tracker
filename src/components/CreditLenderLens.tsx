@@ -35,7 +35,7 @@ function cards(s: number): Band {
   return { rate: '~30%', rateLabel: 'approval odds', verdict: 'Secured cards only', cls: 'warn', detail: 'Focus on a secured card to build history. After 6-12 months of on-time payments your score will improve.', barPct: Math.round(((s - 300) / 550) * 100), barLabel: `${580 - s} points to standard tier (580)` };
 }
 
-const COLOR: Record<string, string> = { good: 'var(--green)', okay: '#e8c97e', warn: 'var(--gold)' };
+const COLOR: Record<string, string> = { good: 'var(--green)', okay: 'var(--gold)', warn: 'var(--gold)' };
 
 const ICONS: Record<string, JSX.Element> = {
   mortgage: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>,

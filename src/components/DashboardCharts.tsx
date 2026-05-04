@@ -40,7 +40,7 @@ const TOOLTIP = {
 
 const TICK = { color: TEXT3, font: { family: "'IBM Plex Mono', monospace", size: 10 } } as const;
 
-const CAT_PALETTE = [ACCENT, INC, EXP, '#f59e0b', '#c084fc', '#3b82f6', '#34d399', '#fb923c'];
+const CAT_PALETTE = [ACCENT, INC, EXP, 'var(--gold)', '#c084fc', '#3b82f6', '#34d399', '#fb923c'];
 
 
 function useCancelRef() {
@@ -101,41 +101,6 @@ function TrendChart({ history }: { history: MonthlyFlow[] }) {
   return <canvas ref={canvasRef} />;
 }
 
-function GroupedBar({ history }: { history: MonthlyFlow[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef  = useCancelRef();
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    chartRef.current?.destroy();
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'bar',
-      data: {
-        labels: history.map(h => h.label),
-        datasets: [
-          { label: 'Income',   data: history.map(h => h.income),   backgroundColor: '#22c55e30', borderColor: INC, borderWidth: 1, borderRadius: 4 },
-          { label: 'Expenses', data: history.map(h => h.expenses), backgroundColor: '#ef444430', borderColor: EXP, borderWidth: 1, borderRadius: 4 },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 700, easing: 'easeOutQuart' },
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: true, position: 'top', align: 'end', labels: { color: TEXT3, boxWidth: 8, boxHeight: 8, padding: 12, font: { family: "'IBM Plex Mono', monospace", size: 10 } } },
-          tooltip: { ...TOOLTIP, callbacks: { label: c => ` ${c.dataset.label}: $${(c.parsed.y ?? 0).toLocaleString()}` } },
-        },
-        scales: {
-          x: { border: { display: false }, grid: { display: false }, ticks: { ...TICK } },
-          y: { border: { display: false }, grid: { color: GRID }, ticks: { ...TICK, callback: v => '$' + (Number(v) / 1000).toFixed(0) + 'k' } },
-        },
-      },
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history]);
-
-  return <canvas ref={canvasRef} />;
-}
 
 function CategoryDoughnut({ data }: { data: { label: string; amount: number }[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -195,33 +160,25 @@ export function DashboardCharts({ history }: { history: MonthlyFlow[] }) {
   const legendItems = [['#22c55e', 'INCOME'], ['#ef4444', 'SPEND'], [TEXT3, 'NET']] as const;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-      <Card
-        testId="cash-flow-card"
-        title="Cash Flow"
-        subtitle="Income vs expenses over time"
-        action={
-          <div style={{ display: 'flex', gap: 14 }}>
-            {legendItems.map(([color, label]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: TEXT3, fontFamily: "'IBM Plex Mono', monospace" }}>
-                <div style={{ width: 14, height: label === 'NET' ? 0 : 1.5, borderTop: label === 'NET' ? `1px dashed ${TEXT3}` : 'none', background: label !== 'NET' ? color : 'transparent' }} />
-                {label}
-              </div>
-            ))}
-          </div>
-        }
-      >
-        <div style={{ position: 'relative', height: 180 }}>
-          {hasHistory ? <TrendChart history={history} /> : <EmptyChart />}
+    <Card
+      testId="cash-flow-card"
+      title="Cash Flow"
+      subtitle="Income vs expenses over time"
+      action={
+        <div style={{ display: 'flex', gap: 14 }}>
+          {legendItems.map(([color, label]) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: TEXT3, fontFamily: "'IBM Plex Mono', monospace" }}>
+              <div style={{ width: 14, height: label === 'NET' ? 0 : 1.5, borderTop: label === 'NET' ? `1px dashed ${TEXT3}` : 'none', background: label !== 'NET' ? color : 'transparent' }} />
+              {label}
+            </div>
+          ))}
         </div>
-      </Card>
-
-      <Card title="Monthly Comparison" subtitle="Income vs spend by month">
-        <div style={{ position: 'relative', height: 180 }}>
-          {hasHistory ? <GroupedBar history={history} /> : <EmptyChart />}
-        </div>
-      </Card>
-    </div>
+      }
+    >
+      <div style={{ position: 'relative', height: 200 }}>
+        {hasHistory ? <TrendChart history={history} /> : <EmptyChart />}
+      </div>
+    </Card>
   );
 }
 

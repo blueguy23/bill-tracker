@@ -138,7 +138,7 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
 
       {/* Unknown accounts warning */}
       {unknownCount > 0 && (
-        <div style={{ background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ background: 'oklch(0.67 0.13 40 / .07)', border: '1px solid oklch(0.67 0.13 40 / .3)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <span style={{ color: 'var(--gold)', flexShrink: 0, marginTop: 1 }}>⚠</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)', fontFamily: 'var(--sans)' }}>
@@ -152,7 +152,7 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
           <button
             onClick={handleBannerSync}
             disabled={syncingFromBanner}
-            style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: 'none', background: 'rgba(245,158,11,.2)', color: 'var(--gold)', cursor: 'pointer', opacity: syncingFromBanner ? 0.5 : 1 }}
+            style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: 'none', background: 'oklch(0.67 0.13 40 / .2)', color: 'var(--gold)', cursor: 'pointer', opacity: syncingFromBanner ? 0.5 : 1 }}
           >
             {syncingFromBanner ? 'Syncing…' : 'Sync Now'}
           </button>
