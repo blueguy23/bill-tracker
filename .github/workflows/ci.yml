@@ -69,15 +69,8 @@ jobs:
         with:
           version: latest
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      # Fails the job on high or critical CVEs.
-      # Change to --audit-level=moderate to be stricter.
+      # pnpm audit only needs the lock file — skip node_modules install and cache restore
+      # to avoid the setup-node cache timeout on the self-hosted runner.
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
