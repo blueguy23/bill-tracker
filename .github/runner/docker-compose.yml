@@ -49,7 +49,7 @@ services:
   # ── Autoheal — restarts unhealthy containers automatically ───────────────────
   # Catches zombie runner processes that pass pgrep but are stuck accepting no jobs
   autoheal:
-    image: willfarrell/autoheal:v0.9.0
+    image: willfarrell/autoheal@sha256:5c714bcf53e70c24329060b85477623cc2a0b05a065095c04785e0afb179c8be
     container_name: autoheal
     restart: always
     init: true
