@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ── System packages ───────────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y \
     ca-certificates curl git jq gnupg gosu lsof \
+    tini chrony ntpdate cron \
     # Chromium/Playwright system deps (pnpm exec playwright install chromium)
     libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
     libdrm2 libdbus-1-3 libxkbcommon0 libxcomposite1 \
@@ -55,12 +56,28 @@ RUN mkdir -p /home/garci/actions-runner \
 # ── MongoDB data dir ─────────────────────────────────────────────────────────
 RUN mkdir -p /data/db
 
+# ── WSL clock drift fix — tighter chrony polling ─────────────────────────────
+COPY chrony.conf /etc/chrony/chrony.conf
+
+# ── Disk-pruning cron — runs every 6 hours as garci ──────────────────────────
+RUN echo "0 */6 * * * docker system prune -f --filter 'until=24h' >> /var/log/docker-prune.log 2>&1" \
+    | crontab -u garci -
+
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# ── Health check — verify Runner.Listener process is alive ───────────────────
+HEALTHCHECK --interval=30s \
+            --timeout=10s \
+            --start-period=90s \
+            --retries=3 \
+  CMD pgrep -f "Runner.Listener" || exit 1
 
 # Container starts as root so the entrypoint can chown named volumes, then drops
 # to garci via gosu. HOME is explicit so tool caches (pnpm, Playwright) land at
 # the paths hardcoded in ci.yml (/home/garci/.cache/ms-playwright etc.).
 ENV HOME=/home/garci
 WORKDIR /home/garci/actions-runner
-ENTRYPOINT ["/entrypoint.sh"]
+
+# tini as PID 1 — handles SIGCHLD and reaps zombie processes
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
