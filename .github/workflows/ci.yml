@@ -26,6 +26,7 @@ jobs:
           version: latest
 
       - uses: actions/setup-node@v4
+        timeout-minutes: 5
         with:
           node-version: 20
           cache: pnpm
@@ -48,6 +49,7 @@ jobs:
           version: latest
 
       - uses: actions/setup-node@v4
+        timeout-minutes: 5
         with:
           node-version: 20
           cache: pnpm
@@ -88,6 +90,7 @@ jobs:
           version: latest
 
       - uses: actions/setup-node@v4
+        timeout-minutes: 5
         with:
           node-version: 20
           cache: pnpm
@@ -111,6 +114,7 @@ jobs:
           version: latest
 
       - uses: actions/setup-node@v4
+        timeout-minutes: 5
         with:
           node-version: 20
           cache: pnpm
