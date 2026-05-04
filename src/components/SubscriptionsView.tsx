@@ -66,7 +66,7 @@ function PendingRow({ sub, isAnchoring, isDismissing, onAnchor, onDismiss }: {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
           <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.normalizedName}</span>
-          <TypeBadge type={sub.recurringType} confidence={sub.typeConfidence} />
+          {sub.recurringType !== 'subscription' && <TypeBadge type={sub.recurringType} confidence={sub.typeConfidence} />}
         </div>
         <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
           {sub.occurrences}× · Next: {fmtDate(sub.nextEstimated)}
@@ -84,7 +84,7 @@ function PendingRow({ sub, isAnchoring, isDismissing, onAnchor, onDismiss }: {
           onClick={() => onAnchor(sub)} disabled={isAnchoring || isDismissing}
           style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: isAnchoring || isDismissing ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, opacity: isAnchoring || isDismissing ? 0.6 : 1 }}
         >
-          {isAnchoring ? '…' : 'Yes, track it'}
+          {isAnchoring ? '…' : sub.recurringType === 'bill' ? 'Add as bill' : 'Yes, track it'}
         </button>
         <button
           onClick={() => onDismiss(sub.id)} disabled={isAnchoring || isDismissing}
@@ -165,16 +165,34 @@ export function SubscriptionsView({ initialSubscriptions }: Props) {
   async function handleAnchor(sub: DetectedSubscriptionResponse) {
     setAnchoring(sub.id); setError(null);
     try {
-      const res = await fetch('/api/v1/subscriptions/anchor', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: sub.id, name: sub.normalizedName, amount: sub.amount,
-          interval: sub.interval, category: sub.suggestedCategory,
-          rawDescriptions: sub.rawDescriptions,
-        }),
-      });
-      if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? 'Failed'); }
-      setSubscriptions(prev => prev.map(s => s.id === sub.id ? { ...s, isAnchored: true, anchoredAmount: sub.amount, anchoredAt: new Date().toISOString(), priceIncreased: false } : s));
+      if (sub.recurringType === 'bill') {
+        // Route bills straight into the bills table, then dismiss from subscription detection
+        const res = await fetch('/api/v1/bills', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: sub.normalizedName, amount: sub.amount,
+            dueDate: new Date(sub.lastCharged).getDate(),
+            category: sub.suggestedCategory, isRecurring: true,
+            recurrenceInterval: sub.interval, isAutoPay: true, isPaid: false,
+          }),
+        });
+        if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? 'Failed'); }
+        await fetch('/api/v1/subscriptions/dismiss', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: sub.id }),
+        });
+        setSubscriptions(prev => prev.filter(s => s.id !== sub.id));
+      } else {
+        const res = await fetch('/api/v1/subscriptions/anchor', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: sub.id, name: sub.normalizedName, amount: sub.amount,
+            interval: sub.interval, category: sub.suggestedCategory,
+            rawDescriptions: sub.rawDescriptions,
+          }),
+        });
+        if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? 'Failed'); }
+        setSubscriptions(prev => prev.map(s => s.id === sub.id ? { ...s, isAnchored: true, anchoredAmount: sub.amount, anchoredAt: new Date().toISOString(), priceIncreased: false } : s));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to confirm');
     } finally { setAnchoring(null); }
