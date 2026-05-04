@@ -11,6 +11,9 @@ if [ "$(id -u)" = "0" ]; then
     chronyc makestep 2>/dev/null || \
     echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: Could not sync clock — TLS errors may follow"
 
+  # Start cron as root before dropping privileges — needs /var/run/crond.pid
+  cron
+
   mkdir -p /home/garci/actions-runner/_work /data/db
   chown -R garci:garci /home/garci /data/db
   exec gosu garci "$0" "$@"
@@ -150,7 +153,6 @@ trap _cleanup TERM INT
 
 # ── 7. Start background services and runner ───────────────────────────────────
 renew_token_loop &
-cron &
 
 log "Starting runner..."
 ./run.sh &
