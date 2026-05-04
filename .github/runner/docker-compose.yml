@@ -6,7 +6,9 @@ services:
       context: .
     image: bill-tracker-runner:latest
     restart: unless-stopped
-    init: true                          # tini as PID 1 — reaps zombie processes
+    # init: true is intentionally absent — the Dockerfile ENTRYPOINT already invokes
+    # tini explicitly. Adding init: true here would inject a second tini as PID 1,
+    # demoting our tini to a child process and triggering subreaper warnings.
 
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
