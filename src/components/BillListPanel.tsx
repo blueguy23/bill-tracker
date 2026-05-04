@@ -60,7 +60,7 @@ const LEFT_BORDER: Partial<Record<BillStatus, string>> = {
   overdue: 'var(--red)', 'due-soon': 'var(--gold)',
 };
 
-function BillRowItem({ bill, today, mm, monthAbbr, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: {
+function BillRowItem({ bill, today, mm, monthAbbr, onEdit, onDelete, onTogglePaid, onToggleAutoPay: _onToggleAutoPay }: {
   bill: BillResponse; today: number; mm: string; monthAbbr: string;
   onEdit: (b: BillResponse) => void;
   onDelete: (id: string) => void;

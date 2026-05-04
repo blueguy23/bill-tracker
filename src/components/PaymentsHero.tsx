@@ -55,7 +55,7 @@ export function PaymentsHero({ allBills, onAddBill }: Props) {
 
   const nextDue = unpaid
     .map(b => ({ bill: b, day: billDay(b) ?? 999 }))
-    .filter(({ day, bill }) => typeof bill.dueDate === 'number' ? bill.dueDate >= todayDay : new Date(bill.dueDate) >= now)
+    .filter(({ day: _day, bill }) => typeof bill.dueDate === 'number' ? bill.dueDate >= todayDay : new Date(bill.dueDate) >= now)
     .sort((a, b) => a.day - b.day)[0];
 
   const nextDueDays = nextDue ? Math.max(0, nextDue.day - todayDay) : null;
