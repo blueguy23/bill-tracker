@@ -66,6 +66,29 @@ WRONG:   /api/users
 - Every E2E test MUST verify: URL, visible elements, data displayed
 - Minimum 3 assertions per test
 
+### 4a. E2E — Known Gotchas
+
+**Page metadata titles — never include `— Folio`:**
+The layout template is `'%s — Folio'`. Page-level metadata must use the bare title:
+```typescript
+// CORRECT
+export const metadata: Metadata = { title: 'Budget & Goals' };
+// WRONG — produces "Budget & Goals — Folio — Folio"
+export const metadata: Metadata = { title: 'Budget & Goals — Folio' };
+```
+
+**Budget page has multiple h1 elements:**
+`/budget` renders h1 in both BudgetGoalsShell and inner view components. Always use `.first()`:
+```typescript
+await expect(page.locator('h1').first()).toContainText('Budget');
+```
+
+**Playwright `hasText` with `&` — use regex:**
+Nav links containing `&` (e.g. "Budget & Goals") should be targeted with a regex to avoid edge cases:
+```typescript
+page.locator('aside nav a', { hasText: /Budget.*Goals/ })
+```
+
 ### 5. NEVER Hardcode Credentials
 
 - ALWAYS use environment variables for secrets
@@ -246,6 +269,8 @@ docker compose down
 
 ## Next Session Ideas
 
+- **Portfolio widget PR** — `feature/dashboard-portfolio-widget` needs rebase onto master (merged PR 13), then open PR
+- **Page redesigns** — transactions, payments, budget-goals, credit-health, settings (in merge order per IMPLEMENTATION_NOTES.md)
 - **Production deployment** — MongoDB Atlas (free tier) is set up; Dokploy config in `.env.example`
 - **Transfer UI** — manually mark transactions as "transfer" (edge cases the env-var heuristic misses)
 - **Goals page** — `src/app/goals/` already scaffolded, needs wiring
