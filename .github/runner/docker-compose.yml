@@ -19,6 +19,12 @@ services:
     # GID of the host Docker socket — lets runner user call docker CLI without root.
     # Correct for WSL2: matches GID 1001 of /var/run/docker.sock on this machine.
     # (usermod -aG docker approach uses the container's docker GID which differs)
+    # SYS_TIME allows clock adjustment inside the container.
+    # Without it, ntpdate/chronyd can't set the kernel clock and WSL2 drift
+    # causes TLS connection failures after host sleep/wake cycles.
+    cap_add:
+      - SYS_TIME
+
     group_add:
       - "${DOCKER_GID:-1001}"
 

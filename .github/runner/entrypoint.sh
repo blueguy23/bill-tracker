@@ -3,12 +3,12 @@ set -euo pipefail
 
 # ── Privilege drop ────────────────────────────────────────────────────────────
 if [ "$(id -u)" = "0" ]; then
-  # Clock sync must run as root — hwclock/ntpdate/chronyc all require it.
-  # WSL2 desyncs after host sleep; fix before gosu so TLS ops don't fail.
+  # Clock sync must run as root with SYS_TIME capability (set in docker-compose.yml).
+  # chronyd -q = one-shot sync, no daemon needed. Falls back to ntpdate.
+  # WSL2 desyncs after host sleep — fix before gosu so TLS ops don't fail.
   echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Syncing clock..."
-  hwclock --hctosys 2>/dev/null || \
+  chronyd -q 'pool pool.ntp.org iburst maxsamples 1' 2>/dev/null || \
     ntpdate -u pool.ntp.org 2>/dev/null || \
-    chronyc makestep 2>/dev/null || \
     echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: Could not sync clock — TLS errors may follow"
 
   # Start cron as root before dropping privileges — needs /var/run/crond.pid
