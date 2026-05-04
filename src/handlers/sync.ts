@@ -2,7 +2,10 @@ import type { StrictDB } from 'strictdb';
 import type { SimpleFINClient } from '@/lib/simplefin/client';
 import type { SyncResult } from '@/lib/simplefin/types';
 import { getTodayLog, incrementUrlUnits, markHistoricalDone } from '@/adapters/syncLog';
-import { upsertAccount, upsertTransaction } from '@/adapters/accounts';
+import { upsertAccount, upsertTransaction, markTransfersById } from '@/adapters/accounts';
+import { getUserProfile } from '@/adapters/userProfile';
+import { buildTransferRe } from '@/lib/classifyTransfer';
+import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
 
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
 const DAILY_QUOTA = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
@@ -20,6 +23,7 @@ async function syncFetch(
   client: SimpleFINClient,
   startDate: Date,
   syncType: 'daily' | 'manual' | 'historical',
+  transferRe: RegExp,
   balancesOnly = false,
 ): Promise<{ accountsUpdated: number; transactionsUpserted: number; warnings: string[]; unitCost: number }> {
   const { accounts, transactions, errors } = await client.fetchAccounts({ startDate, balancesOnly, includeHoldings: !balancesOnly });
@@ -35,7 +39,7 @@ async function syncFetch(
 
   let transactionsUpserted = 0;
   for (const txn of transactions) {
-    const inserted = await upsertTransaction(db, txn, creditAccountIds);
+    const inserted = await upsertTransaction(db, txn, creditAccountIds, transferRe);
     if (inserted) transactionsUpserted++;
   }
 
@@ -58,16 +62,17 @@ export async function runDailySync(
   client: SimpleFINClient,
   syncType: 'daily' | 'manual' = 'daily',
 ): Promise<SyncResult> {
-  const log = await getTodayLog(db);
+  const [log, profile] = await Promise.all([getTodayLog(db), getUserProfile(db)]);
   const currentUnits = log.urlUnits?.[client.urlHash] ?? 0;
 
   if (currentUnits >= QUOTA_GUARD) {
     throw new QuotaExceededError(currentUnits, DAILY_QUOTA);
   }
 
+  const transferRe = buildTransferRe(profile.ownerName || null);
   const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const { accountsUpdated, transactionsUpserted, warnings, unitCost } = await syncFetch(
-    db, client, startDate, syncType,
+    db, client, startDate, syncType, transferRe,
   );
 
   const unitsAfter = currentUnits + unitCost;
@@ -76,6 +81,9 @@ export async function runDailySync(
   if (quotaWarning) {
     console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
   }
+
+  const pairedIds = await detectPairedTransfers(db);
+  if (pairedIds.length) await markTransfersById(db, pairedIds);
 
   return {
     accountsUpdated,
@@ -90,13 +98,14 @@ export async function runHistoricalImport(
   db: StrictDB,
   client: SimpleFINClient,
 ): Promise<SyncResult> {
-  const log = await getTodayLog(db);
+  const [log, profile] = await Promise.all([getTodayLog(db), getUserProfile(db)]);
 
   if (log.historicalImportDone) {
     return { accountsUpdated: 0, transactionsUpserted: 0, quotaUsed: log.requestCount, warnings: [], skipped: true };
   }
 
   const currentUnits = log.urlUnits?.[client.urlHash] ?? 0;
+  const transferRe = buildTransferRe(profile.ownerName || null);
 
   const CHUNK_DAYS = 30;
   const CHUNKS = 3; // 90 days total
@@ -109,7 +118,7 @@ export async function runHistoricalImport(
   // Fetch chunks sequentially (oldest first) — sequential to preserve quota
   for (let i = CHUNKS - 1; i >= 0; i--) {
     const startDate = new Date(now - (i + 1) * CHUNK_DAYS * 24 * 60 * 60 * 1000);
-    const { accountsUpdated, transactionsUpserted, warnings } = await syncFetch(db, client, startDate, 'historical');
+    const { accountsUpdated, transactionsUpserted, warnings } = await syncFetch(db, client, startDate, 'historical', transferRe);
     totalAccounts = Math.max(totalAccounts, accountsUpdated);
     totalTxns += transactionsUpserted;
     allWarnings.push(...warnings);
@@ -122,6 +131,10 @@ export async function runHistoricalImport(
   if (unitsAfter >= QUOTA_WARN) {
     console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
   }
+
+  // Pair transfers across all 90 days of imported data
+  const pairedIds = await detectPairedTransfers(db, CHUNK_DAYS * CHUNKS);
+  if (pairedIds.length) await markTransfersById(db, pairedIds);
 
   return {
     accountsUpdated: totalAccounts,
