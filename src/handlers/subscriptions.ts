@@ -38,6 +38,8 @@ function serializeDetected(
     confidence: d.confidence,
     suggestedCategory: d.suggestedCategory,
     matchedBillId: d.matchedBillId,
+    recurringType: d.recurringType,
+    typeConfidence: d.typeConfidence,
     isAnchored: anchored !== undefined,
     anchoredAmount: anchored?.anchoredAmount ?? null,
     priceIncreased,

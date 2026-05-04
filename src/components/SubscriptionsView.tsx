@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { DetectedSubscriptionResponse } from '@/types/subscription';
+import type { DetectedSubscriptionResponse, RecurringType } from '@/types/subscription';
 
 interface Props {
   initialSubscriptions: DetectedSubscriptionResponse[];
@@ -19,6 +19,23 @@ function monthlyAmount(sub: DetectedSubscriptionResponse): number {
   if (sub.interval === 'biweekly')  return sub.amount * 2;
   if (sub.interval === 'quarterly') return sub.amount / 3;
   return sub.amount;
+}
+
+// ─── Type badge ───────────────────────────────────────────────────────────────
+
+const TYPE_BADGE: Record<RecurringType, { label: string; color: string; bg: string; border: string }> = {
+  bill:         { label: 'Bill',         color: 'var(--gold)',   bg: 'oklch(0.67 0.13 40 / 0.1)',  border: 'oklch(0.67 0.13 40 / 0.3)' },
+  subscription: { label: 'Subscription', color: 'var(--accent)', bg: 'var(--accent-a)',             border: 'oklch(0.6 0.2 250 / 0.3)' },
+  recurring:    { label: 'Recurring',    color: 'var(--text3)',  bg: 'rgba(255,255,255,0.04)',      border: 'var(--border-l)' },
+};
+
+function TypeBadge({ type, confidence }: { type: RecurringType; confidence: 'high' | 'medium' | 'low' }) {
+  const b = TYPE_BADGE[type];
+  return (
+    <span title={`Classified as ${type} (${confidence} confidence)`} style={{ fontSize: 9, fontWeight: 700, color: b.color, background: b.bg, border: `1px solid ${b.border}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: confidence === 'low' ? 0.7 : 1 }}>
+      {b.label}{confidence === 'low' ? '?' : ''}
+    </span>
+  );
 }
 
 // ─── Pending row ──────────────────────────────────────────────────────────────
@@ -47,7 +64,10 @@ function PendingRow({ sub, isAnchoring, isDismissing, onAnchor, onDismiss }: {
         {sub.normalizedName.charAt(0).toUpperCase()}
       </div>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.normalizedName}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.normalizedName}</span>
+          <TypeBadge type={sub.recurringType} confidence={sub.typeConfidence} />
+        </div>
         <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
           {sub.occurrences}× · Next: {fmtDate(sub.nextEstimated)}
         </div>

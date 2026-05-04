@@ -3,6 +3,7 @@ import type { Transaction } from '@/lib/simplefin/types';
 import type { Bill } from '@/types/bill';
 import type { DetectedSubscription, SubscriptionInterval } from '@/types/subscription';
 import { normalizeDescription, toDisplayName, inferCategory } from './normalize';
+import { classifyRecurringType } from './classify';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -106,6 +107,8 @@ export function detectSubscriptions(
 
     const confidence: 'high' | 'medium' = (txns.length >= 3 && maxHits >= 2) ? 'high' : 'medium';
 
+    const { type: recurringType, confidence: typeConfidence } = classifyRecurringType(txns, nameKey, amountVariance);
+
     const lastCharged    = lastTxn.posted;
     const midpoint       = INTERVAL_WINDOWS[winningInterval].midpoint;
     const nextEstimated  = addDays(lastCharged, midpoint);
@@ -126,6 +129,8 @@ export function detectSubscriptions(
       confidence,
       suggestedCategory: inferCategory(nameKey),
       matchedBillId: null,
+      recurringType,
+      typeConfidence,
     });
   }
 

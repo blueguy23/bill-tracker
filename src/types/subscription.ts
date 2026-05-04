@@ -1,6 +1,7 @@
 import type { BillCategory } from './bill';
 
 export type SubscriptionInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+export type RecurringType = 'bill' | 'subscription' | 'recurring';
 export type SubscriptionConfidence = 'high' | 'medium' | 'low';
 
 export const SUBSCRIPTION_INTERVALS: SubscriptionInterval[] = [
@@ -26,6 +27,8 @@ export interface DetectedSubscription {
   confidence: SubscriptionConfidence;
   suggestedCategory: BillCategory;
   matchedBillId: string | null;
+  recurringType: RecurringType;
+  typeConfidence: 'high' | 'medium' | 'low';
 }
 
 export interface DismissedSubscription {
@@ -61,6 +64,8 @@ export interface DetectedSubscriptionResponse {
   confidence: SubscriptionConfidence;
   suggestedCategory: BillCategory;
   matchedBillId: string | null;
+  recurringType: RecurringType;
+  typeConfidence: 'high' | 'medium' | 'low';
   /** Set when user has confirmed this as a subscription */
   isAnchored: boolean;
   /** Original amount when user confirmed — present only when isAnchored */
