@@ -26,11 +26,15 @@ services:
     # causes TLS connection failures after host sleep/wake cycles.
     cap_add:
       - SYS_TIME    # clock adjustment (chrony/ntpdate for WSL2 drift)
-      - NET_ADMIN   # Required for sysctl tcp_keepalive tuning in entrypoint.sh.
-                    # Allows kernel network parameter changes inside the container
-                    # without full --privileged. Scoped to network stack only.
-                    # Removing this silently disables keepalive tuning and reintroduces
-                    # the WSL2 idle-disconnect root cause (connections hang for 2h undetected).
+
+    # TCP keepalive — WSL2 default is 7200s; dead connections go undetected for 2h.
+    # Must be set here (Docker daemon writes at container creation time) — sysctl -w
+    # inside the container silently succeeds but WSL2 discards the write.
+    # 60/10/6 = detect dead connection within ~60s + 6 probes × 10s = ~2 min max.
+    sysctls:
+      net.ipv4.tcp_keepalive_time: 60
+      net.ipv4.tcp_keepalive_intvl: 10
+      net.ipv4.tcp_keepalive_probes: 6
 
     group_add:
       - "${DOCKER_GID:-1001}"

@@ -14,13 +14,6 @@ if [ "$(id -u)" = "0" ]; then
   # Start cron as root before dropping privileges — needs /var/run/crond.pid
   cron
 
-  # TCP keepalive — WSL2 default is 7200s; dead connections go undetected for 2h.
-  # 60/10/6 = detect dead connection within ~60s + 6 probes × 10s = ~2 min max.
-  # Requires NET_ADMIN cap in docker-compose.yml.
-  sysctl -w net.ipv4.tcp_keepalive_time=60  2>/dev/null || echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: tcp_keepalive_time not settable"
-  sysctl -w net.ipv4.tcp_keepalive_intvl=10 2>/dev/null || echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: tcp_keepalive_intvl not settable"
-  sysctl -w net.ipv4.tcp_keepalive_probes=6 2>/dev/null || echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: tcp_keepalive_probes not settable"
-
   # DNS fallback — WSL2 DNS breaks silently after network changes or VPN cycles.
   grep -q '8.8.8.8' /etc/resolv.conf || echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
 
