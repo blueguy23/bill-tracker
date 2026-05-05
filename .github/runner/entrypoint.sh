@@ -17,6 +17,13 @@ if [ "$(id -u)" = "0" ]; then
   # DNS fallback — WSL2 DNS breaks silently after network changes or VPN cycles.
   grep -q '8.8.8.8' /etc/resolv.conf || echo 'nameserver 8.8.8.8' >> /etc/resolv.conf
 
+  # gosu uses initgroups() which only reads /etc/group — Docker's group_add is
+  # applied at the container process level but gosu drops it when switching user.
+  # Register the socket GID in /etc/group so Runner.Listener inherits it.
+  SOCK_GID=$(stat -c '%g' /var/run/docker.sock)
+  getent group "$SOCK_GID" >/dev/null 2>&1 || groupadd -g "$SOCK_GID" docker-sock
+  usermod -aG "$SOCK_GID" garci
+
   mkdir -p /home/garci/actions-runner/_work /data/db
   chown -R garci:garci /home/garci /data/db
   exec gosu garci "$0" "$@"
