@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { DetectedSubscriptionResponse, RecurringType } from '@/types/subscription';
 import type { BillResponse } from '@/types/bill';
+import type { ChargeRecordResponse } from '@/adapters/chargeHistory';
 
 interface Props {
   pendingSubscriptions: DetectedSubscriptionResponse[];
@@ -98,42 +99,111 @@ function PendingRow({ sub, isConfirming, isDismissing, onConfirm, onDismiss }: {
 // ─── Tracked bill row ─────────────────────────────────────────────────────────
 
 function TrackedRow({ bill }: { bill: BillResponse }) {
-  const [hov, setHov] = useState(false);
-  const mo  = monthlyFromInterval(bill.amount, bill.recurrenceInterval ?? 'monthly');
+  const [hov, setHov]         = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [history, setHistory]  = useState<ChargeRecordResponse[] | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const mo      = monthlyFromInterval(bill.amount, bill.recurrenceInterval ?? 'monthly');
   const priceUp = bill.lastChargedAmount !== undefined && Math.abs(bill.lastChargedAmount - bill.amount) > 0.5;
+
+  async function toggleHistory() {
+    if (expanded) { setExpanded(false); return; }
+    setExpanded(true);
+    if (history !== null) return;
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/v1/bills/${bill._id}/charges`);
+      if (res.ok) {
+        const data = await res.json() as { charges: ChargeRecordResponse[] };
+        setHistory(data.charges);
+      }
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
 
   return (
     <div
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       data-testid="tracked-bill-row"
-      style={{ display: 'grid', gridTemplateColumns: '36px 1fr 80px 110px 160px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center', transition: 'background 0.1s', background: hov ? 'rgba(255,255,255,0.02)' : 'transparent' }}
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
     >
-      <div style={{ width: 28, height: 28, background: 'var(--accent-a)', border: '1px solid var(--accent)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
-        {bill.name.charAt(0).toUpperCase()}
-      </div>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bill.name}</span>
-          {priceUp && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gold)', background: 'oklch(0.67 0.13 40 / 0.12)', border: '1px solid oklch(0.67 0.13 40 / 0.3)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>PRICE UP</span>
+      <div
+        onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+        style={{ display: 'grid', gridTemplateColumns: '36px 1fr 80px 110px 160px', padding: '12px 16px', alignItems: 'center', transition: 'background 0.1s', background: hov ? 'rgba(255,255,255,0.02)' : 'transparent', cursor: 'pointer' }}
+        onClick={() => void toggleHistory()}
+      >
+        <div style={{ width: 28, height: 28, background: 'var(--accent-a)', border: '1px solid var(--accent)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+          {bill.name.charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bill.name}</span>
+            {priceUp && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gold)', background: 'oklch(0.67 0.13 40 / 0.12)', border: '1px solid oklch(0.67 0.13 40 / 0.3)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>PRICE UP</span>
+            )}
+            {bill.classificationMeta?.recurringType === 'bill' && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--gold)', background: 'oklch(0.67 0.13 40 / 0.08)', border: '1px solid oklch(0.67 0.13 40 / 0.25)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>BILL</span>
+            )}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+            {bill.recurrenceInterval} · Confirmed {fmtDate(bill.createdAt)}
+          </div>
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'capitalize' }}>{bill.recurrenceInterval}</div>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500, textAlign: 'right' }}>
+          {priceUp && bill.lastChargedAmount !== undefined ? (
+            <>
+              <span style={{ color: 'var(--gold)' }}>{usd(monthlyFromInterval(bill.lastChargedAmount, bill.recurrenceInterval ?? 'monthly'))}/mo</span>
+              <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 1, textDecoration: 'line-through' }}>was {usd(mo)}/mo</div>
+            </>
+          ) : (
+            <span style={{ color: 'var(--text)' }}>{usd(mo)}/mo</span>
           )}
         </div>
-        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-          {bill.recurrenceInterval} · Confirmed {fmtDate(bill.createdAt)}
+        <div style={{ textAlign: 'right' }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" strokeWidth="2" strokeLinecap="round" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
         </div>
       </div>
-      <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', textTransform: 'capitalize' }}>{bill.recurrenceInterval}</div>
-      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500, textAlign: 'right' }}>
-        {priceUp && bill.lastChargedAmount !== undefined ? (
-          <>
-            <span style={{ color: 'var(--gold)' }}>{usd(monthlyFromInterval(bill.lastChargedAmount, bill.recurrenceInterval ?? 'monthly'))}/mo</span>
-            <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 1, textDecoration: 'line-through' }}>was {usd(mo)}/mo</div>
-          </>
-        ) : (
-          <span style={{ color: 'var(--text)' }}>{usd(mo)}/mo</span>
-        )}
-      </div>
-      <div />
+
+      {/* Expandable price history */}
+      {expanded && (
+        <div style={{ padding: '0 16px 12px 60px' }}>
+          {loadingHistory && (
+            <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>Loading history…</div>
+          )}
+          {!loadingHistory && history !== null && history.length === 0 && (
+            <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>No charge history recorded yet</div>
+          )}
+          {!loadingHistory && history !== null && history.length > 0 && (
+            <div>
+              <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text3)', fontFamily: 'var(--mono)', marginBottom: 6 }}>Price history (newest first)</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {history.map((c, i) => {
+                  const prev = history[i + 1];
+                  const delta = prev ? c.amount - prev.amount : 0;
+                  const up   = delta > 0.5;
+                  const down = delta < -0.5;
+                  return (
+                    <div key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, fontFamily: 'var(--mono)' }}>
+                      <span style={{ color: 'var(--text3)', minWidth: 60 }}>
+                        {new Date(c.detectedAt).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}
+                      </span>
+                      <span style={{ fontWeight: 600, color: up ? 'var(--gold)' : down ? 'var(--green)' : 'var(--text)' }}>
+                        {usd(c.amount)}
+                      </span>
+                      {up   && <span style={{ fontSize: 9, color: 'var(--gold)' }}>↑ +{usd(Math.abs(delta))}</span>}
+                      {down && <span style={{ fontSize: 9, color: 'var(--green)' }}>↓ −{usd(Math.abs(delta))}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -141,10 +211,28 @@ function TrackedRow({ bill }: { bill: BillResponse }) {
 // ─── Main view ────────────────────────────────────────────────────────────────
 
 export function SubscriptionsView({ pendingSubscriptions, trackedBills }: Props) {
-  const [pending, setPending]   = useState(pendingSubscriptions);
-  const [confirming, setConfirming] = useState<string | null>(null);
-  const [dismissing, setDismissing] = useState<string | null>(null);
-  const [error, setError]           = useState<string | null>(null);
+  const [pending, setPending]         = useState(pendingSubscriptions);
+  const [confirming, setConfirming]   = useState<string | null>(null);
+  const [dismissing, setDismissing]   = useState<string | null>(null);
+  const [amortizing, setAmortizing]   = useState<string | null>(null);
+  const [error, setError]             = useState<string | null>(null);
+
+  const yearlyPending   = pending.filter(s => s.interval === 'yearly');
+  const regularPending  = pending.filter(s => s.interval !== 'yearly');
+
+  async function handleAmortizeConfirm(sub: DetectedSubscriptionResponse) {
+    setAmortizing(sub.id); setError(null);
+    try {
+      const res = await fetch(`/api/v1/transactions/${sub.lastTransactionId}/amortize`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amortize: true }),
+      });
+      if (!res.ok) { const j = await res.json() as { error?: string }; throw new Error(j.error ?? 'Failed'); }
+      setPending(prev => prev.filter(s => s.id !== sub.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to amortize');
+    } finally { setAmortizing(null); }
+  }
 
   const priceAlerts = trackedBills.filter(
     (b) => b.lastChargedAmount !== undefined && Math.abs(b.lastChargedAmount - b.amount) > 0.5,
@@ -213,24 +301,6 @@ export function SubscriptionsView({ pendingSubscriptions, trackedBills }: Props)
         <div style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', color: 'var(--red)', fontSize: 13, borderRadius: 8, padding: '10px 14px' }}>{error}</div>
       )}
 
-      {pending.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom: 8 }}>
-            <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)' }}>Pending review</span>
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{pending.length} detected</span>
-          </div>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: '2px solid var(--accent)', borderRadius: 10, overflow: 'hidden' }}>
-            {pending.map(sub => (
-              <PendingRow key={sub.id} sub={sub}
-                isConfirming={confirming === sub.id} isDismissing={dismissing === sub.id}
-                onConfirm={(s) => void handleConfirm(s)}
-                onDismiss={(id) => void handleDismiss(id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       {trackedBills.length > 0 && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom: 8 }}>
@@ -242,6 +312,70 @@ export function SubscriptionsView({ pendingSubscriptions, trackedBills }: Props)
           </div>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
             {trackedBills.map(b => <TrackedRow key={b._id} bill={b} />)}
+          </div>
+        </div>
+      )}
+
+      {yearlyPending.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom: 8 }}>
+            <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)' }}>Annual payments — spread over 12 months?</span>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{yearlyPending.length} detected</span>
+          </div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: '2px solid rgba(99,179,237,0.5)', borderRadius: 10, overflow: 'hidden' }}>
+            {yearlyPending.map(sub => {
+              const busy = amortizing === sub.id || dismissing === sub.id;
+              return (
+                <div key={sub.id} data-testid="yearly-amortize-row" style={{ display: 'grid', gridTemplateColumns: '36px 1fr 80px 110px 160px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
+                  <div style={{ width: 28, height: 28, background: 'rgba(99,179,237,0.08)', border: '1px solid rgba(99,179,237,0.25)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#63b3ed', flexShrink: 0 }}>
+                    {sub.normalizedName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', marginBottom: 2 }}>{sub.normalizedName}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
+                      {sub.occurrences}× yearly · {usd(sub.amount / 12)}/mo if spread
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: '#63b3ed', fontFamily: 'var(--mono)' }}>Yearly</div>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 500, color: 'var(--text)', textAlign: 'right' }}>
+                    {usd(sub.amount)}
+                    <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 1 }}>/ charge</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => void handleAmortizeConfirm(sub)} disabled={busy}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'rgba(99,179,237,0.15)', color: '#63b3ed', cursor: busy ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, opacity: busy ? 0.6 : 1 }}
+                    >
+                      {amortizing === sub.id ? '…' : 'Spread it'}
+                    </button>
+                    <button
+                      onClick={() => void handleDismiss(sub.id)} disabled={busy}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-l)', background: 'transparent', color: 'var(--text3)', cursor: busy ? 'not-allowed' : 'pointer', fontSize: 11, opacity: busy ? 0.5 : 1 }}
+                    >
+                      {dismissing === sub.id ? '…' : 'No thanks'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {regularPending.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom: 8 }}>
+            <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text3)' }}>Pending review</span>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{regularPending.length} detected</span>
+          </div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderTop: '2px solid var(--accent)', borderRadius: 10, overflow: 'hidden' }}>
+            {regularPending.map(sub => (
+              <PendingRow key={sub.id} sub={sub}
+                isConfirming={confirming === sub.id} isDismissing={dismissing === sub.id}
+                onConfirm={(s) => void handleConfirm(s)}
+                onDismiss={(id) => void handleDismiss(id)}
+              />
+            ))}
           </div>
         </div>
       )}

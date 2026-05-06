@@ -7,14 +7,15 @@ import { classifyRecurringType } from './classify';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-const INTERVAL_WINDOWS: Record<SubscriptionInterval, { min: number; max: number; midpoint: number }> = {
-  weekly:    { min: 5,  max: 9,  midpoint: 7  },
-  biweekly:  { min: 12, max: 16, midpoint: 14 },
-  monthly:   { min: 26, max: 35, midpoint: 30 },
-  quarterly: { min: 85, max: 95, midpoint: 90 },
+export const INTERVAL_WINDOWS: Record<SubscriptionInterval, { min: number; max: number; midpoint: number }> = {
+  weekly:    { min: 5,   max: 9,   midpoint: 7   },
+  biweekly:  { min: 12,  max: 16,  midpoint: 14  },
+  monthly:   { min: 26,  max: 35,  midpoint: 30  },
+  quarterly: { min: 85,  max: 95,  midpoint: 90  },
+  yearly:    { min: 350, max: 380, midpoint: 365 },
 };
 
-const INTERVAL_ORDER: SubscriptionInterval[] = ['weekly', 'biweekly', 'monthly', 'quarterly'];
+const INTERVAL_ORDER: SubscriptionInterval[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'];
 
 function makeId(key: string, interval: string): string {
   return createHash('sha1').update(`${key}:${interval}`).digest('hex').slice(0, 16);
@@ -132,6 +133,7 @@ export function detectSubscriptions(
       recurringType,
       typeConfidence,
       signals,
+      lastTransactionId: lastTxn._id,
     });
   }
 

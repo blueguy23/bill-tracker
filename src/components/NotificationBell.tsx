@@ -130,13 +130,26 @@ function NotificationsPanel({ open, onClose, alerts, onMarkRead, onMarkAllRead }
 interface NotificationBellProps {
   budgetAlerts?: { category: string; spent: number; limit: number }[];
   billAlerts?: { name: string; amount: number; daysUntilDue: number; isOverdue: boolean }[];
+  priceAlerts?: { name: string; oldAmount: number; newAmount: number; isSubscription: boolean }[];
+  renewalAlerts?: { name: string; daysUntil: number; renewalNote: string }[];
 }
 
-export function NotificationBell({ budgetAlerts = [], billAlerts = [] }: NotificationBellProps) {
+export function NotificationBell({ budgetAlerts = [], billAlerts = [], priceAlerts = [], renewalAlerts = [] }: NotificationBellProps) {
   const [open, setOpen]   = useState(false);
   const [hov, setHov]     = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>(() => {
     const list: Alert[] = [];
+
+    priceAlerts.forEach((p, i) => {
+      const delta = p.newAmount - p.oldAmount;
+      const kind  = p.isSubscription ? 'subscription' : 'bill';
+      list.push({
+        id: `price-up-${i}`, type: 'warning', category: 'Insights', icon: '📈',
+        title: `${p.name} price increased`,
+        body: `${kind.charAt(0).toUpperCase() + kind.slice(1)} went from $${p.oldAmount.toFixed(2)} → $${p.newAmount.toFixed(2)} (+$${delta.toFixed(2)}/mo)`,
+        time: 'Detected', read: false,
+      });
+    });
 
     billAlerts.forEach((b, i) => {
       if (b.isOverdue) {
@@ -153,6 +166,16 @@ export function NotificationBell({ budgetAlerts = [], billAlerts = [] }: Notific
       } else if (pct >= 80) {
         list.push({ id: `budget-warn-${i}`, type: 'warning', category: 'Budget', icon: '📊', title: `${b.category} at ${Math.round(pct)}%`, body: `$${(b.limit - b.spent).toFixed(0)} remaining this month`, time: 'Today', read: true });
       }
+    });
+
+    renewalAlerts.forEach((r, i) => {
+      const when = r.daysUntil === 0 ? 'Today' : r.daysUntil === 1 ? 'Tomorrow' : `${r.daysUntil}d`;
+      list.push({
+        id: `renewal-${i}`, type: 'info', category: 'Bills', icon: '🔔',
+        title: `${r.name} renews in ${r.daysUntil === 0 ? 'today' : `${r.daysUntil} day${r.daysUntil === 1 ? '' : 's'}`}`,
+        body: r.renewalNote,
+        time: when, read: false,
+      });
     });
 
     list.push({ id: 'autopay-info', type: 'info', category: 'Insights', icon: '✅', title: 'AutoPay is active', body: 'Bills on autopay will be handled automatically', time: 'Always on', read: true });

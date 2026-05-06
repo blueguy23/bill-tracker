@@ -53,6 +53,10 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
     setTransactions(p => p.map(t => t._id === id ? { ...t, tags } : t)), []);
   const onNotesChanged = useCallback((id: string, notes: string | null) =>
     setTransactions(p => p.map(t => t._id === id ? { ...t, notes } : t)), []);
+  const onAmortizeChanged = useCallback((id: string, amortize: boolean) =>
+    setTransactions(p => p.map(t => t._id === id ? { ...t, amortize } : t)), []);
+  const onCustomNameChanged = useCallback((id: string, customName: string | null) =>
+    setTransactions(p => p.map(t => t._id === id ? { ...t, customName: customName ?? undefined } : t)), []);
 
   const { displayed, summary, pendingTxns, dateGroups } = useMemo(() => {
     const q = search.toLowerCase();
@@ -66,14 +70,17 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
     else if (sort === 'amount-desc') list = [...list].sort((a, b) => b.amount - a.amount);
     else if (sort === 'amount-asc') list = [...list].sort((a, b) => a.amount - b.amount);
 
+    const pendingTxns = list.filter(t => t.pending);
+    const cleared = list.filter(t => !t.pending);
+
+    // Summary mirrors CashFlow adapter: exclude pending and transfer transactions
+    // so Money In/Out match the dashboard totals for the same period.
     let totalIn = 0, totalOut = 0, largestExpense: { amount: number; description: string } | null = null;
-    for (const t of list) {
+    for (const t of cleared) {
+      if (t.isTransfer) continue;
       if (t.amount > 0) totalIn += t.amount;
       else { totalOut += Math.abs(t.amount); if (!largestExpense || t.amount < largestExpense.amount) largestExpense = { amount: t.amount, description: t.payee ?? t.description }; }
     }
-
-    const pendingTxns = list.filter(t => t.pending);
-    const cleared = list.filter(t => !t.pending);
     const dateGroups = new Map<string, Transaction[]>();
     for (const t of cleared) {
       const key = new Date(t.posted).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -135,8 +142,8 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
       {/* Summary bar */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1px 1fr', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
         {[
-          { label: 'Money In', val: `+${USD.format(summary.totalIn)}`, pos: true, sub: `${displayed.filter(t => t.amount > 0).length} transactions` },
-          { label: 'Money Out', val: `−${USD.format(summary.totalOut)}`, pos: false, sub: `${displayed.filter(t => t.amount < 0).length} transactions` },
+          { label: 'Money In', val: `+${USD.format(summary.totalIn)}`, pos: true, sub: `${displayed.filter(t => !t.pending && !t.isTransfer && t.amount > 0).length} transactions` },
+          { label: 'Money Out', val: `−${USD.format(summary.totalOut)}`, pos: false, sub: `${displayed.filter(t => !t.pending && !t.isTransfer && t.amount < 0).length} transactions` },
           { label: 'Net', val: `${summary.net >= 0 ? '+' : '−'}${USD.format(Math.abs(summary.net))}`, pos: summary.net >= 0, sub: summary.totalIn > 0 ? `${Math.round((summary.net / summary.totalIn) * 100)}% saved` : '—' },
         ].map(c => (
           <div key={c.label} style={{ padding: '14px 20px' }}>
@@ -238,7 +245,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
                   <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#60a5fa', fontFamily: 'var(--mono)' }}>⏱ Pending · not yet cleared</span>
                   <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{pendingTxns.length} transactions · −{USD.format(pendingTxns.reduce((s, t) => s + Math.abs(t.amount), 0))} held</span>
                 </div>
-                {pendingTxns.map(t => <TxRow key={t._id} txn={t} acct={accountMap.get(t.accountId)} onCategoryChanged={onCategoryChanged} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} />)}
+                {pendingTxns.map(t => <TxRow key={t._id} txn={t} acct={accountMap.get(t.accountId)} onCategoryChanged={onCategoryChanged} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} onAmortizeChanged={onAmortizeChanged} onCustomNameChanged={onCustomNameChanged} />)}
               </>
             )}
 
@@ -259,7 +266,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
                           {dayTotal >= 0 ? '+' : '−'}{USD.format(Math.abs(dayTotal))}
                         </span>
                       </div>
-                      {txns.map(t => <TxRow key={t._id} txn={t} acct={accountMap.get(t.accountId)} onCategoryChanged={onCategoryChanged} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} />)}
+                      {txns.map(t => <TxRow key={t._id} txn={t} acct={accountMap.get(t.accountId)} onCategoryChanged={onCategoryChanged} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} onAmortizeChanged={onAmortizeChanged} onCustomNameChanged={onCustomNameChanged} />)}
                     </div>
                   );
                 })}

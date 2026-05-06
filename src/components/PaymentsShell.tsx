@@ -9,13 +9,15 @@ import { BillListPanel } from './BillListPanel';
 import { BillModal } from './BillModal';
 import { RecurringView } from './RecurringView';
 import { SubscriptionsView } from './SubscriptionsView';
+import { PaymentsCalendar } from './PaymentsCalendar';
 
-type Tab = 'bills' | 'subscriptions' | 'recurring';
+type Tab = 'bills' | 'subscriptions' | 'recurring' | 'calendar';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'bills',         label: 'Bills' },
   { id: 'subscriptions', label: 'Subscriptions' },
   { id: 'recurring',     label: 'Recurring' },
+  { id: 'calendar',      label: 'Calendar' },
 ];
 
 interface Props {
@@ -123,6 +125,7 @@ export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonth
         {tab === 'recurring' && (
           <RecurringView bills={recurringBills} totalMonthly={totalMonthly} totalPaid={totalPaid} autoPayCount={autoPayCount} />
         )}
+        {tab === 'calendar' && <PaymentsCalendar bills={allBills} />}
       </div>
 
       <BillModal

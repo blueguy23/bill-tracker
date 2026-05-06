@@ -10,7 +10,7 @@ import { detectSubscriptions } from '@/lib/subscriptions/detect';
 
 export const metadata: Metadata = { title: 'Payments' };
 
-type Tab = 'bills' | 'subscriptions' | 'recurring';
+type Tab = 'bills' | 'subscriptions' | 'recurring' | 'calendar';
 
 function serializeBill(bill: Bill): BillResponse {
   return {
@@ -37,10 +37,11 @@ function serializeDetected(d: DetectedSubscription): DetectedSubscriptionRespons
     occurrences: d.occurrences, accountIds: d.accountIds, confidence: d.confidence,
     suggestedCategory: d.suggestedCategory, matchedBillId: d.matchedBillId,
     recurringType: d.recurringType, typeConfidence: d.typeConfidence, signals: d.signals,
+    lastTransactionId: d.lastTransactionId,
   };
 }
 
-const VALID_TABS: Tab[] = ['bills', 'subscriptions', 'recurring'];
+const VALID_TABS: Tab[] = ['bills', 'subscriptions', 'recurring', 'calendar'];
 function resolveTab(raw: string | undefined): Tab {
   return VALID_TABS.includes(raw as Tab) ? (raw as Tab) : 'bills';
 }

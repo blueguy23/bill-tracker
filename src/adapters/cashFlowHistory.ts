@@ -9,18 +9,22 @@ export interface MonthlyFlow {
   net: number;
 }
 
-export async function getCashFlowHistory(db: StrictDB, months = 6): Promise<MonthlyFlow[]> {
+export async function getCashFlowHistory(db: StrictDB, months = 6, normalized = false): Promise<MonthlyFlow[]> {
   const now = new Date();
 
   // Needed as fallback for transactions inserted before isTransfer was stored
   const accounts = await listAccounts(db);
   const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
 
-  const windowStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
-  const windowEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  // When normalized, fetch a wider window so amortized charges that started
+  // before the view window can still contribute slices into it.
+  const fetchStart = normalized
+    ? new Date(now.getFullYear(), now.getMonth() - (months - 1) - 11, 1)
+    : new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+  const windowEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
   const { transactions } = await listTransactions(db, {
-    startDate: windowStart,
+    startDate: fetchStart,
     endDate:   windowEnd,
     limit:     20000,
   });
@@ -33,16 +37,27 @@ export async function getCashFlowHistory(db: StrictDB, months = 6): Promise<Mont
 
   for (const t of transactions) {
     if (t.pending) continue;
-    // Use stored flag when available; fall back to live classification for legacy rows
     const transfer = t.isTransfer ?? classifyTransfer(t, creditAccountIds);
     if (transfer) continue;
     const posted = t.posted instanceof Date ? t.posted : new Date(Number(t.posted) * 1000);
-    const key = `${posted.getFullYear()}-${posted.getMonth()}`;
-    const bucket = buckets.get(key);
-    if (!bucket) continue;
     const amt = Number(t.amount);
-    if (amt > 0) bucket.income   += amt;
-    else         bucket.expenses += Math.abs(amt);
+
+    if (normalized && t.amortize && amt < 0) {
+      // Spread across 12 months starting from the charge month
+      const slice = Math.abs(amt) / 12;
+      for (let m = 0; m < 12; m++) {
+        const d   = new Date(posted.getFullYear(), posted.getMonth() + m, 1);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        const bucket = buckets.get(key);
+        if (bucket) bucket.expenses += slice;
+      }
+    } else {
+      const key = `${posted.getFullYear()}-${posted.getMonth()}`;
+      const bucket = buckets.get(key);
+      if (!bucket) continue;
+      if (amt > 0) bucket.income   += amt;
+      else         bucket.expenses += Math.abs(amt);
+    }
   }
 
   const result: MonthlyFlow[] = [];

@@ -2,16 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { DetectedSubscriptionResponse, RecurringType } from '@/types/subscription';
+import type { DetectedSubscriptionResponse } from '@/types/subscription';
+import type { RecurringType } from '@/types/bill';
 
 interface Props {
   subscriptions: DetectedSubscriptionResponse[];
   onClose: () => void;
   onResolved: (id: string) => void;
 }
-
-const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-function usd(n: number) { return USD.format(n); }
 
 function monthlyAmount(sub: DetectedSubscriptionResponse): number {
   if (sub.interval === 'weekly')    return sub.amount * 4;
@@ -20,34 +18,26 @@ function monthlyAmount(sub: DetectedSubscriptionResponse): number {
   return sub.amount;
 }
 
-const TYPE_COLORS: Record<RecurringType, { color: string; bg: string; border: string }> = {
-  bill:         { color: 'var(--gold)',   bg: 'oklch(0.67 0.13 40 / 0.12)',  border: 'oklch(0.67 0.13 40 / 0.3)' },
-  subscription: { color: 'var(--accent)', bg: 'var(--accent-a)',              border: 'oklch(0.6 0.2 250 / 0.3)'  },
-  recurring:    { color: 'var(--text3)',  bg: 'rgba(255,255,255,0.05)',       border: 'var(--border-l)'            },
-};
-
-function ConfirmLabel({ type }: { type: RecurringType }) {
-  if (type === 'bill') return <>Add as bill</>;
-  return <>Yes, track it</>;
-}
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 function ReviewRow({ sub, onResolved }: { sub: DetectedSubscriptionResponse; onResolved: (id: string) => void }) {
-  const [busy, setBusy] = useState<'confirm' | 'dismiss' | null>(null);
-  const tc = TYPE_COLORS[sub.recurringType];
+  const [busy, setBusy] = useState<RecurringType | 'dismiss' | null>(null);
   const mo = monthlyAmount(sub);
 
-  async function confirm() {
-    setBusy('confirm');
+  async function confirm(recurringType: RecurringType) {
+    setBusy(recurringType);
     try {
       await fetch('/api/v1/subscriptions/anchor', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: sub.id, name: sub.normalizedName, amount: sub.amount,
           interval: sub.interval, category: sub.suggestedCategory,
-          rawDescriptions: sub.rawDescriptions, recurringType: sub.recurringType,
+          rawDescriptions: sub.rawDescriptions,
+          recurringType,
           lastCharged: sub.lastCharged,
           classificationMeta: {
-            recurringType: sub.recurringType, billScore: 0, subScore: 0, signals: sub.signals,
+            recurringType, billScore: 0, subScore: 0, signals: sub.signals,
+            userOverride: true,
           },
         }),
       });
@@ -61,7 +51,8 @@ function ReviewRow({ sub, onResolved }: { sub: DetectedSubscriptionResponse; onR
     setBusy('dismiss');
     try {
       await fetch('/api/v1/subscriptions/dismiss', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: sub.id }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sub.id }),
       });
       onResolved(sub.id);
     } finally {
@@ -69,43 +60,82 @@ function ReviewRow({ sub, onResolved }: { sub: DetectedSubscriptionResponse; onR
     }
   }
 
+  const isBusy = busy !== null;
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-      {/* Avatar */}
-      <div style={{ width: 32, height: 32, background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: tc.color, flexShrink: 0 }}>
-        {sub.normalizedName.charAt(0).toUpperCase()}
+    <div style={{ padding: '16px 0', borderBottom: '1px solid #1c1c22' }}>
+      {/* Main row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10, background: 'rgba(120,100,255,0.15)',
+          color: '#a090ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 600, flexShrink: 0,
+        }}>
+          {sub.normalizedName.charAt(0).toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: '#e0e0ea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {sub.normalizedName}
+          </div>
+          <div style={{ fontSize: 11, color: '#50505a', marginTop: 2 }}>
+            {USD.format(mo)}/mo · {sub.interval} · {sub.occurrences}× detected
+          </div>
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 600, color: '#fff', whiteSpace: 'nowrap' }}>
+          {USD.format(sub.amount)}
+        </div>
       </div>
 
-      {/* Name + meta */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.normalizedName}</span>
-          {sub.recurringType !== 'subscription' && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: tc.color, background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 4, padding: '1px 5px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {sub.recurringType === 'bill' ? 'Bill' : 'Recurring?'}
-            </span>
-          )}
-        </div>
-        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 1 }}>
-          {usd(mo)}/mo · {sub.interval} · {sub.occurrences}×
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+      {/* Action buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
         <button
-          onClick={() => void confirm()} disabled={busy !== null}
-          style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: busy ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, opacity: busy ? 0.6 : 1 }}
+          onClick={() => void confirm('bill')}
+          disabled={isBusy}
+          style={{
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            color: '#888', fontSize: 11, fontWeight: 400, fontFamily: 'Inter, sans-serif',
+            padding: '7px 14px', borderRadius: 8, cursor: isBusy ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap', opacity: isBusy && busy !== 'bill' ? 0.4 : 1,
+            transition: 'background 0.15s, color 0.15s',
+          }}
         >
-          {busy === 'confirm' ? '…' : <ConfirmLabel type={sub.recurringType} />}
+          {busy === 'bill' ? 'Saving…' : '🧾 Track as Bill'}
         </button>
         <button
-          onClick={() => void dismiss()} disabled={busy !== null}
-          style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-l)', background: 'transparent', color: 'var(--text3)', cursor: busy ? 'not-allowed' : 'pointer', fontSize: 11, opacity: busy ? 0.5 : 1 }}
+          onClick={() => void confirm('subscription')}
+          disabled={isBusy}
+          style={{
+            background: 'rgba(80,120,255,0.18)', border: '1px solid rgba(80,120,255,0.3)',
+            color: '#8ab0ff', fontSize: 11, fontWeight: 500, fontFamily: 'Inter, sans-serif',
+            padding: '7px 16px', borderRadius: 8, cursor: isBusy ? 'not-allowed' : 'pointer',
+            whiteSpace: 'nowrap', opacity: isBusy && busy !== 'subscription' ? 0.4 : 1,
+            transition: 'background 0.15s',
+          }}
+        >
+          {busy === 'subscription' ? 'Saving…' : '⚡ Track as Subscription'}
+        </button>
+        <button
+          onClick={() => void dismiss()}
+          disabled={isBusy}
+          style={{
+            background: 'none', border: 'none', color: '#3a3a3a',
+            fontSize: 11, fontFamily: 'Inter, sans-serif',
+            padding: '7px 10px', cursor: isBusy ? 'not-allowed' : 'pointer',
+            opacity: isBusy ? 0.4 : 1, transition: 'color 0.15s',
+          }}
         >
           {busy === 'dismiss' ? '…' : 'Ignore'}
         </button>
       </div>
+
+      {/* Classifier hint — only shown on high-confidence suggestions */}
+      {sub.typeConfidence === 'high' && (
+        <div style={{ fontSize: 11, color: '#3a3a44', marginTop: 7 }}>
+          Classifier suggests:{' '}
+          <span style={{ color: '#8ab0ff', fontWeight: 500 }}>{sub.recurringType}</span>
+          {sub.signals.length > 0 && ` (${sub.signals.slice(0, 2).join(', ')})`}
+        </div>
+      )}
     </div>
   );
 }
@@ -115,7 +145,7 @@ export function SubscriptionReviewModal({ subscriptions: initial, onClose, onRes
 
   function handleResolved(id: string) {
     onResolved(id);
-    const next = items.filter((s) => s.id !== id);
+    const next = items.filter(s => s.id !== id);
     setItems(next);
     if (next.length === 0) onClose();
   }
@@ -125,42 +155,52 @@ export function SubscriptionReviewModal({ subscriptions: initial, onClose, onRes
       {/* Backdrop */}
       <div
         onClick={onClose}
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 50, backdropFilter: 'blur(2px)' }}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 50, backdropFilter: 'blur(3px)' }}
       />
 
-      {/* Modal */}
+      {/* Panel */}
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        zIndex: 51, width: 'min(520px, calc(100vw - 32px))',
-        background: 'var(--surface)', border: '1px solid var(--border-l)',
-        borderRadius: 14, boxShadow: '0 24px 60px rgba(0,0,0,0.5)', overflow: 'hidden',
+        zIndex: 51, width: 'min(560px, calc(100vw - 32px))',
+        background: '#16161a', border: '1px solid #2a2a32',
+        borderRadius: 18, boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
+        maxHeight: 'calc(100vh - 48px)',
       }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Recurring charges detected</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
-              {items.length} pending — confirm to track, or ignore to hide
+        <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid #1e1e26', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#e8e8f0', letterSpacing: '-0.01em' }}>
+                Recurring charges detected
+              </div>
+              <div style={{ fontSize: 12, color: '#555', marginTop: 3, fontWeight: 400 }}>
+                {items.length} pending — classify each to start tracking
+              </div>
             </div>
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: '#444', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 2, transition: 'color 0.15s' }}
+              aria-label="Close"
+            >
+              ✕
+            </button>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', display: 'flex', padding: 4 }} aria-label="Close">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
         </div>
 
-        {/* List */}
-        <div style={{ maxHeight: 360, overflowY: 'auto' }}>
-          {items.map((sub) => (
+        {/* Scrollable item list */}
+        <div style={{ padding: '0 24px', overflowY: 'auto', flex: 1 }}>
+          {items.map(sub => (
             <ReviewRow key={sub.id} sub={sub} onResolved={handleResolved} />
           ))}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #1c1c22', textAlign: 'right', flexShrink: 0 }}>
           <Link
             href="/payments?tab=subscriptions"
             onClick={onClose}
-            style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none', fontFamily: 'var(--sans)' }}
+            style={{ fontSize: 12, color: '#8ab0ff', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
           >
             See all in Payments →
           </Link>

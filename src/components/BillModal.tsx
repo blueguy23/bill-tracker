@@ -32,7 +32,7 @@ interface FormState {
   name: string; amount: string; dueDateStr: string; dueDateDay: string;
   category: string; isPaid: boolean; isAutoPay: boolean; isRecurring: boolean;
   recurrenceInterval: string; url: string; notes: string;
-  paymentDescriptionHint: string;
+  paymentDescriptionHint: string; renewalNote: string;
 }
 
 function buildInitialState(initialData?: BillResponse): FormState {
@@ -41,7 +41,7 @@ function buildInitialState(initialData?: BillResponse): FormState {
       name: '', amount: '', dueDateStr: '', dueDateDay: '1',
       category: BILL_CATEGORIES[0] ?? 'other', isPaid: false, isAutoPay: false,
       isRecurring: false, recurrenceInterval: RECURRENCE_INTERVALS[2] ?? 'monthly',
-      url: '', notes: '', paymentDescriptionHint: '',
+      url: '', notes: '', paymentDescriptionHint: '', renewalNote: '',
     };
   }
   return {
@@ -53,6 +53,7 @@ function buildInitialState(initialData?: BillResponse): FormState {
     recurrenceInterval: initialData.recurrenceInterval ?? (RECURRENCE_INTERVALS[2] ?? 'monthly'),
     url: initialData.url ?? '', notes: initialData.notes ?? '',
     paymentDescriptionHint: initialData.paymentDescriptionHint ?? '',
+    renewalNote: initialData.renewalNote ?? '',
   };
 }
 
@@ -106,13 +107,16 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
     setIsSaving(true);
     const dto: CreateBillDto = {
       name: form.name.trim(), amount: Number(form.amount),
-      dueDate: form.isRecurring ? Number(form.dueDateDay) : form.dueDateStr,
+      dueDate: form.isRecurring && form.recurrenceInterval !== 'yearly'
+        ? Number(form.dueDateDay)
+        : form.dueDateStr,
       category: form.category as CreateBillDto['category'],
       isPaid: form.isPaid, isAutoPay: form.isAutoPay, isRecurring: form.isRecurring,
       ...(form.isRecurring && { recurrenceInterval: form.recurrenceInterval as CreateBillDto['recurrenceInterval'] }),
       ...(form.url.trim() && { url: form.url.trim() }),
       ...(form.notes.trim() && { notes: form.notes.trim() }),
       ...(form.paymentDescriptionHint.trim() && { paymentDescriptionHint: form.paymentDescriptionHint.trim() }),
+      ...(form.renewalNote.trim() && { renewalNote: form.renewalNote.trim() }),
     };
     try {
       await onSave(dto);
@@ -181,10 +185,17 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
 
           {form.isRecurring ? (
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={label}>Day of Month</label>
-                <input className={input} type="number" min="1" max="31" value={form.dueDateDay} onChange={(e) => set('dueDateDay', e.target.value)} required />
-              </div>
+              {form.recurrenceInterval === 'yearly' ? (
+                <div>
+                  <label className={label}>Annual Due Date</label>
+                  <input className={input} type="date" style={{ colorScheme: 'dark' }} value={form.dueDateStr} onChange={(e) => set('dueDateStr', e.target.value)} required />
+                </div>
+              ) : (
+                <div>
+                  <label className={label}>Day of Month</label>
+                  <input className={input} type="number" min="1" max="31" value={form.dueDateDay} onChange={(e) => set('dueDateDay', e.target.value)} required />
+                </div>
+              )}
               <div>
                 <label className={label}>Recurrence</label>
                 <select className={input} value={form.recurrenceInterval} onChange={(e) => set('recurrenceInterval', e.target.value)}>
@@ -197,6 +208,24 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
               <label className={label}>Due Date</label>
               <input className={input} type="date" style={{ colorScheme: 'dark' }} value={form.dueDateStr} onChange={(e) => set('dueDateStr', e.target.value)} required />
             </div>
+          )}
+          {form.isRecurring && form.recurrenceInterval === 'yearly' && (
+            <>
+              <p className="text-xs text-zinc-500 -mt-2">
+                Annual payment — won&apos;t appear in monthly totals or due-date reminders outside its due month.
+              </p>
+              <div>
+                <label className={label}>Renewal reminder <span className="normal-case font-normal text-zinc-500">(optional)</span></label>
+                <textarea
+                  className={input}
+                  rows={2}
+                  value={form.renewalNote}
+                  onChange={(e) => set('renewalNote', e.target.value)}
+                  placeholder="e.g. Call to negotiate rate before renewing, shop for better providers"
+                />
+                <p className="text-xs text-zinc-500 mt-1">You&apos;ll be notified 30 days before the annual due date.</p>
+              </div>
+            </>
           )}
 
           <div>
