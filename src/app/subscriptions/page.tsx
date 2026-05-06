@@ -5,6 +5,7 @@ import { SubscriptionsView } from '@/components/SubscriptionsView';
 import { getDb } from '@/adapters/db';
 import { listTransactionsForDetection } from '@/adapters/accounts';
 import { listBills, listSubscriptionBills, updateLastChargedAmount } from '@/adapters/bills';
+import { recordCharge } from '@/adapters/chargeHistory';
 import { listDismissedSubscriptions } from '@/adapters/subscriptions';
 import { detectSubscriptions } from '@/lib/subscriptions/detect';
 
@@ -18,6 +19,7 @@ function serializeDetected(d: DetectedSubscription): DetectedSubscriptionRespons
     occurrences: d.occurrences, accountIds: d.accountIds, confidence: d.confidence,
     suggestedCategory: d.suggestedCategory, matchedBillId: d.matchedBillId,
     recurringType: d.recurringType, typeConfidence: d.typeConfidence, signals: d.signals,
+    lastTransactionId: d.lastTransactionId,
   };
 }
 
@@ -51,16 +53,16 @@ export default async function SubscriptionsPage() {
   const trackedIds    = new Set(subBills.map((b) => b.detectionId).filter(Boolean) as string[]);
   const trackedBillMap = new Map(subBills.filter((b) => b.detectionId).map((b) => [b.detectionId!, b]));
 
-  // Update lastChargedAmount for tracked subs whose price drifted
+  // Update lastChargedAmount + record charge history for tracked subs with price drift
   await Promise.all(
     detected
       .filter((d) => {
         const bill = trackedBillMap.get(d.id);
         return bill && Math.abs((bill.lastChargedAmount ?? bill.amount) - d.amount) > 0.5;
       })
-      .map((d) => {
+      .flatMap((d) => {
         const bill = trackedBillMap.get(d.id)!;
-        return updateLastChargedAmount(db, bill._id, d.amount);
+        return [updateLastChargedAmount(db, bill._id, d.amount), recordCharge(db, bill._id, d.amount)];
       }),
   );
 

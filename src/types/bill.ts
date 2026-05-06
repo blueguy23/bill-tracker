@@ -76,6 +76,8 @@ export interface Bill {
   classificationMeta?: ClassificationMeta;
   url?: string;
   notes?: string;
+  /** Reminder shown in notifications ~30 days before annual due date */
+  renewalNote?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -96,6 +98,7 @@ export interface CreateBillDto {
   classificationMeta?: Omit<ClassificationMeta, 'classifiedAt' | 'userOverride'>;
   url?: string;
   notes?: string;
+  renewalNote?: string;
 }
 
 export type UpdateBillDto = Partial<CreateBillDto>;
@@ -119,6 +122,7 @@ export interface BillResponse {
   classificationMeta?: ClassificationMetaResponse;
   url?: string;
   notes?: string;
+  renewalNote?: string;
   createdAt: string;
   updatedAt: string;
 }

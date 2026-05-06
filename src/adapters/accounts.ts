@@ -98,22 +98,57 @@ export async function getCashFlowThisMonth(db: StrictDB): Promise<CashFlow> {
   return { income, expenses, net: income - expenses };
 }
 
-export async function getCashFlowForRange(db: StrictDB, startDate: Date, endDate: Date): Promise<CashFlow> {
+export async function getCashFlowForRange(
+  db: StrictDB,
+  startDate: Date,
+  endDate: Date,
+  normalized = false,
+): Promise<CashFlow> {
+  // When normalized, also fetch up to 11 months back so amortized charges
+  // that started before the window can contribute slices into it.
+  const fetchStart = normalized
+    ? new Date(startDate.getFullYear(), startDate.getMonth() - 11, 1)
+    : startDate;
+
   const [{ transactions }, accounts] = await Promise.all([
-    listTransactions(db, { startDate, endDate, limit: 10000 }),
+    listTransactions(db, { startDate: fetchStart, endDate, limit: 10000 }),
     listAccounts(db),
   ]);
   const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
 
   let income = 0, expenses = 0;
+  const rangeMs = { start: startDate.getTime(), end: endDate.getTime() };
+
   for (const txn of transactions) {
     if (txn.pending) continue;
     if (txn.isTransfer ?? classifyTransfer(txn, creditAccountIds)) continue;
     const amt = Number(txn.amount);
-    if (amt > 0) income += amt;
-    else expenses += Math.abs(amt);
+
+    if (normalized && txn.amortize && amt < 0) {
+      // Spread across 12 months from the charge month; accumulate only the
+      // slices whose month falls within [startDate, endDate].
+      const posted = txn.posted instanceof Date ? txn.posted : new Date(Number(txn.posted) * 1000);
+      const slice = Math.abs(amt) / 12;
+      for (let m = 0; m < 12; m++) {
+        const sliceMonth = new Date(posted.getFullYear(), posted.getMonth() + m, 1);
+        const sliceEnd   = new Date(posted.getFullYear(), posted.getMonth() + m + 1, 1);
+        // Include the slice if its month overlaps the requested range
+        if (sliceEnd.getTime() > rangeMs.start && sliceMonth.getTime() < rangeMs.end) {
+          expenses += slice;
+        }
+      }
+    } else {
+      const posted = txn.posted instanceof Date ? txn.posted : new Date(Number(txn.posted) * 1000);
+      if (posted.getTime() < rangeMs.start || posted.getTime() >= rangeMs.end) continue;
+      if (amt > 0) income += amt;
+      else expenses += Math.abs(amt);
+    }
   }
-  return { income, expenses, net: income - expenses };
+  return {
+    income:   Math.round(income   * 100) / 100,
+    expenses: Math.round(expenses * 100) / 100,
+    net:      Math.round((income - expenses) * 100) / 100,
+  };
 }
 
 export async function markTransfersById(db: StrictDB, ids: string[]): Promise<void> {

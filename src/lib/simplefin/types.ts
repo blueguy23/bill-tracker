@@ -111,6 +111,8 @@ export interface Transaction {
   tags?: string[];
   notes?: string | null;
   isTransfer?: boolean;
+  amortize?: boolean;
+  customName?: string;
 }
 
 export interface SyncLog {

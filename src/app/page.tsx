@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import type { BillResponse, BillSummary, Bill, BillCategory } from '@/types/bill';
 import type { EnrichedMatch } from '@/types/subscription';
 import type { Account } from '@/lib/simplefin/types';
@@ -7,6 +9,8 @@ import { OnboardingBanner } from '@/components/OnboardingBanner';
 import { NewSubscriptionsBanner } from '@/components/NewSubscriptionsBanner';
 import { DashboardCharts, SpendByCategoryCard } from '@/components/DashboardCharts';
 import { PeriodSelector } from '@/components/PeriodSelector';
+import { CashFlowToggle } from '@/components/CashFlowToggle';
+import type { CashFlowViewMode } from '@/components/CashFlowToggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import type { Period } from '@/components/PeriodSelector';
 import { getDb } from '@/adapters/db';
@@ -41,7 +45,7 @@ function serializeBill(bill: Bill): BillResponse {
     dueDate: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : bill.dueDate,
     category: bill.category, isPaid: bill.isPaid, isAutoPay: bill.isAutoPay,
     isRecurring: bill.isRecurring, recurrenceInterval: bill.recurrenceInterval,
-    url: bill.url, notes: bill.notes,
+    url: bill.url, notes: bill.notes, renewalNote: bill.renewalNote,
     createdAt: bill.createdAt instanceof Date ? bill.createdAt.toISOString() : String(bill.createdAt),
     updatedAt: bill.updatedAt instanceof Date ? bill.updatedAt.toISOString() : String(bill.updatedAt),
   };
@@ -54,7 +58,13 @@ function computeSummary(bills: BillResponse[]): BillSummary {
   for (const bill of bills) {
     if (bill.isAutoPay) autoPayTotal += bill.amount;
     if (bill.isPaid) { totalPaid += bill.amount; continue; }
-    if (bill.isRecurring) {
+    if (bill.isRecurring && bill.recurrenceInterval === 'yearly') {
+      // Only count in the month it's actually due, not every month
+      if (typeof bill.dueDate === 'string') {
+        const due = new Date(bill.dueDate);
+        if (due.getMonth() === month) totalOwedThisMonth += bill.amount;
+      }
+    } else if (bill.isRecurring) {
       totalOwedThisMonth += bill.amount;
       if (typeof bill.dueDate === 'number' && bill.dueDate < now.getDate()) overdueCount++;
     } else if (typeof bill.dueDate === 'string') {
@@ -127,9 +137,10 @@ function BudgetMiniRow({ label, spent, limit }: { label: string; spent: number; 
   );
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
-  const { p } = await searchParams;
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string; view?: string }> }) {
+  const { p, view } = await searchParams;
   const period = (['1W', '1M', '3M', 'YTD', '1Y'].includes(p ?? '') ? p : '1M') as Period;
+  const viewMode: CashFlowViewMode = view === 'normalized' ? 'normalized' : 'actual';
   const { start, end, historyMonths } = periodToRange(period);
 
   const db = await getDb();
@@ -138,9 +149,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
-    getCashFlowForRange(db, start, end),
+    getCashFlowForRange(db, start, end, viewMode === 'normalized'),
     listBudgets(db),
-    getCashFlowHistory(db, historyMonths),
+    getCashFlowHistory(db, historyMonths, viewMode === 'normalized'),
   ]);
 
   const metaList = allAccounts.length > 0 ? await listAccountMeta(db, allAccounts.map(a => a._id)) : [];
@@ -179,7 +190,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const categorySpendData = Array.from(spendByCat.entries()).map(([label, amount]) => ({ label, amount }));
 
   const billAlerts = bills
-    .filter(b => !b.isPaid)
+    .filter(b => !b.isPaid && b.recurrenceInterval !== 'yearly')
     .map(b => {
       const dueDay = typeof b.dueDate === 'number' ? b.dueDate : null;
       const today = new Date().getDate();
@@ -191,6 +202,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const budgetAlerts = budgets
     .map(b => ({ category: b.category, spent: spendByCat.get(b.category as BillCategory) ?? 0, limit: b.monthlyAmount }))
     .filter(b => b.limit > 0);
+
+  const priceAlerts = rawBills
+    .filter(b => b.lastChargedAmount !== undefined && Math.abs(b.lastChargedAmount - b.amount) > 0.5)
+    .map(b => ({ name: b.name, oldAmount: b.amount, newAmount: b.lastChargedAmount!, isSubscription: b.isSubscription ?? false }));
+
+  const renewalAlerts = (() => {
+    const now = new Date();
+    const results: { name: string; daysUntil: number; renewalNote: string }[] = [];
+    for (const b of bills) {
+      if (b.recurrenceInterval !== 'yearly' || !b.renewalNote || typeof b.dueDate !== 'string') continue;
+      const stored = new Date(b.dueDate);
+      if (isNaN(stored.getTime())) continue;
+      // Check this year's and next year's anniversary
+      for (const year of [now.getFullYear(), now.getFullYear() + 1]) {
+        const anniversary = new Date(year, stored.getMonth(), stored.getDate());
+        const daysUntil = Math.round((anniversary.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysUntil >= 0 && daysUntil <= 30) {
+          results.push({ name: b.name, daysUntil, renewalNote: b.renewalNote });
+          break;
+        }
+      }
+    }
+    return results;
+  })();
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -212,9 +247,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Suspense>
+            <CashFlowToggle active={viewMode} />
+          </Suspense>
+          <Suspense>
             <PeriodSelector active={period} />
           </Suspense>
-          <NotificationBell billAlerts={billAlerts} budgetAlerts={budgetAlerts} />
+          <NotificationBell billAlerts={billAlerts} budgetAlerts={budgetAlerts} priceAlerts={priceAlerts} renewalAlerts={renewalAlerts} />
         </div>
       </div>
 
@@ -255,6 +293,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* Charts row */}
         <div style={{ marginBottom: 20 }}>
           <DashboardCharts history={history} />
+          {viewMode === 'normalized' && (
+            <div style={{ textAlign: 'right', marginTop: 6, fontSize: 10, color: '#63b3ed', fontFamily: 'var(--mono)', letterSpacing: '0.05em' }}>
+              NORMALIZED — annual charges spread over 12 months
+            </div>
+          )}
         </div>
 
         {/* Portfolio widget — only renders when SimpleFIN GAP 3 holdings exist */}
