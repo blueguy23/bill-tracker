@@ -3,44 +3,37 @@
 import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { BillResponse, CreateBillDto, UpdateBillDto } from '@/types/bill';
-import type { DetectedSubscriptionResponse } from '@/types/subscription';
 import { PaymentsHero } from './PaymentsHero';
-import { BillListPanel } from './BillListPanel';
+import { UnifiedPaymentsList } from './UnifiedPaymentsList';
 import { BillModal } from './BillModal';
-import { RecurringView } from './RecurringView';
-import { SubscriptionsView } from './SubscriptionsView';
 import { PaymentsCalendar } from './PaymentsCalendar';
 
-type Tab = 'bills' | 'subscriptions' | 'recurring' | 'calendar';
+type Tab = 'payments' | 'calendar';
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'bills',         label: 'Bills' },
-  { id: 'subscriptions', label: 'Subscriptions' },
-  { id: 'recurring',     label: 'Recurring' },
-  { id: 'calendar',      label: 'Calendar' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'calendar', label: 'Calendar' },
 ];
 
 interface Props {
   initialTab: Tab;
   allBills: BillResponse[];
-  recurringBills: BillResponse[];
-  totalMonthly: number;
-  totalPaid: number;
-  autoPayCount: number;
-  pendingSubscriptions: DetectedSubscriptionResponse[];
   trackedBills: BillResponse[];
+  serverToday: { d: number; m: number; y: number };
 }
 
-export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonthly, totalPaid, autoPayCount, pendingSubscriptions, trackedBills }: Props) {
+export function PaymentsShell({ initialTab, allBills, trackedBills, serverToday }: Props) {
   const [tab, setTab]             = useState<Tab>(initialTab);
   const [isModalOpen, setModal]   = useState(false);
   const [editingBill, setEditing] = useState<BillResponse | undefined>();
   const router   = useRouter();
   const pathname = usePathname();
 
+  const allCombined = [...allBills, ...trackedBills];
+
   function switchTab(next: Tab) {
     setTab(next);
-    router.replace(next === 'bills' ? pathname : `${pathname}?tab=${next}`, { scroll: false });
+    router.replace(next === 'payments' ? pathname : `${pathname}?tab=${next}`, { scroll: false });
   }
 
   function openCreate() { setEditing(undefined); setModal(true); }
@@ -86,47 +79,52 @@ export function PaymentsShell({ initialTab, allBills, recurringBills, totalMonth
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Sticky header: title + tab bar */}
-      <div style={{ padding: '16px 28px 0', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)' }}>
-        <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)', marginBottom: 12 }}>Payments</h1>
-        <div data-testid="payments-tabs" style={{ display: 'flex', gap: 0 }}>
+
+      {/* Sticky header */}
+      <div style={{ padding: '16px 24px 0', borderBottom: '0.5px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)', marginBottom: 12 }}>Payments</h1>
+        <div data-testid="payments-tabs" role="tablist" style={{ display: 'flex', gap: 0 }}>
           {TABS.map(t => (
-            <button key={t.id} onClick={() => switchTab(t.id)} style={{
-              padding: '8px 16px', fontSize: 13, fontWeight: tab === t.id ? 600 : 500,
-              fontFamily: 'var(--sans)',
-              color: tab === t.id ? 'var(--accent)' : 'var(--text3)',
-              background: 'transparent', border: 'none',
-              borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
-              cursor: 'pointer', transition: 'all .1s', marginBottom: -1,
-            }}>
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => switchTab(t.id)}
+              style={{
+                padding: '8px 16px 10px', fontSize: 14, fontFamily: 'var(--sans)',
+                fontWeight: tab === t.id ? 500 : 400,
+                color: tab === t.id ? 'var(--text)' : 'rgba(255,255,255,0.45)',
+                background: 'transparent', border: 'none',
+                borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+                cursor: 'pointer', transition: 'color 0.15s', marginBottom: -0.5,
+              }}
+            >
               {t.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Hero — shown on all tabs */}
-      <div style={{ padding: '20px 28px 0' }}>
-        <PaymentsHero allBills={allBills} onAddBill={openCreate} />
-      </div>
-
       {/* Tab content */}
-      <div style={{ padding: '16px 28px 24px' }}>
-        {tab === 'bills' && (
-          <BillListPanel
-            bills={allBills}
+      {tab === 'payments' && (
+        <div role="tabpanel">
+          <PaymentsHero bills={allCombined} today={serverToday} onAddBill={openCreate} />
+          <UnifiedPaymentsList
+            bills={allCombined}
+            today={serverToday}
             onEdit={openEdit}
             onDelete={(id) => void handleDelete(id)}
             onTogglePaid={(id, isPaid) => void handleTogglePaid(id, isPaid)}
             onToggleAutoPay={(id, isAutoPay) => void handleToggleAutoPay(id, isAutoPay)}
           />
-        )}
-        {tab === 'subscriptions' && <SubscriptionsView pendingSubscriptions={pendingSubscriptions} trackedBills={trackedBills} />}
-        {tab === 'recurring' && (
-          <RecurringView bills={recurringBills} totalMonthly={totalMonthly} totalPaid={totalPaid} autoPayCount={autoPayCount} />
-        )}
-        {tab === 'calendar' && <PaymentsCalendar bills={allBills} />}
-      </div>
+        </div>
+      )}
+
+      {tab === 'calendar' && (
+        <div role="tabpanel" style={{ padding: '16px 20px 24px' }}>
+          <PaymentsCalendar bills={allCombined} today={serverToday} onAddBill={openCreate} />
+        </div>
+      )}
 
       <BillModal
         mode={editingBill ? 'edit' : 'create'}

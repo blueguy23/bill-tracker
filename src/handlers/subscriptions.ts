@@ -128,7 +128,9 @@ export async function handleAnchorSubscription(
   const bill = await createBill(db, {
     name:               b.name as string,
     amount:             b.amount as number,
-    dueDate:            new Date(b.lastCharged as string).getDate(),
+    dueDate:            b.interval === 'yearly'
+      ? new Date(b.lastCharged as string).toISOString()
+      : new Date(b.lastCharged as string).getDate(),
     category:           b.category as BillCategory,
     isRecurring:        true,
     recurrenceInterval: b.interval as SubscriptionInterval,

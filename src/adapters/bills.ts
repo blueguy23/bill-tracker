@@ -47,7 +47,9 @@ export async function createBill(db: StrictDB, data: CreateBillDto): Promise<Bil
     _id: randomUUID(),
     name: data.name,
     amount: data.amount,
-    dueDate: data.isRecurring ? Number(data.dueDate) : new Date(data.dueDate as string),
+    dueDate: data.isRecurring && data.recurrenceInterval !== 'yearly'
+      ? Number(data.dueDate)
+      : new Date(data.dueDate as string),
     category: data.category,
     isPaid: data.isPaid ?? false,
     isAutoPay: data.isAutoPay ?? false,
@@ -85,7 +87,10 @@ export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto):
   if (data.dueDate !== undefined) {
     // isRecurring in the patch takes precedence; fall back to existing value
     const isRecurring = data.isRecurring ?? existing?.isRecurring ?? false;
-    updates.dueDate = isRecurring ? Number(data.dueDate) : new Date(data.dueDate as string);
+    const recurrenceInterval = data.recurrenceInterval ?? existing?.recurrenceInterval;
+    updates.dueDate = isRecurring && recurrenceInterval !== 'yearly'
+      ? Number(data.dueDate)
+      : new Date(data.dueDate as string);
   }
 
   // Stamp paidMonth before the DB write so it persists in the same operation
