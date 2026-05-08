@@ -18,6 +18,16 @@ interface Props {
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
+const isPlaceholderTime = (d: Date) => d.getUTCHours() === 12 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+
+export function txDisplayDate(txn: { posted: Date | string; transactedAt?: Date | string }): Date {
+  if (txn.transactedAt) {
+    const d = new Date(txn.transactedAt);
+    if (!isPlaceholderTime(d)) return d;
+  }
+  return new Date(txn.posted);
+}
+
 function shortAccount(acct: Account): string {
   const m = acct.name.match(/\d{4}$/);
   const type = acct.accountType === 'credit' ? 'Visa' :
@@ -93,6 +103,7 @@ const actionBtn: React.CSSProperties = {
 export function TxRow({ txn, acct, onCategoryChanged, onTagsChanged, onNotesChanged, onAmortizeChanged, onCustomNameChanged }: Props) {
   const isPos = txn.amount >= 0;
   const [hovered, setHovered] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [amortizePending, setAmortizePending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,8 +163,13 @@ export function TxRow({ txn, acct, onCategoryChanged, onTagsChanged, onNotesChan
       setAmortizePending(false);
     }
   }
-  const time = new Date(txn.posted).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  const dateStr = new Date(txn.posted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const displayDate = txDisplayDate(txn);
+  const postedDate  = new Date(txn.posted);
+  const timeStr     = !isPlaceholderTime(displayDate)
+    ? displayDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : null;
+  const dateStr   = displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const postedStr = postedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <div style={{ position: 'relative' }}>
@@ -181,6 +197,7 @@ export function TxRow({ txn, acct, onCategoryChanged, onTagsChanged, onNotesChan
         background: txn.pending ? 'rgba(96,165,250,0.03)' : 'transparent',
         opacity: txn.pending ? 0.65 : 1,
       }}
+      onClick={() => setExpanded(e => !e)}
       onMouseEnter={e => { setHovered(true); (e.currentTarget as HTMLDivElement).style.background = txn.pending ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.02)'; if (txn.pending) (e.currentTarget as HTMLDivElement).style.opacity = '0.85'; }}
       onMouseLeave={e => { setHovered(false); (e.currentTarget as HTMLDivElement).style.background = txn.pending ? 'rgba(96,165,250,0.03)' : 'transparent'; if (txn.pending) (e.currentTarget as HTMLDivElement).style.opacity = '0.65'; }}
     >
@@ -205,7 +222,7 @@ export function TxRow({ txn, acct, onCategoryChanged, onTagsChanged, onNotesChan
           {txn.pending && <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)', fontFamily: 'var(--mono)', flexShrink: 0 }}>PENDING</span>}
           {txn.customName && !editingName && <span style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{txn.payee ?? txn.description}</span>}
         </div>
-        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{dateStr} · {time}</div>
+        <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{dateStr}</div>
         {txn.memo && <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 200 }}>{txn.memo}</div>}
         <TxTagsRow txnId={txn._id} tags={txn.tags} notes={txn.notes} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} />
       </div>
@@ -252,6 +269,38 @@ export function TxRow({ txn, acct, onCategoryChanged, onTagsChanged, onNotesChan
         </button>
       </div>
     </div>
+
+    {expanded && (
+      <div style={{
+        padding: '10px 16px 12px 56px',
+        background: 'rgba(255,255,255,0.02)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex', flexDirection: 'column', gap: 5,
+      }}>
+        {timeStr && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', width: 80 }}>Time</span>
+            <span style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--mono)' }}>{timeStr}</span>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', width: 80 }}>Settled</span>
+          <span style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--mono)' }}>{postedStr}</span>
+        </div>
+        {acct && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', width: 80 }}>Account</span>
+            <span style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--mono)' }}>{acct.orgName} · {acct.name}</span>
+          </div>
+        )}
+        {txn.description && txn.description !== (txn.payee ?? txn.description) && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', width: 80 }}>Raw</span>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{txn.description}</span>
+          </div>
+        )}
+      </div>
+    )}
     </div>
   );
 }

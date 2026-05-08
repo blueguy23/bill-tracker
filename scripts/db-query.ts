@@ -77,6 +77,7 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'debug-pending-in-db':     () => import('./queries/debug-pending-in-db.js'),
   'fix-stuck-pending':       () => import('./queries/fix-stuck-pending.js'),
   'debug-simplefin-accounts': () => import('./queries/debug-simplefin-accounts.js'),
+  'debug-txn-times':          () => import('./queries/debug-txn-times.js'),
 };
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import type { Account, Transaction } from '@/lib/simplefin/types';
 import type { TransactionCategory } from '@/lib/categorization/types';
 import { CATEGORY_LABELS, TRANSACTION_CATEGORIES } from '@/lib/categorization/types';
 import { CATEGORY_COLORS } from '@/lib/category-colors';
-import { TxRow } from './TxRow';
+import { TxRow, txDisplayDate } from './TxRow';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 type DateRange = 'this-month' | 'last-month' | '3-months' | '6-months' | 'all';
@@ -66,7 +66,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
       if (catFilter !== 'all' && t.category !== catFilter) return false;
       return true;
     });
-    if (sort === 'date-asc') list = [...list].sort((a, b) => new Date(a.posted).getTime() - new Date(b.posted).getTime());
+    if (sort === 'date-asc') list = [...list].sort((a, b) => txDisplayDate(a).getTime() - txDisplayDate(b).getTime());
     else if (sort === 'amount-desc') list = [...list].sort((a, b) => b.amount - a.amount);
     else if (sort === 'amount-asc') list = [...list].sort((a, b) => a.amount - b.amount);
 
@@ -83,7 +83,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
     }
     const dateGroups = new Map<string, Transaction[]>();
     for (const t of cleared) {
-      const key = new Date(t.posted).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      const key = txDisplayDate(t).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
       if (!dateGroups.has(key)) dateGroups.set(key, []);
       dateGroups.get(key)!.push(t);
     }
