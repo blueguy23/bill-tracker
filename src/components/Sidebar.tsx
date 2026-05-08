@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { ThemeToggle } from './ThemeToggle';
 
 const NAV_SECTIONS: { label: string; items: { href: string; icon: string; label: string; hidden?: boolean }[] }[] = [
   { label: 'Overview', items: [
@@ -235,7 +234,6 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
 
         {/* Footer sync + theme */}
         <div style={{ padding: collapsed ? '12px 8px' : '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-          {collapsed && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><ThemeToggle /></div>}
           <button
             onClick={handleSync}
             disabled={syncState === 'syncing'}
@@ -255,12 +253,11 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
             {!collapsed && syncLabel}
           </button>
           {!collapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
                 <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', animation: 'btPulse 2s infinite', flexShrink: 0 }} />
                 LIVE · {formatLastSync(lastSyncAt).toUpperCase()}
               </div>
-              <ThemeToggle />
             </div>
           )}
         </div>

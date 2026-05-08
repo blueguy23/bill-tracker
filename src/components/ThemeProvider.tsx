@@ -7,11 +7,13 @@ type Theme = 'dark' | 'light';
 interface ThemeContextValue {
   theme: Theme | undefined;
   toggleTheme: () => void;
+  applyAndPersist: (t: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: undefined,
   toggleTheme: () => {},
+  applyAndPersist: () => {},
 });
 
 export function useTheme() {
@@ -45,8 +47,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const applyAndPersist = useCallback((t: Theme) => {
+    localStorage.setItem('theme', t);
+    applyTheme(t);
+    setTheme(t);
+  }, []);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, applyAndPersist }}>
       {children}
     </ThemeContext.Provider>
   );

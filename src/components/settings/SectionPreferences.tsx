@@ -7,7 +7,7 @@ import { sectionCard, sectionHeader, sectionHeaderIcon, formRow, formSelect, btn
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface Props {
-  initial: Pick<UserProfile, 'theme' | 'defaultDateRange' | 'hideTransfers' | 'compactRows' | 'numberFormat'>;
+  initial: Pick<UserProfile, 'defaultDateRange' | 'hideTransfers' | 'compactRows' | 'numberFormat'>;
 }
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -22,7 +22,6 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 export function SectionPreferences({ initial }: Props) {
-  const [theme, setTheme]               = useState(initial.theme);
   const [dateRange, setDateRange]       = useState(initial.defaultDateRange);
   const [hideTransfers, setHideTransfers] = useState(initial.hideTransfers);
   const [compactRows, setCompactRows]   = useState(initial.compactRows);
@@ -35,7 +34,7 @@ export function SectionPreferences({ initial }: Props) {
       const res = await fetch('/api/v1/user-profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, defaultDateRange: dateRange, hideTransfers, compactRows, numberFormat }),
+        body: JSON.stringify({ defaultDateRange: dateRange, hideTransfers, compactRows, numberFormat }),
       });
       setStatus(res.ok ? 'saved' : 'error');
     } catch {
@@ -53,18 +52,6 @@ export function SectionPreferences({ initial }: Props) {
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Preferences</div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>Display and behaviour settings</div>
         </div>
-      </div>
-
-      <div style={formRow}>
-        <div>
-          <div style={{ fontSize: 13, color: 'var(--text)' }}>Theme</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>App color scheme</div>
-        </div>
-        <select data-testid="theme-select" value={theme} onChange={(e) => setTheme(e.target.value as UserProfile['theme'])} style={formSelect}>
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-          <option value="auto">Auto (system)</option>
-        </select>
       </div>
 
       <div style={formRow}>

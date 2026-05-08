@@ -73,6 +73,10 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'autopay-detect':         () => import('./queries/autopay-detect.js'),
   'debug-bills':       () => import('./queries/debug-bills.js'),
   'seed-demo':         () => import('./queries/seed-demo.js'),
+  'debug-simplefin-pending': () => import('./queries/debug-simplefin-pending.js'),
+  'debug-pending-in-db':     () => import('./queries/debug-pending-in-db.js'),
+  'fix-stuck-pending':       () => import('./queries/fix-stuck-pending.js'),
+  'debug-simplefin-accounts': () => import('./queries/debug-simplefin-accounts.js'),
 };
 
 // ---------------------------------------------------------------------------
