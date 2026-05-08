@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 
-const NAV_SECTIONS = [
+const NAV_SECTIONS: { label: string; items: { href: string; icon: string; label: string; hidden?: boolean }[] }[] = [
   { label: 'Overview', items: [
     { href: '/',              icon: '▦', label: 'Dashboard' },
     { href: '/transactions',  icon: '↕', label: 'Transactions' },
@@ -13,10 +13,10 @@ const NAV_SECTIONS = [
   ]},
   { label: 'Planning', items: [
     { href: '/budget',        icon: '◎', label: 'Budget & Goals' },
+    { href: '/settings',      icon: '⚙', label: 'Settings' },
   ]},
   { label: 'Insights', items: [
-    { href: '/credit-health', icon: '◇', label: 'Credit Health' },
-    { href: '/settings',      icon: '⚙', label: 'Settings' },
+    { href: '/credit-health', icon: '◇', label: 'Credit Health', hidden: true },
   ]},
 ];
 
@@ -113,7 +113,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       .catch(() => {});
   }, [fetchStatus]);
 
-  const PREFETCH = ['/', '/transactions', '/payments', '/budget', '/credit-health', '/settings'];
+  const PREFETCH = ['/', '/transactions', '/payments', '/budget', '/settings'];
   useEffect(() => { PREFETCH.forEach(r => router.prefetch(r)); }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
@@ -207,14 +207,17 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', overflowY: 'auto' }}>
-          {NAV_SECTIONS.map(section => (
+          {NAV_SECTIONS.map(section => {
+            const visibleItems = section.items.filter(item => !item.hidden);
+            if (visibleItems.length === 0) return null;
+            return (
             <div key={section.label}>
               {!collapsed && (
                 <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', padding: '12px 8px 5px', fontWeight: 600, fontFamily: 'var(--mono)' }}>
                   {section.label}
                 </div>
               )}
-              {section.items.map(item => (
+              {visibleItems.map(item => (
                 <NavItem
                   key={item.href}
                   href={item.href}
@@ -226,7 +229,8 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
                 />
               ))}
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Footer sync + theme */}

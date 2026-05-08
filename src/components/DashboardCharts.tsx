@@ -5,7 +5,6 @@ import {
   Chart,
   LineController, LineElement, PointElement,
   BarController, BarElement,
-  DoughnutController, ArcElement,
   CategoryScale, LinearScale,
   Tooltip, Legend,
 } from 'chart.js';
@@ -14,7 +13,6 @@ import type { MonthlyFlow } from '@/adapters/cashFlowHistory';
 Chart.register(
   LineController, LineElement, PointElement,
   BarController, BarElement,
-  DoughnutController, ArcElement,
   CategoryScale, LinearScale,
   Tooltip, Legend,
 );
@@ -102,50 +100,6 @@ function TrendChart({ history }: { history: MonthlyFlow[] }) {
 }
 
 
-function CategoryDoughnut({ data }: { data: { label: string; amount: number }[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef  = useCancelRef();
-
-  useEffect(() => {
-    if (!canvasRef.current || !data.length) return;
-    chartRef.current?.destroy();
-    const sorted = [...data].sort((a, b) => b.amount - a.amount).slice(0, 8);
-    const total  = sorted.reduce((s, d) => s + d.amount, 0);
-
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'doughnut',
-      data: {
-        labels: sorted.map(d => d.label),
-        datasets: [{ data: sorted.map(d => d.amount), backgroundColor: CAT_PALETTE, borderColor: SURFACE, borderWidth: 3, hoverBorderWidth: 4 }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        cutout: '70%',
-        animation: { animateRotate: true, duration: 900, easing: 'easeInOutQuart' },
-        plugins: {
-          legend: {
-            display: true, position: 'right',
-            labels: {
-              color: TEXT2, font: { family: "'IBM Plex Mono', monospace", size: 10 }, boxWidth: 8, boxHeight: 8, padding: 10,
-              generateLabels: (chart) => {
-                const ds = chart.data.datasets[0] ?? { data: [], backgroundColor: [] };
-                return (chart.data.labels as string[]).map((label, i) => {
-                  const val = (ds.data[i] as number) ?? 0;
-                  const pct = total > 0 ? ((val / total) * 100).toFixed(0) : '0';
-                  return { text: `${label}  ${pct}%`, fillStyle: (ds.backgroundColor as string[])[i] ?? '#333', strokeStyle: 'transparent', lineWidth: 0, index: i, hidden: false };
-                });
-              },
-            },
-          },
-          tooltip: { ...TOOLTIP, callbacks: { label: c => { const val = c.parsed as number; const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0'; return ` $${val.toLocaleString('en-US', { minimumFractionDigits: 2 })} (${pct}%)`; } } },
-        },
-      },
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
-
-  return <canvas ref={canvasRef} />;
-}
 
 function EmptyChart() {
   return (
@@ -183,13 +137,29 @@ export function DashboardCharts({ history }: { history: MonthlyFlow[] }) {
 }
 
 export function SpendByCategoryCard({ data }: { data: { label: string; amount: number }[] }) {
-  const hasSpend = data.length > 0;
+  const sorted = [...data].sort((a, b) => b.amount - a.amount).slice(0, 8);
+  const max = sorted[0]?.amount ?? 0;
+
   return (
     <div data-testid="spending-chart">
       <Card title="Spend by Category" subtitle="This period">
-        <div style={{ position: 'relative', height: 200 }}>
-          {hasSpend ? <CategoryDoughnut data={data} /> : <EmptyChart />}
-        </div>
+        {sorted.length === 0 ? (
+          <EmptyChart />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {sorted.map(({ label, amount }, i) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ fontSize: 12, color: TEXT2, minWidth: 80, fontFamily: "'Plus Jakarta Sans', sans-serif", whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+                <div style={{ flex: 1, height: 4, background: GRID, borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: max > 0 ? `${(amount / max) * 100}%` : '0%', background: CAT_PALETTE[i % CAT_PALETTE.length], borderRadius: 2, transition: 'width .4s ease' }} />
+                </div>
+                <div style={{ fontSize: 11, color: TEXT2, textAlign: 'right', minWidth: 48, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {'$' + amount.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
     </div>
   );
