@@ -33,9 +33,21 @@ export default function LoginPage({
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-white">Folio</h1>
-          <p className="text-sm text-zinc-500 mt-1">Your personal finance command center</p>
+        <div className="mb-8 text-center flex flex-col items-center gap-3">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-label="Folio">
+            <defs>
+              <linearGradient id="login-ember" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#F2A988" />
+                <stop offset="1" stopColor="#C9624A" />
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#login-ember)" />
+            <path d="M7 7h10M7 12h7M7 17h4" stroke="#0A0E15" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Folio</h1>
+            <p className="text-sm text-zinc-500 mt-1">Your personal finance command center</p>
+          </div>
         </div>
 
         <form action={handleLogin} className="space-y-4">

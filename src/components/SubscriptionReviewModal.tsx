@@ -168,7 +168,7 @@ export function SubscriptionReviewModal({ subscriptions: initial, onClose, onRes
         maxHeight: 'calc(100vh - 48px)',
       }}>
         {/* Header */}
-        <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid #1e1e26', flexShrink: 0 }}>
+        <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 600, color: '#e8e8f0', letterSpacing: '-0.01em' }}>

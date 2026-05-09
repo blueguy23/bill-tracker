@@ -31,12 +31,12 @@ const PACE_COLOR: Record<PaceStatus, string> = {
   'on-track':  'var(--green)',
   'watch-out': 'var(--gold)',
   'over':      'var(--red)',
-  'no-budget': 'rgba(255,255,255,0.15)',
+  'no-budget': 'var(--text3)',
 };
 const PACE_ALPHA: Record<PaceStatus, string> = {
-  'on-track':  'rgba(34,197,94,0.85)',
-  'watch-out': 'oklch(0.67 0.13 40 / 0.85)',
-  'over':      'rgba(239,68,68,0.85)',
+  'on-track':  'var(--pace-good-fill)',
+  'watch-out': 'var(--pace-warn-fill)',
+  'over':      'var(--pace-bad-fill)',
   'no-budget': 'transparent',
 };
 const PACE_LABEL: Record<PaceStatus, string> = {
@@ -49,7 +49,7 @@ const PACE_CHIP: Record<PaceStatus, React.CSSProperties> = {
   'on-track':  { background: 'rgba(34,197,94,0.10)',   color: 'var(--green)', border: '1px solid rgba(34,197,94,0.2)' },
   'watch-out': { background: 'oklch(0.67 0.13 40 / 0.10)',  color: 'var(--gold)',  border: '1px solid oklch(0.67 0.13 40 / 0.2)' },
   'over':      { background: 'rgba(239,68,68,0.10)',   color: 'var(--red)',   border: '1px solid rgba(239,68,68,0.2)' },
-  'no-budget': { background: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: '1px solid var(--border)' },
+  'no-budget': { background: 'var(--raised)', color: 'var(--text3)', border: '1px solid var(--border)' },
 };
 
 function paceStatus(b: CategoryBudgetSummary, todayPct: number): PaceStatus {
@@ -79,24 +79,24 @@ function BudgetChartRow({ b, todayPct, onEdit }: { b: CategoryBudgetSummary; tod
       </div>
 
       {hasLimit ? (
-        <div style={{ position: 'relative', height: 22, background: 'rgba(255,255,255,0.05)', borderRadius: 5, overflow: 'visible' }}>
+        <div style={{ position: 'relative', height: 22, background: 'var(--progress-track)', borderRadius: 5, overflow: 'visible' }}>
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 5 }}>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${animPct}%`, background: PACE_ALPHA[ps], borderRadius: 5, transition: 'width 0.8s cubic-bezier(.4,0,.2,1)' }} />
           </div>
-          <div style={{ position: 'absolute', top: -3, bottom: -3, left: `${todayPct}%`, width: 2, background: 'rgba(255,255,255,0.45)', borderRadius: 1, zIndex: 2 }} />
+          <div style={{ position: 'absolute', top: -3, bottom: -3, left: `${todayPct}%`, width: 2, background: 'var(--progress-marker)', borderRadius: 1, zIndex: 2 }} />
           {ps === 'watch-out' && b.effectiveBudget && (
-            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontFamily: 'var(--mono)', color: '#0b0b0f', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--on-fill-text)', fontWeight: 600, whiteSpace: 'nowrap' }}>
               {USD0.format(b.effectiveBudget - b.spent)} left
             </div>
           )}
           {ps === 'over' && (
-            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontFamily: 'var(--mono)', color: '#0b0b0f', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            <div style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: 9, fontFamily: 'var(--mono)', color: 'var(--on-fill-text)', fontWeight: 600, whiteSpace: 'nowrap' }}>
               OVER
             </div>
           )}
         </div>
       ) : (
-        <div style={{ position: 'relative', height: 22, background: 'rgba(255,255,255,0.03)', borderRadius: 5, border: '1px dashed rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
+        <div style={{ position: 'relative', height: 22, background: 'var(--raised)', borderRadius: 5, border: '1px dashed var(--border-l)', display: 'flex', alignItems: 'center', paddingLeft: 10 }}>
           <span style={{ fontSize: 10, color: 'var(--text3)' }}>No budget set{b.spent > 0 ? ` — ${USD.format(b.spent)} spent` : ''}</span>
         </div>
       )}

@@ -3,17 +3,32 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const LS_KEY = 'cashflow_view_mode';
+const LS_KEY      = 'cashflow_view_mode';
+const NORM_GATE_KEY = 'normalized_mode_enabled';
 
 export type CashFlowViewMode = 'actual' | 'normalized';
 
 export function CashFlowToggle({ active }: { active: CashFlowViewMode }) {
   const router = useRouter();
   const params = useSearchParams();
-  const [hov, setHov] = useState<CashFlowViewMode | null>(null);
+  const [hov, setHov]           = useState<CashFlowViewMode | null>(null);
+  const [enabled, setEnabled]   = useState<boolean | null>(null);
 
-  // On first mount, if no view param in URL, restore from localStorage
   useEffect(() => {
+    const normEnabled = localStorage.getItem(NORM_GATE_KEY) === 'true';
+    setEnabled(normEnabled);
+
+    if (!normEnabled) {
+      // Clear any lingering ?view=normalized so the server re-renders as actual
+      if (params.get('view') === 'normalized') {
+        const next = new URLSearchParams(params.toString());
+        next.delete('view');
+        router.replace(next.toString() ? `?${next.toString()}` : window.location.pathname);
+      }
+      return;
+    }
+
+    // Normalized mode is on — restore last view from localStorage
     if (!params.get('view')) {
       const saved = localStorage.getItem(LS_KEY) as CashFlowViewMode | null;
       if (saved && saved !== 'actual') {
@@ -24,6 +39,8 @@ export function CashFlowToggle({ active }: { active: CashFlowViewMode }) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!enabled) return null;
 
   function select(mode: CashFlowViewMode) {
     localStorage.setItem(LS_KEY, mode);

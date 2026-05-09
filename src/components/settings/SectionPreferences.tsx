@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UserProfile } from '@/types/userProfile';
 import { sectionCard, sectionHeader, sectionHeaderIcon, formRow, formSelect, btnPrimary } from './settingsStyles';
+
+const NORM_GATE_KEY = 'normalized_mode_enabled';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -22,11 +24,25 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 export function SectionPreferences({ initial }: Props) {
-  const [dateRange, setDateRange]       = useState(initial.defaultDateRange);
-  const [hideTransfers, setHideTransfers] = useState(initial.hideTransfers);
-  const [compactRows, setCompactRows]   = useState(initial.compactRows);
-  const [numberFormat, setNumberFormat] = useState(initial.numberFormat);
-  const [status, setStatus]             = useState<SaveStatus>('idle');
+  const [dateRange, setDateRange]           = useState(initial.defaultDateRange);
+  const [hideTransfers, setHideTransfers]   = useState(initial.hideTransfers);
+  const [compactRows, setCompactRows]       = useState(initial.compactRows);
+  const [numberFormat, setNumberFormat]     = useState(initial.numberFormat);
+  const [normalizedMode, setNormalizedMode] = useState(false);
+  const [status, setStatus]                 = useState<SaveStatus>('idle');
+
+  useEffect(() => {
+    setNormalizedMode(localStorage.getItem(NORM_GATE_KEY) === 'true');
+  }, []);
+
+  function handleNormalizedMode(v: boolean) {
+    setNormalizedMode(v);
+    localStorage.setItem(NORM_GATE_KEY, String(v));
+    if (!v) {
+      // Reset the saved view so the dashboard defaults back to actual
+      localStorage.setItem('cashflow_view_mode', 'actual');
+    }
+  }
 
   async function handleSave() {
     setStatus('saving');
@@ -93,6 +109,14 @@ export function SectionPreferences({ initial }: Props) {
           <option value="en-GB">1,234.56 (UK)</option>
           <option value="de-DE">1.234,56 (EU)</option>
         </select>
+      </div>
+
+      <div style={formRow}>
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--text)' }}>Enable Normalized Mode</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Unlocks an Actualized / Normalized toggle on the dashboard. Normalized spreads annual charges evenly across 12 months so your cash flow reflects a true monthly cost. When off, the dashboard shows real cash outflows only with no toggle or labels.</div>
+        </div>
+        <Toggle on={normalizedMode} onChange={handleNormalizedMode} />
       </div>
 
       <div style={{ padding: '13px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -107,9 +107,9 @@ export function SettingsShell({ profile, lastSyncAt, discordConfigured, dueSoonD
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--sans)', marginBottom: 2 }}>Settings</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)', marginBottom: 2 }}>Settings</h1>
           <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>Account, connections, and preferences</span>
         </div>
       </div>
