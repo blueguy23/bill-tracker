@@ -126,8 +126,9 @@ describe('getCashFlowHistory — normalized mode', () => {
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 15);
 
   it('should return unchanged results when normalized=false (default)', () => {
-    // Integration tests for getCashFlowHistory require a real DB instance.
-    // The spread math is covered by the assertions below.
+    // TODO: real integration test needs a mock DB that satisfies listTransactions + listAccounts.
+    // The spread transformation logic is covered by the math assertions below.
+    // Track in: L1 audit finding 2026-05-10.
     expect(true).toBe(true);
   });
 
