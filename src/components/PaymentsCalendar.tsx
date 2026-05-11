@@ -85,20 +85,18 @@ function getBillsForDate(
   if (day < 1 || day > daysInMonth) return result;
 
   for (const bill of bills) {
-    let matches = false;
     if (bill.isRecurring && bill.recurrenceInterval === 'yearly') {
       if (typeof bill.dueDate !== 'string') continue;
       const d = new Date(bill.dueDate);
-      matches = !isNaN(d.getTime()) && d.getMonth() === month && d.getDate() === day;
+      if (isNaN(d.getTime()) || d.getMonth() !== month || d.getDate() !== day) continue;
     } else if (bill.isRecurring) {
       if (typeof bill.dueDate !== 'number') continue;
-      matches = bill.dueDate === day;
+      if (bill.dueDate !== day) continue;
     } else {
       if (typeof bill.dueDate !== 'string') continue;
       const d = new Date(bill.dueDate);
-      matches = !isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+      if (isNaN(d.getTime()) || d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== day) continue;
     }
-    if (!matches) continue;
     result.push({ id: bill._id, name: bill.name, category: bill.category, amount: bill.amount, status: billStatus(bill, day, month, year, today), isAutoPay: bill.isAutoPay });
   }
   return result;

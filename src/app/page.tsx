@@ -20,7 +20,7 @@ import { listAccountMeta } from '@/adapters/accountMeta';
 import { listBudgets } from '@/adapters/budgets';
 import { getCashFlowHistory } from '@/adapters/cashFlowHistory';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
-import type { Budget } from '@/types/budget';
+import type { Budget as _Budget } from '@/types/budget';
 import type { Holding } from '@/lib/simplefin/types';
 import { PortfolioWidget } from '@/components/PortfolioWidget';
 
