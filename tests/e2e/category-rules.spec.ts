@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+function settingsCard(page: import('@playwright/test').Page, title: string) {
+  return page.locator('button').filter({ has: page.locator(`div >> text="${title}"`) }).first();
+}
+
 test.describe('Category Rules — Settings page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
-    await page.locator('button', { hasText: 'Categories' }).click();
+    await settingsCard(page, 'Categories').click();
     await expect(page.locator('[data-testid="category-rules"]')).toBeVisible();
   });
 
