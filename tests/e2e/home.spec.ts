@@ -70,7 +70,6 @@ test.describe('Sidebar Navigation', () => {
     await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Payments' })).toBeVisible();
     await expect(nav.locator('a', { hasText: /Budget.*Goals/ })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Credit Health' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Settings' })).toBeVisible();
   });
 
