@@ -55,7 +55,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 9
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
@@ -78,7 +78,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 9
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
@@ -101,7 +101,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 9
 
       # pnpm audit only needs the lock file — skip node_modules install and cache restore
       # to avoid the setup-node cache timeout on the self-hosted runner.
@@ -119,7 +119,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 9
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
@@ -143,7 +143,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: latest
+          version: 9
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
