@@ -105,44 +105,7 @@ rm -f .runner .credentials
 
 log "Runner configured."
 
-# ── 5. Token renewal loop ─────────────────────────────────────────────────────
-# Renews every 25 days — before the 30-day expiry window.
-# Runs in background; curl errors are caught within the loop so set -e doesn't
-# kill the subshell silently and leave the runner with an unrenewed token.
-renew_token_loop() {
-  local INTERVAL=$((25 * 24 * 3600))
-  while true; do
-    sleep "${INTERVAL}"
-    log "Renewing runner token (25-day cycle)..."
-    NEW_TOKEN=$(curl -sf -X POST \
-      -H "Authorization: token ${GITHUB_PAT}" \
-      -H "Accept: application/vnd.github+json" \
-      "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners/registration-token" \
-      | jq -r '.token') || {
-        log "WARNING: Token renewal curl failed — retrying in 1 hour"
-        sleep 3600
-        continue
-      }
-    if [ -n "${NEW_TOKEN}" ] && [ "${NEW_TOKEN}" != "null" ]; then
-      log "Token renewal: OK"
-      ./config.sh \
-        --url     "$REPO_URL" \
-        --token   "${NEW_TOKEN}" \
-        --name    "${RUNNER_NAME}" \
-        --labels  "self-hosted,Linux,X64" \
-        --work    _work \
-        --unattended \
-        --replace \
-        --disableupdate \
-        || log "WARNING: config.sh re-registration failed — runner continues with current token"
-    else
-      log "WARNING: Token renewal returned null — retrying in 1 hour"
-      sleep 3600
-    fi
-  done
-}
-
-# ── 6. Graceful deregister on container stop ──────────────────────────────────
+# ── 5. Graceful deregister on container stop ──────────────────────────────────
 _cleanup() {
   log "Caught signal — deregistering runner..."
   STALE_ID=$(curl -s \
@@ -161,47 +124,10 @@ _cleanup() {
 }
 trap _cleanup TERM INT
 
-# ── 7. Start background services and runner ───────────────────────────────────
-renew_token_loop &
-
-log "Starting runner..."
-RUNNER_LOG=/tmp/runner-output.log
-: > "$RUNNER_LOG"
-
-# Capture runner output to file; stream it to Docker logs in parallel.
-# We need RUNNER_PID from run.sh directly — can't use a pipeline (gives tee's PID).
-./run.sh >> "$RUNNER_LOG" 2>&1 &
-RUNNER_PID=$!
-tail -F "$RUNNER_LOG" &
-TAIL_PID=$!
-
-# Watchdog: WSL2 silently drops long-poll connections. The runner enters a
-# "Retrying until reconnected" loop that never recovers on its own.
-# Detect it early and kill the process — Docker restarts the container cleanly.
-(
-  sleep 120  # grace period for initial startup
-  while kill -0 "$RUNNER_PID" 2>/dev/null; do
-    sleep 30
-    if tail -3 "$RUNNER_LOG" 2>/dev/null | grep -q "Retrying until reconnected"; then
-      log "Watchdog: runner stuck in retry loop — waiting 30s before forcing exit"
-      sleep 30
-      # Stand down if it recovered while we were waiting
-      if tail -5 "$RUNNER_LOG" 2>/dev/null | grep -qE "reconnected\.|Listening for Jobs"; then
-        log "Watchdog: runner recovered — standing down"
-        continue
-      fi
-      log "Watchdog: still stuck — exiting to trigger container restart"
-      kill "$RUNNER_PID" 2>/dev/null || true
-      break
-    fi
-  done
-) &
-WATCHDOG_PID=$!
-
-wait "${RUNNER_PID}"
-EXIT_CODE=$?
-
-kill "$TAIL_PID" 2>/dev/null || true
-kill "$WATCHDOG_PID" 2>/dev/null || true
-log "Runner process exited with code ${EXIT_CODE}"
-exit "${EXIT_CODE}"
+# ── 6. Run one job, then exit ─────────────────────────────────────────────────
+# --once makes the runner exit after completing a single job. Docker's
+# restart: unless-stopped brings the container back up with a fresh
+# connection and re-registration — eliminates stale long-poll issues
+# and ensures clean state between jobs.
+log "Starting runner (--once mode)..."
+exec ./run.sh --once
