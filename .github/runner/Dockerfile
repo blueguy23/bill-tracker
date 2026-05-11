@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
      | gpg --dearmor -o /usr/share/keyrings/docker.gpg \
   && printf 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable\n' \
      > /etc/apt/sources.list.d/docker.list \
-  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
   && curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc \
      | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg \
   && printf 'deb [arch=amd64 signed-by=/usr/share/keyrings/mongodb.gpg] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse\n' \
@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxdamage1 libxfixes3 libxrandr2 libgbm1 \
     libpango-1.0-0 libcairo2 libasound2 libatspi2.0-0 \
   && rm -rf /var/lib/apt/lists/* \
-  && npm install -g pnpm@9
+  && npm install -g pnpm@10
 
 # ── Runner user, binary, dirs, cron ──────────────────────────────────────────
 # User must be 'garci' — ci.yml references /home/garci/.cache/ms-playwright

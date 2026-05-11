@@ -55,12 +55,12 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -78,12 +78,12 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -101,7 +101,7 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 10
 
       # pnpm audit only needs the lock file — skip node_modules install and cache restore
       # to avoid the setup-node cache timeout on the self-hosted runner.
@@ -119,12 +119,12 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -143,12 +143,12 @@ jobs:
 
       - uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         timeout-minutes: 5
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
