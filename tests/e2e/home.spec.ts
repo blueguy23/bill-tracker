@@ -24,9 +24,9 @@ test.describe('Dashboard Page (/)', () => {
     test('should render the three metric cards', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('Monthly Net', { exact: true })).toBeVisible();
-      await expect(page.getByText('Bills Owed', { exact: true })).toBeVisible();
-      await expect(page.getByText('AutoPay', { exact: true })).toBeVisible();
+      await expect(page.getByText('Money in vs out', { exact: true })).toBeVisible();
+      await expect(page.getByText('Bills this month', { exact: true })).toBeVisible();
+      await expect(page.getByText('Savings rate', { exact: true })).toBeVisible();
     });
 
     test('should render metric card values as USD currency strings', async ({ page }) => {

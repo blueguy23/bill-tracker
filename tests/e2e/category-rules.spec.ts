@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Category Rules — Settings page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
+    await page.locator('button', { hasText: 'Categories' }).click();
     await expect(page.locator('[data-testid="category-rules"]')).toBeVisible();
   });
 

@@ -11,6 +11,7 @@ test.describe('Settings Page (/settings)', () => {
     await expect(page).toHaveURL('/settings');
     await expect(page.locator('h1')).toBeVisible();
     await expect(page.locator('h1')).toContainText('Settings');
+    await page.locator('button', { hasText: 'Notifications' }).click();
     await expect(page.locator('[data-testid="section-notifications"]')).toBeVisible();
   });
 
@@ -29,8 +30,8 @@ test.describe('Settings Page (/settings)', () => {
   });
 
   test('Send Test button should be disabled when webhook is not configured', async ({ page }) => {
-    // This test is environment-dependent: button is disabled only when webhook is not configured
     await page.goto('/settings');
+    await page.locator('button', { hasText: 'Notifications' }).click();
 
     const sendTestBtn = page.getByRole('button', { name: /send test/i });
     await expect(sendTestBtn).toBeVisible();
@@ -42,8 +43,8 @@ test.describe('Settings Page (/settings)', () => {
 
   test('should list at least one notification event in the reference section', async ({ page }) => {
     await page.goto('/settings');
+    await page.locator('button', { hasText: 'Notifications' }).click();
 
-    // The settings view renders a list of notification event types
     await expect(page.getByText(/bill due soon/i)).toBeVisible();
   });
 });
