@@ -3,9 +3,9 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
-import { ThemeToggle } from './ThemeToggle';
+import { FolioLogo } from './FolioLogo';
 
-const NAV_SECTIONS = [
+const NAV_SECTIONS: { label: string; items: { href: string; icon: string; label: string; hidden?: boolean }[] }[] = [
   { label: 'Overview', items: [
     { href: '/',              icon: '▦', label: 'Dashboard' },
     { href: '/transactions',  icon: '↕', label: 'Transactions' },
@@ -13,10 +13,10 @@ const NAV_SECTIONS = [
   ]},
   { label: 'Planning', items: [
     { href: '/budget',        icon: '◎', label: 'Budget & Goals' },
+    { href: '/settings',      icon: '⚙', label: 'Settings' },
   ]},
   { label: 'Insights', items: [
-    { href: '/credit-health', icon: '◇', label: 'Credit Health' },
-    { href: '/settings',      icon: '⚙', label: 'Settings' },
+    { href: '/credit-health', icon: '◇', label: 'Credit Health', hidden: true },
   ]},
 ];
 
@@ -113,7 +113,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       .catch(() => {});
   }, [fetchStatus]);
 
-  const PREFETCH = ['/', '/transactions', '/payments', '/budget', '/credit-health', '/settings'];
+  const PREFETCH = ['/', '/transactions', '/payments', '/budget', '/settings'];
   useEffect(() => { PREFETCH.forEach(r => router.prefetch(r)); }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
@@ -143,10 +143,9 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       )}
       <aside
         className="sidebar-overlay"
-        data-theme="dark"
         style={{
           width: w, minHeight: '100vh',
-          background: 'linear-gradient(180deg, #0f0f14 0%, var(--bg) 100%)',
+          background: 'var(--sidebar-bg)',
           borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', flexShrink: 0,
           position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 50,
@@ -157,27 +156,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       >
         {/* Brand */}
         <div style={{ padding: collapsed ? '18px 16px' : '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-            background: 'linear-gradient(145deg, oklch(0.22 0.08 265) 0%, oklch(0.14 0.06 285) 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 14px oklch(0.68 0.22 265 / 0.28), inset 0 1px 0 rgba(255,255,255,0.08)',
-            border: '1px solid oklch(0.68 0.22 265 / 0.3)',
-          }}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="5" y="2" width="11" height="14" rx="2" fill="oklch(0.68 0.22 265)" opacity="0.25" />
-              <rect x="3" y="4" width="11" height="14" rx="2" fill="oklch(0.68 0.22 265)" opacity="0.5" />
-              <rect x="3" y="4" width="11" height="14" rx="2" fill="none" stroke="oklch(0.78 0.22 265)" strokeWidth="1" />
-              <path d="M5.5 14.5 L7.5 11.5 L9.5 12.8 L12 9" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
-              <circle cx="12" cy="9" r="1.2" fill="white" opacity="0.9" />
-            </svg>
-          </div>
-          {!collapsed && (
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--sans)', letterSpacing: '-.03em' }}>Folio</div>
-              <div style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: '.1em', fontFamily: 'var(--mono)', marginTop: 1 }}>PERSONAL FINANCE</div>
-            </div>
-          )}
+          <FolioLogo size={collapsed ? 22 : 26} withWordmark={!collapsed} />
           {!collapsed && onCollapseChange && (
             <button onClick={() => onCollapseChange(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 2 }}>‹</button>
           )}
@@ -207,14 +186,17 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', overflowY: 'auto' }}>
-          {NAV_SECTIONS.map(section => (
+          {NAV_SECTIONS.map(section => {
+            const visibleItems = section.items.filter(item => !item.hidden);
+            if (visibleItems.length === 0) return null;
+            return (
             <div key={section.label}>
               {!collapsed && (
                 <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', padding: '12px 8px 5px', fontWeight: 600, fontFamily: 'var(--mono)' }}>
                   {section.label}
                 </div>
               )}
-              {section.items.map(item => (
+              {visibleItems.map(item => (
                 <NavItem
                   key={item.href}
                   href={item.href}
@@ -226,12 +208,12 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
                 />
               ))}
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Footer sync + theme */}
         <div style={{ padding: collapsed ? '12px 8px' : '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-          {collapsed && <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}><ThemeToggle /></div>}
           <button
             onClick={handleSync}
             disabled={syncState === 'syncing'}
@@ -251,12 +233,11 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
             {!collapsed && syncLabel}
           </button>
           {!collapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
                 <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', animation: 'btPulse 2s infinite', flexShrink: 0 }} />
                 LIVE · {formatLastSync(lastSyncAt).toUpperCase()}
               </div>
-              <ThemeToggle />
             </div>
           )}
         </div>

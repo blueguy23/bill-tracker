@@ -51,17 +51,14 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         timeout-minutes: 5
         with:
-          node-version: 20
-          cache: pnpm
+          node-version-file: '.node-version'
+
+      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -74,17 +71,14 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         timeout-minutes: 5
         with:
-          node-version: 20
-          cache: pnpm
+          node-version-file: '.node-version'
+
+      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -97,14 +91,15 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v5
+        timeout-minutes: 5
         with:
-          version: latest
+          node-version-file: '.node-version'
 
-      # pnpm audit only needs the lock file — skip node_modules install and cache restore
-      # to avoid the setup-node cache timeout on the self-hosted runner.
+      - uses: pnpm/action-setup@v4
+
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
@@ -115,17 +110,14 @@ jobs:
     timeout-minutes: 4
     needs: [audit, lint, typecheck]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         timeout-minutes: 5
         with:
-          node-version: 20
-          cache: pnpm
+          node-version-file: '.node-version'
+
+      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -139,17 +131,14 @@ jobs:
     timeout-minutes: 15
     needs: unit
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         timeout-minutes: 5
         with:
-          node-version: 20
-          cache: pnpm
+          node-version-file: '.node-version'
+
+      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -199,7 +188,7 @@ jobs:
 
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results
           path: |
@@ -224,7 +213,7 @@ jobs:
     # Build verification only on pushes to master (not on every PR)
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # docker/setup-buildx-action creates a separate buildkitd container which
       # cannot inherit the runner's Docker socket group permissions — permission

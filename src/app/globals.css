@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -28,6 +28,17 @@
   --mono:     'IBM Plex Mono', monospace;
   --sans:     'Plus Jakarta Sans', sans-serif;
 
+  /* sidebar */
+  --sidebar-bg: linear-gradient(180deg, #0f0f14 0%, #0b0b0f 100%);
+
+  /* progress bars */
+  --progress-track:  rgba(255,255,255,0.05);
+  --progress-marker: rgba(255,255,255,0.45);
+  --on-fill-text:    #0b0b0f;
+  --pace-good-fill:  rgba(34,197,94,0.85);
+  --pace-warn-fill:  oklch(0.67 0.13 40 / 0.85);
+  --pace-bad-fill:   rgba(239,68,68,0.85);
+
   /* legacy aliases kept for backward compat */
   --bg-old:   #0b0b0f;
   --s1:       #131318;
@@ -43,30 +54,69 @@
 }
 
 [data-theme="light"] {
-  --bg:       #f0f0f6;
-  --surface:  #e8e8f0;
-  --raised:   #fafafd;
-  --border:   #dcdce8;
-  --border-l: #c8c8d8;
-  --text:     #0f0f1a;
-  --text2:    #60607a;
-  --text3:    #9090aa;
-  --accent:   oklch(0.52 0.22 265);
-  --accent-a: oklch(0.52 0.22 265 / 0.12);
-  --green:    #16a34a;
-  --red:      #dc2626;
-  --gold:     oklch(0.55 0.11 40);
-  --bg-old:   #f5f5f9;
-  --s1:       #ebebf2;
-  --s2:       #ffffff;
-  --s3:       #dcdce8;
-  --b1:       #dcdce8;
-  --b2:       #c8c8d8;
-  --text-old: #0f0f1a;
-  --text2-old:#60607a;
-  --muted:    #9090aa;
-  --inc:      #16a34a;
-  --exp:      #dc2626;
+  /* surfaces */
+  --bg:      #F1F4F8;
+  --surface: #FFFFFF;
+  --raised:  #F7F9FC;
+  --border:  #E2E7EE;
+  --border-l:#CDD5DF;
+
+  /* text */
+  --text:  #0F1729;
+  --text2: #5C6679;
+  --text3: #8A93A6;
+
+  /* brand accent (ember — interactive only) */
+  --accent:   #C9624A;
+  --accent-a: rgba(201,98,74,0.12);
+
+  /* semantic */
+  --green: #187A5C;
+  --red:   #C0432A;
+  --gold:  #C47A2A;
+
+  /* extended semantic tokens */
+  --accent-soft: #FCE6DD;
+  --good:        #187A5C;
+  --good-soft:   #D5EDE3;
+  --bad:         #C0432A;
+  --bad-soft:    #F8DDD3;
+  --info:        #2A5BD7;
+  --info-soft:   #DEE7FA;
+
+  /* chart tokens */
+  --chart-grid:   rgba(15,23,41,0.07);
+  --chart-income: #187A5C;
+  --chart-spend:  #C9624A;
+  --chart-net:    #8A93A6;
+
+  /* sidebar */
+  --sidebar-bg: #FFFFFF;
+
+  /* progress bars */
+  --progress-track:  rgba(15,23,41,0.07);
+  --progress-marker: rgba(15,23,41,0.2);
+  --on-fill-text:    #FFFFFF;
+  --pace-good-fill:  rgba(24,122,92,0.9);
+  --pace-warn-fill:  rgba(196,122,42,0.85);
+  --pace-bad-fill:   rgba(192,67,42,0.85);
+
+  /* typography */
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --sans: 'Inter', -apple-system, system-ui, sans-serif;
+
+  /* legacy aliases */
+  --bg-old:    #F1F4F8;
+  --s1:        #FFFFFF;
+  --s2:        #F7F9FC;
+  --s3:        #E2E7EE;
+  --b1:        #E2E7EE;
+  --b2:        #CDD5DF;
+  --text-old:  #0F1729;
+  --text2-old: #5C6679;
+  --muted:     #8A93A6;
+  --inc:       #187A5C;
+  --exp:       #C0432A;
 }
 
 body {

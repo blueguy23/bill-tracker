@@ -31,7 +31,7 @@ export function inferAccountType(extra?: RawSFINAccount['extra'], name?: string)
 
 const BANK_PATTERNS: [RegExp, string][] = [
   [/chase/i, 'Chase'],
-  [/capital one|capitalone/i, 'Capital One'],
+  [/capital one|capitalone|360 checking|360 saving|360 performance/i, 'Capital One'],
   [/bank of america|bofa/i, 'Bank of America'],
   [/wells fargo/i, 'Wells Fargo'],
   [/citibank|citi(?:\s|$)/i, 'Citibank'],
@@ -109,16 +109,22 @@ export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): A
 }
 
 export function transformTransaction(raw: RawSFINTransaction, accountId: string, now: Date = new Date()): Transaction {
+  const isPending = raw.pending ?? raw.extra?.pending ?? false;
+  // Pending transactions have posted=0 (not yet settled); use transacted_at as the display date
+  const postedDate = (raw.posted === 0 && raw.transacted_at)
+    ? new Date(raw.transacted_at * 1000)
+    : new Date(raw.posted * 1000);
+
   return {
     _id: raw.id,
     accountId,
-    posted: new Date(raw.posted * 1000),
+    posted: postedDate,
     amount: parseFloat(raw.amount),
     description: raw.description,
     payee: raw.payee,
     memo: raw.memo ?? null,
     transactedAt: raw.transacted_at != null ? new Date(raw.transacted_at * 1000) : undefined,
-    pending: raw.extra?.pending ?? false,
+    pending: isPending,
     importedAt: now,
     extra: raw.extra,
   };

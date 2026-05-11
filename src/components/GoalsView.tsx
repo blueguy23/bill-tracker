@@ -169,7 +169,7 @@ function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () =>
           </div>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
             <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)' }}>Cancel</button>
-            <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--green)', color: '#0b0b0f', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}>Create Goal</button>
+            <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--green)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}>Create Goal</button>
           </div>
         </div>
       </div>

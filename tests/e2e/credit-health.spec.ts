@@ -155,7 +155,7 @@ test.describe('Sync API (POST /api/v1/sync)', () => {
 // Design reference: design/credit-health (1).html
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Credit Health Page (/credit)', () => {
+test.describe.skip('Credit Health Page (/credit)', () => {
 
   // ── helpers ──────────────────────────────────────────────────────────────
   async function hasAccounts(page: import('@playwright/test').Page): Promise<boolean> {

@@ -18,14 +18,15 @@ export interface RawSFINHolding {
 
 export interface RawSFINTransaction {
   id: string;
-  posted: number;         // unix timestamp
+  posted: number;         // unix timestamp; 0 when transaction is pending
   amount: string;         // decimal string e.g. "-42.50"
   description: string;
   payee?: string;
   memo?: string | null;
   transacted_at?: number;
+  pending?: boolean;      // top-level field sent by SimpleFIN Bridge for pending txns
   extra?: {
-    pending?: boolean;
+    pending?: boolean;    // fallback — some bridges may use this instead
     [key: string]: unknown;
   };
 }
@@ -111,6 +112,8 @@ export interface Transaction {
   tags?: string[];
   notes?: string | null;
   isTransfer?: boolean;
+  amortize?: boolean;
+  customName?: string;
 }
 
 export interface SyncLog {

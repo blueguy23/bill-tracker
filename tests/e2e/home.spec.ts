@@ -24,9 +24,9 @@ test.describe('Dashboard Page (/)', () => {
     test('should render the three metric cards', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('Monthly Net', { exact: true })).toBeVisible();
-      await expect(page.getByText('Bills Owed', { exact: true })).toBeVisible();
-      await expect(page.getByText('AutoPay', { exact: true })).toBeVisible();
+      await expect(page.getByText('Money in vs out', { exact: true })).toBeVisible();
+      await expect(page.getByText('Bills this month', { exact: true })).toBeVisible();
+      await expect(page.getByText('Savings rate', { exact: true })).toBeVisible();
     });
 
     test('should render metric card values as USD currency strings', async ({ page }) => {
@@ -70,7 +70,6 @@ test.describe('Sidebar Navigation', () => {
     await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Payments' })).toBeVisible();
     await expect(nav.locator('a', { hasText: /Budget.*Goals/ })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Credit Health' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Settings' })).toBeVisible();
   });
 

@@ -36,6 +36,7 @@ function serializeBill(bill: Bill): BillResponse {
     recurrenceInterval: bill.recurrenceInterval,
     url: bill.url,
     notes: bill.notes,
+    renewalNote: bill.renewalNote,
     paymentDescriptionHint: bill.paymentDescriptionHint,
     createdAt: toISOString(bill.createdAt, 'createdAt'),
     updatedAt: toISOString(bill.updatedAt, 'updatedAt'),
@@ -61,9 +62,16 @@ function validateCreateDto(body: unknown): string | null {
     if (!isRecurrenceInterval(b.recurrenceInterval)) {
       return `recurrenceInterval must be one of: ${RECURRENCE_INTERVALS.join(', ')} when isRecurring is true`;
     }
-    const day = Number(b.dueDate);
-    if (!Number.isInteger(day) || day < 1 || day > 31) {
-      return 'dueDate must be an integer between 1 and 31 for recurring bills';
+    if (b.recurrenceInterval === 'yearly') {
+      // Yearly bills use a full date (the annual due date) instead of a day-of-month
+      if (typeof b.dueDate !== 'string' || isNaN(Date.parse(b.dueDate))) {
+        return 'dueDate must be a valid ISO date string for yearly bills';
+      }
+    } else {
+      const day = Number(b.dueDate);
+      if (!Number.isInteger(day) || day < 1 || day > 31) {
+        return 'dueDate must be an integer between 1 and 31 for recurring bills';
+      }
     }
   } else {
     if (typeof b.dueDate !== 'string' || isNaN(Date.parse(b.dueDate))) {

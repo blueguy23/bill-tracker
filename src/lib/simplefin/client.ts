@@ -181,6 +181,25 @@ export class SimpleFINClient {
       }
     }
 
+    // MX bridge sends conn_id (not org) — group by it and propagate known names to Unknown siblings
+    const rawByAccountId = new Map(raw.accounts.map(a => [a.id, a]));
+    const connIdToOrgName = new Map<string, string>();
+    for (const account of accounts) {
+      const connId = (rawByAccountId.get(account._id) as Record<string, unknown> | undefined)?.conn_id as string | undefined;
+      if (connId && account.orgName !== 'Unknown') {
+        connIdToOrgName.set(connId, account.orgName);
+      }
+    }
+    for (const account of accounts) {
+      if (account.orgName === 'Unknown') {
+        const connId = (rawByAccountId.get(account._id) as Record<string, unknown> | undefined)?.conn_id as string | undefined;
+        if (connId) {
+          const resolved = connIdToOrgName.get(connId);
+          if (resolved) account.orgName = resolved;
+        }
+      }
+    }
+
     const errors = (raw.errors ?? []).map(transformError);
 
     return { accounts, transactions, errors };

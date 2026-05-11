@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UserProfile } from '@/types/userProfile';
 import { sectionCard, sectionHeader, sectionHeaderIcon, formRow, formSelect, btnPrimary } from './settingsStyles';
+
+const NORM_GATE_KEY = 'normalized_mode_enabled';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface Props {
-  initial: Pick<UserProfile, 'theme' | 'defaultDateRange' | 'hideTransfers' | 'compactRows' | 'numberFormat'>;
+  initial: Pick<UserProfile, 'defaultDateRange' | 'hideTransfers' | 'compactRows' | 'numberFormat'>;
 }
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -22,12 +24,25 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 }
 
 export function SectionPreferences({ initial }: Props) {
-  const [theme, setTheme]               = useState(initial.theme);
-  const [dateRange, setDateRange]       = useState(initial.defaultDateRange);
-  const [hideTransfers, setHideTransfers] = useState(initial.hideTransfers);
-  const [compactRows, setCompactRows]   = useState(initial.compactRows);
-  const [numberFormat, setNumberFormat] = useState(initial.numberFormat);
-  const [status, setStatus]             = useState<SaveStatus>('idle');
+  const [dateRange, setDateRange]           = useState(initial.defaultDateRange);
+  const [hideTransfers, setHideTransfers]   = useState(initial.hideTransfers);
+  const [compactRows, setCompactRows]       = useState(initial.compactRows);
+  const [numberFormat, setNumberFormat]     = useState(initial.numberFormat);
+  const [normalizedMode, setNormalizedMode] = useState(false);
+  const [status, setStatus]                 = useState<SaveStatus>('idle');
+
+  useEffect(() => {
+    setNormalizedMode(localStorage.getItem(NORM_GATE_KEY) === 'true');
+  }, []);
+
+  function handleNormalizedMode(v: boolean) {
+    setNormalizedMode(v);
+    localStorage.setItem(NORM_GATE_KEY, String(v));
+    if (!v) {
+      // Reset the saved view so the dashboard defaults back to actual
+      localStorage.setItem('cashflow_view_mode', 'actual');
+    }
+  }
 
   async function handleSave() {
     setStatus('saving');
@@ -35,7 +50,7 @@ export function SectionPreferences({ initial }: Props) {
       const res = await fetch('/api/v1/user-profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, defaultDateRange: dateRange, hideTransfers, compactRows, numberFormat }),
+        body: JSON.stringify({ defaultDateRange: dateRange, hideTransfers, compactRows, numberFormat }),
       });
       setStatus(res.ok ? 'saved' : 'error');
     } catch {
@@ -53,18 +68,6 @@ export function SectionPreferences({ initial }: Props) {
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Preferences</div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>Display and behaviour settings</div>
         </div>
-      </div>
-
-      <div style={formRow}>
-        <div>
-          <div style={{ fontSize: 13, color: 'var(--text)' }}>Theme</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>App color scheme</div>
-        </div>
-        <select data-testid="theme-select" value={theme} onChange={(e) => setTheme(e.target.value as UserProfile['theme'])} style={formSelect}>
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-          <option value="auto">Auto (system)</option>
-        </select>
       </div>
 
       <div style={formRow}>
@@ -106,6 +109,14 @@ export function SectionPreferences({ initial }: Props) {
           <option value="en-GB">1,234.56 (UK)</option>
           <option value="de-DE">1.234,56 (EU)</option>
         </select>
+      </div>
+
+      <div style={formRow}>
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--text)' }}>Enable Normalized Mode</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Unlocks an Actualized / Normalized toggle on the dashboard. Normalized spreads annual charges evenly across 12 months so your cash flow reflects a true monthly cost. When off, the dashboard shows real cash outflows only with no toggle or labels.</div>
+        </div>
+        <Toggle on={normalizedMode} onChange={handleNormalizedMode} />
       </div>
 
       <div style={{ padding: '13px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>

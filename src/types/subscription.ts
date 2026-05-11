@@ -2,7 +2,7 @@ import type { BillCategory, RecurringType } from './bill';
 
 export type { RecurringType } from './bill';
 
-export type SubscriptionInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+export type SubscriptionInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 export type SubscriptionConfidence = 'high' | 'medium' | 'low';
 
 export const SUBSCRIPTION_INTERVALS: SubscriptionInterval[] = [
@@ -10,6 +10,7 @@ export const SUBSCRIPTION_INTERVALS: SubscriptionInterval[] = [
   'biweekly',
   'monthly',
   'quarterly',
+  'yearly',
 ];
 
 export const SUBSCRIPTION_CONFIDENCES: SubscriptionConfidence[] = ['high', 'medium', 'low'];
@@ -31,6 +32,8 @@ export interface DetectedSubscription {
   recurringType: RecurringType;
   typeConfidence: SubscriptionConfidence;
   signals: string[];
+  /** _id of the most recent transaction in this pattern — used for amortize flagging */
+  lastTransactionId: string;
 }
 
 export interface DismissedSubscription {
@@ -56,6 +59,7 @@ export interface DetectedSubscriptionResponse {
   recurringType: RecurringType;
   typeConfidence: SubscriptionConfidence;
   signals: string[];
+  lastTransactionId: string;
 }
 
 export interface SuggestedMatch {

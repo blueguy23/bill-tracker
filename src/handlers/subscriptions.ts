@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import type { StrictDB } from 'strictdb';
 import { listTransactionsForDetection } from '@/adapters/accounts';
 import { listBills, listSubscriptionBills, createBill, updateLastChargedAmount } from '@/adapters/bills';
+import { recordCharge } from '@/adapters/chargeHistory';
 import { dismissSubscription, listDismissedSubscriptions } from '@/adapters/subscriptions';
 import { detectSubscriptions } from '@/lib/subscriptions/detect';
 import type { DetectedSubscription, DetectedSubscriptionResponse } from '@/types/subscription';
@@ -29,6 +30,7 @@ function serializeDetected(d: DetectedSubscription): DetectedSubscriptionRespons
     recurringType: d.recurringType,
     typeConfidence: d.typeConfidence,
     signals: d.signals,
+    lastTransactionId: d.lastTransactionId,
   };
 }
 
@@ -48,12 +50,15 @@ export async function handleListSubscriptions(db: StrictDB): Promise<Response> {
   const trackedIds     = new Set(subBills.map((b) => b.detectionId).filter(Boolean) as string[]);
   const trackedBillMap = new Map(subBills.filter((b) => b.detectionId).map((b) => [b.detectionId!, b]));
 
-  // Silently update lastChargedAmount when detected price drifts from the tracked bill amount
-  const priceUpdates: Promise<void>[] = [];
+  // Silently update lastChargedAmount + record charge history when price drifts
+  const priceUpdates: Promise<unknown>[] = [];
   for (const d of detected) {
     const bill = trackedBillMap.get(d.id);
     if (bill && Math.abs((bill.lastChargedAmount ?? bill.amount) - d.amount) > 0.5) {
-      priceUpdates.push(updateLastChargedAmount(db, bill._id, d.amount));
+      priceUpdates.push(
+        updateLastChargedAmount(db, bill._id, d.amount),
+        recordCharge(db, bill._id, d.amount),
+      );
     }
   }
   await Promise.all(priceUpdates);
@@ -123,7 +128,9 @@ export async function handleAnchorSubscription(
   const bill = await createBill(db, {
     name:               b.name as string,
     amount:             b.amount as number,
-    dueDate:            new Date(b.lastCharged as string).getDate(),
+    dueDate:            b.interval === 'yearly'
+      ? new Date(b.lastCharged as string).toISOString()
+      : new Date(b.lastCharged as string).getDate(),
     category:           b.category as BillCategory,
     isRecurring:        true,
     recurrenceInterval: b.interval as SubscriptionInterval,
@@ -134,6 +141,9 @@ export async function handleAnchorSubscription(
     notes:              rawDescriptions.length > 0 ? rawDescriptions.join(', ') : undefined,
     classificationMeta: b.classificationMeta as { recurringType: RecurringType; billScore: number; subScore: number; signals: string[] } | undefined,
   });
+
+  // Seed charge history with the initial detected charge
+  await recordCharge(db, bill._id, b.amount as number);
 
   return NextResponse.json({ anchored: true, billId: bill._id });
 }
