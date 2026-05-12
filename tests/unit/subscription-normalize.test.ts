@@ -80,7 +80,7 @@ describe('inferCategory', () => {
     expect(inferCategory('riverside apartment rent')).toBe('rent');
   });
 
-  it('defaults to subscriptions for unknown recurring charge', () => {
-    expect(inferCategory('mystery charge monthly')).toBe('subscriptions');
+  it('defaults to other for unknown recurring charge', () => {
+    expect(inferCategory('mystery charge monthly')).toBe('other');
   });
 });

@@ -33,7 +33,7 @@ export interface RawSFINTransaction {
 
 export interface RawSFINAccount {
   id: string;
-  org: RawSFINOrg;
+  org?: RawSFINOrg;
   name: string;
   currency: string;
   balance: string;                   // decimal string

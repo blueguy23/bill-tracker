@@ -24,9 +24,8 @@ function dateRangeBounds(range: DateRange): { startDate?: string; endDate?: stri
   return { startDate: start.toISOString().slice(0, 10), endDate: range === 'last-month' ? end.toISOString().slice(0, 10) : undefined };
 }
 
-function isTransfer(d: string) {
-  const l = d.toLowerCase();
-  return l.includes('zelle') || l.includes('withdrawal to') || l.includes('deposit from') || l.includes('transfer') || l.includes('wire');
+function isTransfer(t: Transaction) {
+  return t.isTransfer === true;
 }
 
 interface Props { initialTransactions: Transaction[]; initialHasMore: boolean; accounts: Account[] }
@@ -61,7 +60,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const { displayed, summary, pendingTxns, dateGroups } = useMemo(() => {
     const q = search.toLowerCase();
     let list = transactions.filter(t => {
-      if (hideTransfers && isTransfer(t.description)) return false;
+      if (hideTransfers && isTransfer(t)) return false;
       if (q && !(t.payee ?? t.description).toLowerCase().includes(q) && !t.description.toLowerCase().includes(q)) return false;
       if (catFilter !== 'all' && t.category !== catFilter) return false;
       return true;

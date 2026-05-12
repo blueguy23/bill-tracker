@@ -13,7 +13,7 @@ interface Props {
 const EVENTS = [
   { event: 'Bill Due Soon',     desc: (days: number) => `Bills due within ${days} days`,          color: 'var(--gold)' },
   { event: 'Bill Overdue',      desc: () => 'Unpaid bills past their due date',                   color: 'var(--red)' },
-  { event: 'Budget Warning',    desc: () => 'Category spending reaches 80%+',                     color: 'var(--gold)' },
+  { event: 'Budget Warning',    desc: () => 'Category spending reaches 90%+',                     color: 'var(--gold)' },
   { event: 'Budget Exceeded',   desc: () => 'Category spending exceeds budget',                   color: 'var(--red)' },
   { event: 'Sync Completed',    desc: () => 'SimpleFIN sync finishes successfully',               color: 'var(--green)' },
   { event: 'Statement Closing', desc: () => 'Pay down before close to lower reported utilization', color: 'var(--gold)' },
@@ -28,7 +28,7 @@ export function SectionNotifications({ configured, dueSoonDays }: Props) {
   async function handleTest() {
     setStatus('loading'); setMessage('');
     try {
-      const res  = await fetch('/api/v1/notifications/test');
+      const res  = await fetch('/api/v1/notifications/test', { method: 'POST' });
       const body = await res.json() as { sent?: boolean; message?: string; error?: string };
       if (res.ok && body.sent) { setStatus('success'); setMessage(body.message ?? 'Test notification sent'); }
       else                     { setStatus('error');   setMessage(body.error   ?? 'Failed to send'); }

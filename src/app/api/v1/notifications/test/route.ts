@@ -3,7 +3,7 @@ import { getDb } from '@/adapters/db';
 import { isWebhookConfigured } from '@/lib/discord/webhook';
 import { notifyTest } from '@/handlers/notifications';
 
-export async function GET(): Promise<Response> {
+export async function POST(): Promise<Response> {
   if (!isWebhookConfigured()) {
     return NextResponse.json(
       { error: 'DISCORD_WEBHOOK_URL is not configured' },

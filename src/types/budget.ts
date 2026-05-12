@@ -7,6 +7,7 @@ export interface Budget {
   category: BillCategory;
   monthlyAmount: number;
   rolloverBalance: number;
+  lastRolloverMonth?: string;
   updatedAt: Date;
 }
 
