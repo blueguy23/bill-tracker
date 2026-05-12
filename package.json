@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "pnpm test:kill-ports && playwright test",

@@ -8,12 +8,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/unit/**/*.test.ts'],
-    exclude: ['tests/e2e/**/*', 'tests/integration/**/*'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/**/*.ts', 'scripts/content/**/*.ts'],
-    },
+    include: ['tests/integration/**/*.test.ts'],
+    globalSetup: ['tests/integration/setup.ts'],
+    testTimeout: 15_000,
   },
 });
