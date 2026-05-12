@@ -14,12 +14,12 @@ test.describe('Payments Page (/payments)', () => {
       await expect(page.locator('h1')).toContainText('Payments');
     });
 
-    test('should render Bills, Subscriptions, and Recurring tabs', async ({ page }) => {
+    test('should render Payments and Calendar tabs', async ({ page }) => {
       await page.goto('/payments');
 
-      await expect(page.locator('button', { hasText: 'Bills' })).toBeVisible();
-      await expect(page.locator('button', { hasText: 'Subscriptions' })).toBeVisible();
-      await expect(page.locator('button', { hasText: 'Recurring' })).toBeVisible();
+      await expect(page.locator('[data-testid="payments-tabs"]')).toBeVisible();
+      await expect(page.locator('button', { hasText: 'Payments' }).first()).toBeVisible();
+      await expect(page.locator('button', { hasText: 'Calendar' })).toBeVisible();
     });
 
     test('should render the sidebar with navigation links', async ({ page }) => {

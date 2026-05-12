@@ -19,7 +19,7 @@ const DEFAULTS: Omit<UserProfile, '_id'> = {
 
 export async function getUserProfile(db: StrictDB): Promise<UserProfile> {
   const doc = await db.queryOne<UserProfile>(COLLECTION, { _id: SINGLETON_ID });
-  return doc ?? { _id: SINGLETON_ID, ...DEFAULTS };
+  return { _id: SINGLETON_ID, ...DEFAULTS, ...doc };
 }
 
 export async function upsertUserProfile(db: StrictDB, patch: UserProfilePatch): Promise<void> {

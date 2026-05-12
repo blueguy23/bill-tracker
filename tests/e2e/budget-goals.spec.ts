@@ -62,19 +62,19 @@ test.describe('Budget & Goals (/budget)', () => {
   test.describe('4.2 — hero morphs when Goals tab is clicked', () => {
     test('should show goals-hero-total when Goals tab is active', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await expect(page.locator('[data-testid="goals-hero-total"]')).toBeVisible();
     });
 
     test('should hide budget-hero-remaining when Goals tab is active', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await expect(page.locator('[data-testid="budget-hero-remaining"]')).not.toBeVisible();
     });
 
     test('should show New Goal CTA button when Goals tab is active', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await expect(page.locator('[data-testid="add-goal-btn"]')).toBeVisible();
       await expect(page.locator('[data-testid="add-goal-btn"]')).toContainText('New Goal');
     });
@@ -83,8 +83,8 @@ test.describe('Budget & Goals (/budget)', () => {
   test.describe('4.3 — hero morphs back when Budget tab is clicked', () => {
     test('should restore budget-hero-remaining when switching back to Budget tab', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
-      await page.locator('[data-testid="tab-budget"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
+      await page.locator('[data-testid="tab-budget"]').first().click();
       await expect(page.locator('[data-testid="budget-hero-remaining"]')).toBeVisible();
       await expect(page.locator('[data-testid="goals-hero-total"]')).not.toBeVisible();
     });
@@ -130,13 +130,13 @@ test.describe('Budget & Goals (/budget)', () => {
   test.describe('4.7 — Goals tab card grid', () => {
     test('should show the goals grid when Goals tab is active', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await expect(page.locator('[data-testid="goals-grid"]')).toBeVisible();
     });
 
     test('should show the add-goal-card in the grid', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await expect(page.locator('[data-testid="add-goal-card"]')).toBeVisible();
     });
   });
@@ -144,7 +144,7 @@ test.describe('Budget & Goals (/budget)', () => {
   test.describe('4.11 — Add goal card', () => {
     test('should open new goal flow when add-goal-card is clicked', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await page.locator('[data-testid="add-goal-card"]').click();
       await expect(page.locator('text=New Goal').first()).toBeVisible();
     });
@@ -153,7 +153,7 @@ test.describe('Budget & Goals (/budget)', () => {
   test.describe('4.12 — New Goal button from hero', () => {
     test('should open new goal flow when add-goal-btn is clicked', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await page.locator('[data-testid="add-goal-btn"]').click();
       await expect(page.locator('text=New Goal').first()).toBeVisible();
     });
@@ -171,7 +171,7 @@ test.describe('Budget & Goals (/budget)', () => {
   test.describe('URL state', () => {
     test('should update URL to ?tab=goals when Goals tab is clicked', async ({ page }) => {
       await page.goto('/budget');
-      await page.locator('[data-testid="tab-goals"]').click();
+      await page.locator('[data-testid="tab-goals"]').first().click();
       await expect(page).toHaveURL(/[?&]tab=goals/);
     });
 
