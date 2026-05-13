@@ -11,7 +11,8 @@ export async function dismissSubscription(
   try {
     await db.insertOne<DismissedSubscription>(COLLECTION, doc);
   } catch (err: unknown) {
-    const isDuplicate = err instanceof Error && 'code' in err && (err as { code: number }).code === 11000;
+    const isDuplicate = err instanceof Error && 'code' in err &&
+      ((err as { code: number | string }).code === 11000 || (err as { code: string }).code === 'DUPLICATE_KEY');
     if (!isDuplicate) throw err;
   }
   return doc;

@@ -1,5 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+async function openSidebarIfMobile(page: import('@playwright/test').Page) {
+  const menuBtn = page.getByLabel('Open menu');
+  if (await menuBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+    await menuBtn.click();
+    await page.locator('aside nav').waitFor({ state: 'visible' });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Payments Page — /payments (merged Recurring Bills + Subscriptions)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +76,7 @@ test.describe('Payments Page (/payments)', () => {
   test.describe('navigation back to dashboard', () => {
     test('should navigate to dashboard when Dashboard sidebar link is clicked', async ({ page }) => {
       await page.goto('/payments');
+      await openSidebarIfMobile(page);
 
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
 
@@ -316,6 +325,7 @@ test.describe('Budget Page (/budget)', () => {
   test.describe('navigation', () => {
     test('should navigate to dashboard when Dashboard link is clicked', async ({ page }) => {
       await page.goto('/budget');
+      await openSidebarIfMobile(page);
 
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
 
@@ -394,6 +404,7 @@ test.describe.skip('Credit Health Page (/credit-health)', () => {
   test.describe('navigation', () => {
     test('should navigate to dashboard when Dashboard link is clicked', async ({ page }) => {
       await page.goto('/credit-health');
+      await openSidebarIfMobile(page);
       await page.locator('aside nav a', { hasText: 'Dashboard' }).click();
       await expect(page).toHaveURL('/');
     });

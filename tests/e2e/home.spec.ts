@@ -1,5 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+async function openSidebarIfMobile(page: import('@playwright/test').Page) {
+  const menuBtn = page.getByLabel('Open menu');
+  if (await menuBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+    await menuBtn.click();
+    await page.locator('aside nav').waitFor({ state: 'visible' });
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Dashboard Page — /
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +99,7 @@ test.describe('Sidebar Navigation', () => {
 
   test('should navigate to /payments when Payments link is clicked', async ({ page }) => {
     await page.goto('/');
+    await openSidebarIfMobile(page);
 
     await page.locator('aside nav a', { hasText: 'Payments' }).click();
 
@@ -100,6 +109,7 @@ test.describe('Sidebar Navigation', () => {
 
   test('should navigate to /budget when Budget & Goals link is clicked', async ({ page }) => {
     await page.goto('/');
+    await openSidebarIfMobile(page);
 
     await page.locator('aside nav a', { hasText: /Budget.*Goals/ }).click();
 
@@ -109,6 +119,7 @@ test.describe('Sidebar Navigation', () => {
 
   test('should navigate to /transactions when Transactions link is clicked', async ({ page }) => {
     await page.goto('/');
+    await openSidebarIfMobile(page);
 
     await page.locator('aside nav a', { hasText: 'Transactions' }).click();
 
