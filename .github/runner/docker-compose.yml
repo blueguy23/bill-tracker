@@ -54,10 +54,10 @@ services:
 
     healthcheck:
       test: ["CMD", "/deep-healthcheck.sh"]
-      interval: 60s
+      interval: 30s
       timeout: 15s
       start_period: 120s
-      retries: 3
+      retries: 1
 
     logging:
       driver: "json-file"
