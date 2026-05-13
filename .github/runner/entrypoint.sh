@@ -80,7 +80,27 @@ trap _cleanup TERM INT
 # Ephemeral runners auto-deregister after each job, so no stale cleanup needed.
 RUNNER_LOG=/tmp/runner-output.log
 
+remove_stale_runner() {
+  local RUNNER_ID
+  RUNNER_ID=$(curl -fsSL \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners" \
+    | jq -r ".runners[] | select(.name==\"${RUNNER_NAME}\") | .id" 2>/dev/null)
+
+  if [[ -n "$RUNNER_ID" ]]; then
+    log "Removing stale runner registration (id=${RUNNER_ID})..."
+    curl -fsSL -X DELETE \
+      -H "Authorization: token ${GITHUB_PAT}" \
+      -H "Accept: application/vnd.github+json" \
+      "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners/${RUNNER_ID}" || true
+    sleep 2
+  fi
+}
+
 register() {
+  remove_stale_runner
+
   local REG_TOKEN
   REG_TOKEN=$(curl -fsSL -X POST \
     -H "Authorization: token ${GITHUB_PAT}" \
