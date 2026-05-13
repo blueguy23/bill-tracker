@@ -50,18 +50,15 @@ export async function handleListSubscriptions(db: StrictDB): Promise<Response> {
   const trackedIds     = new Set(subBills.map((b) => b.detectionId).filter(Boolean) as string[]);
   const trackedBillMap = new Map(subBills.filter((b) => b.detectionId).map((b) => [b.detectionId!, b]));
 
-  // Silently update lastChargedAmount + record charge history when price drifts
+  // Update lastChargedAmount when price actually drifts (skip charge history on reads)
   const priceUpdates: Promise<unknown>[] = [];
   for (const d of detected) {
     const bill = trackedBillMap.get(d.id);
     if (bill && Math.abs((bill.lastChargedAmount ?? bill.amount) - d.amount) > 0.5) {
-      priceUpdates.push(
-        updateLastChargedAmount(db, bill._id, d.amount),
-        recordCharge(db, bill._id, d.amount),
-      );
+      priceUpdates.push(updateLastChargedAmount(db, bill._id, d.amount));
     }
   }
-  await Promise.all(priceUpdates);
+  if (priceUpdates.length) await Promise.all(priceUpdates);
 
   // Return only pending items — not dismissed and not already tracked in bills
   const pending = detected.filter((s) => !dismissedIds.has(s.id) && !trackedIds.has(s.id));
@@ -114,9 +111,11 @@ export async function handleAnchorSubscription(
     typeof b.name !== 'string'     || !b.name  ||
     typeof b.amount !== 'number'              ||
     typeof b.interval !== 'string'            ||
-    typeof b.category !== 'string'
+    typeof b.category !== 'string'            ||
+    typeof b.lastCharged !== 'string'         ||
+    isNaN(Date.parse(b.lastCharged as string))
   ) {
-    return NextResponse.json({ error: 'id, name, amount, interval, category are required' }, { status: 400 });
+    return NextResponse.json({ error: 'id, name, amount, interval, category, lastCharged (valid date) are required' }, { status: 400 });
   }
 
   const recurringType   = (b.recurringType as RecurringType | undefined) ?? 'subscription';

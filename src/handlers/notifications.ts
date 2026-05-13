@@ -36,6 +36,7 @@ const COOLDOWNS: Partial<Record<NotificationEvent, number>> = {
   bill_overdue: 24 * HOUR,
   budget_warning: 6 * HOUR,
   budget_exceeded: 6 * HOUR,
+  sync_completed: 1 * HOUR,
   sync_failed: 1 * HOUR,
   daily_digest: 20 * HOUR,
   statement_close_alert: 24 * HOUR,
@@ -91,7 +92,7 @@ export async function notifyBudgetExceeded(db: StrictDB, p: BudgetAlertPayload):
 
 export async function notifySyncCompleted(db: StrictDB, p: SyncCompletedPayload): Promise<void> {
   if (!isWebhookConfigured()) return;
-  await dispatchNotification(db, 'sync_completed', `sync_completed:${Date.now()}`, buildSyncCompletedEmbed(p));
+  await dispatchNotification(db, 'sync_completed', 'sync_completed:global', buildSyncCompletedEmbed(p));
 }
 
 export async function notifySyncFailed(db: StrictDB, p: SyncFailedPayload): Promise<void> {

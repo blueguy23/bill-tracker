@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { runDailyDigest } from '@/handlers/notificationDigest';
 
-export async function GET(): Promise<Response> {
+export async function POST(): Promise<Response> {
   try {
     const db = await getDb();
     const result = await runDailyDigest(db);

@@ -10,8 +10,10 @@ export async function dismissSubscription(
   const doc: DismissedSubscription = { _id: id, dismissedAt: new Date() };
   try {
     await db.insertOne<DismissedSubscription>(COLLECTION, doc);
-  } catch {
-    // Swallow duplicate key errors — dismissing twice is idempotent
+  } catch (err: unknown) {
+    const isDuplicate = err instanceof Error && 'code' in err &&
+      ((err as { code: number | string }).code === 11000 || (err as { code: string }).code === 'DUPLICATE_KEY');
+    if (!isDuplicate) throw err;
   }
   return doc;
 }

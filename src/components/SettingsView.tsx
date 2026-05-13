@@ -101,7 +101,7 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
   async function handleSendTest() {
     setTestStatus('loading'); setTestMessage('');
     try {
-      const res  = await fetch('/api/v1/notifications/test');
+      const res  = await fetch('/api/v1/notifications/test', { method: 'POST' });
       const body = await res.json() as { sent?: boolean; message?: string; error?: string };
       if (res.ok && body.sent) { setTestStatus('success'); setTestMessage(body.message ?? 'Test notification sent'); }
       else { setTestStatus('error'); setTestMessage(body.error ?? 'Failed to send test notification'); }
@@ -228,7 +228,7 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
           {[
             { event: 'Bill Due Soon',       desc: `Bills due within ${dueSoonDays} days`,             color: 'var(--gold)' },
             { event: 'Bill Overdue',        desc: 'Unpaid bills past their due date',                 color: 'var(--red)' },
-            { event: 'Budget Warning',      desc: 'Category spending reaches 80%+',                   color: 'var(--gold)' },
+            { event: 'Budget Warning',      desc: 'Category spending reaches 90%+',                   color: 'var(--gold)' },
             { event: 'Budget Exceeded',     desc: 'Category spending exceeds budget',                 color: 'var(--red)' },
             { event: 'Sync Completed',      desc: 'SimpleFIN sync finishes successfully',             color: 'var(--green)' },
             { event: 'Statement Closing',   desc: 'Pay down before close to lower reported utilization', color: 'var(--gold)' },

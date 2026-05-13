@@ -1,13 +1,15 @@
 name: CI
 # Job execution order:
-#   dora-start ──────────────────────────────────────┐
-#   [Security Audit, Lint, TypeScript]  (parallel)   │
-#          ↓ (all three must pass)                   │
-#       [Unit Tests]                                 │
-#          ↓                                         │
-#       [E2E Tests] ──────────────────────────────── ┤
-#          ↓                                         │
-#       [dora-emit] ◄────────────────────────────────┘
+#   dora-start ──────────────────────────────────────────┐
+#   [SAST, Security Audit, Lint, TypeScript]  (parallel) │
+#          ↓ (all four must pass)                        │
+#       [Unit Tests]                                     │
+#          ↓                                             │
+#       [Integration Tests]                              │
+#          ↓                                             │
+#       [E2E Tests] ────────────────────────────────── ──┤
+#          ↓                                             │
+#       [dora-emit] ◄────────────────────────────────────┘
 #          ↓
 #       [dora-summary]
 
@@ -45,7 +47,22 @@ jobs:
           fi
           echo "commit-epoch=$EPOCH" >> "$GITHUB_OUTPUT"
 
-  # ── 1. TypeScript typecheck ───────────────────────────────────────────────────
+  # ── 1a. SAST (Semgrep) ─────────────────────────────────────────────────────────
+  semgrep:
+    name: SAST (Semgrep)
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run Semgrep
+        run: |
+          set -euo pipefail
+          docker run --rm -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep \
+            semgrep scan --config p/javascript --config p/typescript --error /src
+
+  # ── 1b. TypeScript typecheck ──────────────────────────────────────────────────
   typecheck:
     name: TypeScript
     runs-on: self-hosted
@@ -108,7 +125,7 @@ jobs:
     name: Unit Tests
     runs-on: self-hosted
     timeout-minutes: 4
-    needs: [audit, lint, typecheck]
+    needs: [semgrep, audit, lint, typecheck]
     steps:
       - uses: actions/checkout@v5
 
@@ -124,12 +141,39 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
-  # ── 4. E2E tests ──────────────────────────────────────────────────────────────
+  # ── 4. Integration tests ───────────────────────────────────────────────────────
+  integration:
+    name: Integration Tests
+    runs-on: self-hosted
+    timeout-minutes: 6
+    needs: unit
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        timeout-minutes: 5
+        with:
+          node-version-file: '.node-version'
+
+      - uses: pnpm/action-setup@v4
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Integration tests
+        run: pnpm test:integration
+        env:
+          STRICTDB_URI: mongodb://localhost:27017/bill-tracker-integration
+          DATABASE_NAME: bill-tracker-integration
+          NODE_ENV: test
+          AUTH_SECRET: test-secret-for-ci-only-not-used-in-prod
+          AUTH_PASSWORD: testpassword
+
+  # ── 5. E2E tests ──────────────────────────────────────────────────────────────
   e2e:
     name: E2E Tests
     runs-on: self-hosted
     timeout-minutes: 15
-    needs: unit
+    needs: integration
     steps:
       - uses: actions/checkout@v5
 
@@ -200,7 +244,7 @@ jobs:
     name: test
     runs-on: self-hosted
     timeout-minutes: 4
-    needs: [typecheck, lint, audit, unit, e2e]
+    needs: [semgrep, typecheck, lint, audit, unit, integration, e2e]
     steps:
       - run: echo "All checks passed"
 

@@ -56,7 +56,7 @@ export async function incrementUrlUnits(
 ): Promise<void> {
   const date = todayUTC();
   const existing = await db.queryOne<SyncLog>(COLLECTION, { date });
-  if (!existing) return;
+  if (!existing) throw new Error('[syncLog] No log for today — getTodayLog must be called first');
 
   const urlUnits = { ...(existing.urlUnits ?? {}) };
   urlUnits[urlHash] = (urlUnits[urlHash] ?? 0) + units;

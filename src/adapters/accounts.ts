@@ -1,5 +1,6 @@
 import type { StrictDB } from 'strictdb';
 import type { Account, Transaction } from '@/lib/simplefin/types';
+import type { CategoryRule } from '@/lib/categorization/types';
 import { categorize } from '@/lib/categorization/engine';
 import { listCategoryRules } from '@/adapters/categoryRules';
 import { classifyTransfer } from '@/lib/classifyTransfer';
@@ -11,16 +12,17 @@ export async function upsertAccount(db: StrictDB, account: Account): Promise<voi
   await db.updateOne<Account>(ACCOUNTS, { _id: account._id }, { $set: account }, true);
 }
 
-export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAccountIds: Set<string>, transferRe?: RegExp): Promise<boolean> {
+export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAccountIds: Set<string>, transferRe?: RegExp, rules?: CategoryRule[]): Promise<boolean> {
   // Skip settled transactions that are already in the DB
   const existing = await db.queryOne<Transaction>(TRANSACTIONS, { _id: txn._id });
   if (existing && !existing.pending) return false; // already settled, skip
 
   // Auto-categorize only if the user hasn't manually set a category
   const preserveCategory = existing?.categorySource === 'user';
+  const resolvedRules = rules ?? await listCategoryRules(db);
   const categorized: Transaction = preserveCategory
     ? { ...txn, category: existing.category, categorySource: 'user' }
-    : { ...txn, category: categorize(txn.description, txn.memo, await listCategoryRules(db)), categorySource: 'auto' };
+    : { ...txn, category: categorize(txn.description, txn.memo, resolvedRules), categorySource: 'auto' };
 
   const toSave: Transaction = { ...categorized, isTransfer: classifyTransfer(txn, creditAccountIds, transferRe) };
 
@@ -152,9 +154,9 @@ export async function getCashFlowForRange(
 }
 
 export async function markTransfersById(db: StrictDB, ids: string[]): Promise<void> {
-  for (const id of ids) {
-    await db.updateOne<Transaction>(TRANSACTIONS, { _id: id }, { $set: { isTransfer: true } });
-  }
+  await Promise.all(ids.map(id =>
+    db.updateOne<Transaction>(TRANSACTIONS, { _id: id }, { $set: { isTransfer: true } }),
+  ));
 }
 
 export async function listTransactionsForDetection(

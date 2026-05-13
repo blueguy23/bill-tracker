@@ -16,7 +16,7 @@ const DIGEST_KEY = 'daily_digest:global';
 
 export interface DigestResult {
   sent: boolean;
-  reason?: 'no_webhook' | 'already_sent_today';
+  reason?: 'no_webhook' | 'already_sent_today' | 'send_failed';
   billsDueSoon: number;
   overdueCount: number;
   budgetWarnings: number;
@@ -107,7 +107,7 @@ export async function runDailyDigest(db: StrictDB): Promise<DigestResult> {
     });
   } catch (err) {
     console.error('[digest] failed to send webhook:', err);
-    return { ...empty, reason: 'no_webhook' };
+    return { ...empty, reason: 'send_failed' };
   }
 
   return {

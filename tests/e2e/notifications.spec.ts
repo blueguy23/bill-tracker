@@ -50,9 +50,9 @@ test.describe('Settings Page (/settings)', () => {
 // Notification API Routes
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('GET /api/v1/notifications/digest', () => {
+test.describe('POST /api/v1/notifications/digest', () => {
   test('returns 200 with correct JSON shape', async ({ request }) => {
-    const res = await request.get('/api/v1/notifications/digest');
+    const res = await request.post('/api/v1/notifications/digest');
 
     expect(res.status()).toBe(200);
 
@@ -64,7 +64,7 @@ test.describe('GET /api/v1/notifications/digest', () => {
   });
 
   test('returns sent:false and reason:no_webhook when webhook not configured', async ({ request }) => {
-    const res = await request.get('/api/v1/notifications/digest');
+    const res = await request.post('/api/v1/notifications/digest');
 
     expect(res.status()).toBe(200);
 
@@ -75,9 +75,9 @@ test.describe('GET /api/v1/notifications/digest', () => {
   });
 });
 
-test.describe('GET /api/v1/notifications/test', () => {
+test.describe('POST /api/v1/notifications/test', () => {
   test('returns 503 when webhook is not configured', async ({ request }) => {
-    const res = await request.get('/api/v1/notifications/test');
+    const res = await request.post('/api/v1/notifications/test');
 
     expect([200, 503]).toContain(res.status());
 

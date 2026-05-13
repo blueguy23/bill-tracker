@@ -31,9 +31,9 @@ export function findAutoMatches(
       if (!amountMatch || !dateMatch) continue;
 
       const normalizedDesc = normalizeDescription(txn.description);
-      const descriptionMatch =
+      const descriptionMatch = normalizedBillName.length >= 3 && normalizedDesc.length >= 3 && (
         normalizedDesc.includes(normalizedBillName) ||
-        normalizedBillName.includes(normalizedDesc);
+        normalizedBillName.includes(normalizedDesc));
 
       const confidence: 'high' | 'medium' = descriptionMatch ? 'high' : 'medium';
 

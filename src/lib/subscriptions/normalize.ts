@@ -94,5 +94,5 @@ export function inferCategory(normalized: string): BillCategory {
     const keywords = CATEGORY_KEYWORDS[cat];
     if (keywords.some((kw) => normalized.includes(kw))) return cat;
   }
-  return 'subscriptions'; // default for this module — recurring charges are usually subscriptions
+  return 'other';
 }

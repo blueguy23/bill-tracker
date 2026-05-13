@@ -17,9 +17,10 @@ export async function applyMonthEndRollover(db: StrictDB, month: string): Promis
 
   await Promise.all(
     budgets.map(async (budget) => {
+      if (budget.lastRolloverMonth === month) return;
       const spent = computeSpending(transactions, quickAdds, budget.category, month);
       const newBalance = computeRollover(budget, spent);
-      await updateRollover(db, budget.category, newBalance);
+      await updateRollover(db, budget.category, newBalance, month);
     }),
   );
 }

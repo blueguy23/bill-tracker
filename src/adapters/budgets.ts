@@ -43,10 +43,11 @@ export async function updateRollover(
   db: StrictDB,
   category: BillCategory,
   newBalance: number,
+  month: string,
 ): Promise<void> {
   await db.updateOne<Budget>(
     COLLECTION,
     { _id: category },
-    { $set: { rolloverBalance: newBalance, updatedAt: new Date() } },
+    { $set: { rolloverBalance: newBalance, lastRolloverMonth: month, updatedAt: new Date() } },
   );
 }

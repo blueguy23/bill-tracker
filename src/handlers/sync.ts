@@ -3,6 +3,7 @@ import type { SimpleFINClient } from '@/lib/simplefin/client';
 import type { SyncResult } from '@/lib/simplefin/types';
 import { getTodayLog, incrementUrlUnits, markHistoricalDone } from '@/adapters/syncLog';
 import { upsertAccount, upsertTransaction, markTransfersById } from '@/adapters/accounts';
+import { listCategoryRules } from '@/adapters/categoryRules';
 import { getUserProfile } from '@/adapters/userProfile';
 import { buildTransferRe } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
@@ -26,7 +27,10 @@ async function syncFetch(
   transferRe: RegExp,
   balancesOnly = false,
 ): Promise<{ accountsUpdated: number; transactionsUpserted: number; warnings: string[]; unitCost: number }> {
-  const { accounts, transactions, errors } = await client.fetchAccounts({ startDate, balancesOnly, includeHoldings: !balancesOnly, includePending: true });
+  const [{ accounts, transactions, errors }, rules] = await Promise.all([
+    client.fetchAccounts({ startDate, balancesOnly, includeHoldings: !balancesOnly, includePending: true }),
+    listCategoryRules(db),
+  ]);
   const unitCost = balancesOnly ? 0.5 : 1.0;
 
   let accountsUpdated = 0;
@@ -39,7 +43,7 @@ async function syncFetch(
 
   let transactionsUpserted = 0;
   for (const txn of transactions) {
-    const inserted = await upsertTransaction(db, txn, creditAccountIds, transferRe);
+    const inserted = await upsertTransaction(db, txn, creditAccountIds, transferRe, rules);
     if (inserted) transactionsUpserted++;
   }
 
@@ -105,10 +109,14 @@ export async function runHistoricalImport(
   }
 
   const currentUnits = log.urlUnits?.[client.urlHash] ?? 0;
+  const CHUNKS = 3;
+  if (currentUnits + CHUNKS > QUOTA_GUARD) {
+    throw new QuotaExceededError(currentUnits, DAILY_QUOTA);
+  }
+
   const transferRe = buildTransferRe(profile.ownerName || null);
 
   const CHUNK_DAYS = 30;
-  const CHUNKS = 3; // 90 days total
   const now = Date.now();
 
   let totalAccounts = 0;
