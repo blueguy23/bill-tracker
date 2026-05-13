@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           docker run --rm -v "${{ github.workspace }}:/src" \
             semgrep/semgrep \
-            semgrep scan --config p/javascript --config p/typescript --error /src
+            semgrep scan --config p/javascript --config p/typescript --no-git-ignore --error /src
 
   # ── 1b. TypeScript typecheck ──────────────────────────────────────────────────
   typecheck:
