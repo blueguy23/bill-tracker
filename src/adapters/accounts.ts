@@ -1,9 +1,5 @@
 import type { StrictDB } from 'strictdb';
 import type { Account, Transaction } from '@/lib/simplefin/types';
-import type { CategoryRule } from '@/lib/categorization/types';
-import { categorize } from '@/lib/categorization/engine';
-import { listCategoryRules } from '@/adapters/categoryRules';
-import { classifyTransfer } from '@/lib/classifyTransfer';
 import { computeCashFlowSimple, computeCashFlow } from '@/lib/cashFlow';
 
 const ACCOUNTS = 'accounts';
@@ -13,21 +9,15 @@ export async function upsertAccount(db: StrictDB, account: Account): Promise<voi
   await db.updateOne<Account>(ACCOUNTS, { _id: account._id }, { $set: account }, true);
 }
 
-export async function upsertTransaction(db: StrictDB, txn: Transaction, creditAccountIds: Set<string>, transferRe?: RegExp, rules?: CategoryRule[]): Promise<boolean> {
-  // Skip settled transactions that are already in the DB
+export async function getTransaction(db: StrictDB, id: string): Promise<Transaction | null> {
+  return db.queryOne<Transaction>(TRANSACTIONS, { _id: id });
+}
+
+export async function upsertTransaction(db: StrictDB, txn: Transaction): Promise<boolean> {
   const existing = await db.queryOne<Transaction>(TRANSACTIONS, { _id: txn._id });
-  if (existing && !existing.pending) return false; // already settled, skip
+  if (existing && !existing.pending) return false;
 
-  // Auto-categorize only if the user hasn't manually set a category
-  const preserveCategory = existing?.categorySource === 'user';
-  const resolvedRules = rules ?? await listCategoryRules(db);
-  const categorized: Transaction = preserveCategory
-    ? { ...txn, category: existing.category, categorySource: 'user' }
-    : { ...txn, category: categorize(txn.description, txn.memo, resolvedRules), categorySource: 'auto' };
-
-  const toSave: Transaction = { ...categorized, isTransfer: classifyTransfer(txn, creditAccountIds, transferRe) };
-
-  await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: toSave }, true);
+  await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: txn }, true);
   return true;
 }
 

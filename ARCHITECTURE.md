@@ -66,7 +66,7 @@
 | Domain | What exists | CMM |
 |--------|------------|-----|
 | **Sync** | `adapters/syncLog.ts` — pure CRUD | 4 |
-| **Cat** | `adapters/categoryRules.ts` — pure CRUD; **but `categorize()` called inside `adapters/accounts.ts:upsertTransaction`** | 3 |
+| **Cat** | `adapters/categoryRules.ts` — pure CRUD; `upsertTransaction` accepts pre-categorized transactions | 4 |
 | **Xfer** | `adapters/accounts.ts:markTransfersById` — pure update | 4 |
 | **Bills** | `adapters/bills.ts` — **creates payment record on isPaid transition (line 108)** — business rule in adapter | 3 |
 | **Subs** | `adapters/subscriptions.ts` — dismiss tracking | 4 |
@@ -108,7 +108,7 @@
 | ~~**C1**~~ | ~~`getCashFlowThisMonth()` + `getCashFlowForRange()` — 75 lines of amortization, transfer classification, income/expense bucketing~~ | ~~`adapters/accounts.ts:79–154`~~ | ~~`lib/cashFlow.ts` or `handlers/cashFlow.ts`~~ | ~~**FIXED**~~ |
 | ~~**C2**~~ | ~~`getCashFlowHistory()` — 77 lines duplicating the same amortization + bucketing pattern~~ | ~~`adapters/cashFlowHistory.ts:12–77`~~ | ~~`lib/cashFlow.ts` (shared with C1)~~ | ~~**FIXED**~~ |
 | ~~**C3**~~ | ~~`isTransfer()` — hardcoded transfer keywords, diverges from canonical `classifyTransfer.ts`~~ | ~~`app/api/v1/summary/route.ts:5–13`~~ | ~~Should use `classifyTransfer` or stored `isTransfer` field~~ | ~~**FIXED**~~ |
-| **C4** | `categorize()` called during `upsertTransaction()` | `adapters/accounts.ts:23–25` | `handlers/sync.ts` (pre-categorize before passing to adapter) | **MEDIUM** |
+| ~~**C4**~~ | ~~`categorize()` called during `upsertTransaction()`~~ | ~~`adapters/accounts.ts:23–25`~~ | ~~`handlers/sync.ts` (pre-categorize before passing to adapter)~~ | ~~**FIXED**~~ |
 | **C5** | Payment record creation on `isPaid` transition | `adapters/bills.ts:108–114` | `handlers/bills.ts` (after update confirmation) | **LOW** |
 | **C6** | `escapeCSV()` + `buildCSV()` inline in API route | `app/api/v1/export/route.ts:7–34` | `lib/export.ts` or `handlers/export.ts` | **LOW** |
 | **C7** | Onboarding step computation inline in API route | `app/api/v1/onboarding/route.ts:33–38` | `handlers/onboarding.ts` | **LOW** |

@@ -1,11 +1,12 @@
 import type { StrictDB } from 'strictdb';
 import type { SimpleFINClient } from '@/lib/simplefin/client';
-import type { SyncResult } from '@/lib/simplefin/types';
+import type { SyncResult, Transaction } from '@/lib/simplefin/types';
 import { getTodayLog, incrementUrlUnits, markHistoricalDone } from '@/adapters/syncLog';
-import { upsertAccount, upsertTransaction, markTransfersById } from '@/adapters/accounts';
+import { upsertAccount, upsertTransaction, getTransaction, markTransfersById } from '@/adapters/accounts';
 import { listCategoryRules } from '@/adapters/categoryRules';
 import { getUserProfile } from '@/adapters/userProfile';
-import { buildTransferRe } from '@/lib/classifyTransfer';
+import { categorize } from '@/lib/categorization/engine';
+import { buildTransferRe, classifyTransfer } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
 
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
@@ -43,7 +44,15 @@ async function syncFetch(
 
   let transactionsUpserted = 0;
   for (const txn of transactions) {
-    const inserted = await upsertTransaction(db, txn, creditAccountIds, transferRe, rules);
+    const existing = await getTransaction(db, txn._id);
+    const preserveCategory = existing?.categorySource === 'user';
+    const prepared: Transaction = {
+      ...txn,
+      category: preserveCategory ? existing.category : categorize(txn.description, txn.memo, rules),
+      categorySource: preserveCategory ? 'user' : 'auto',
+      isTransfer: classifyTransfer(txn, creditAccountIds, transferRe),
+    };
+    const inserted = await upsertTransaction(db, prepared);
     if (inserted) transactionsUpserted++;
   }
 
