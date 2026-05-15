@@ -90,12 +90,12 @@
 | **Bills** | Missing — no bill-reset cron (monthly isPaid reset is manual) | 2 |
 | **Subs** | Implicit — detection runs on-demand only | 2 |
 | **AutoPay** | Implicit — fires from sync route, no standalone trigger | 2 |
-| **Budget** | Rollover logic exists in lib but **no cron trigger for month-end rollover** | 2 |
+| **Budget** | `scripts/run-budget-rollover.sh` + `scripts/cron-budget-rollover.ts` — delegates to `applyMonthEndRollover`; crontab: 1st of month at 00:05 | 3 |
 | **CFlow** | Missing | 1 |
 | **QAdd** | Missing — not needed | N/A |
 | **Credit** | Missing — alerts fire from sync only | 2 |
 | **AZEO** | Missing | 1 |
-| **Notif** | Digest route exists but **no cron for daily digest** | 2 |
+| **Notif** | `scripts/run-notification-digest.sh` + `scripts/cron-notification-digest.ts` — delegates to `runDailyDigest`; crontab: daily at 08:00 | 3 |
 | **Profile** | Missing — not needed | N/A |
 | **Export** | Missing — not needed | N/A |
 
