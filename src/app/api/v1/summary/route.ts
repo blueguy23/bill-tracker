@@ -1,17 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
-import { listTransactions } from '@/adapters/accounts';
-
-function isTransfer(description: string): boolean {
-  const lower = description.toLowerCase();
-  return (
-    lower.includes('zelle') ||
-    lower.includes('withdrawal to') ||
-    lower.includes('deposit from') ||
-    lower.includes('transfer') ||
-    lower.includes('wire')
-  );
-}
+import { listTransactions, listAccounts } from '@/adapters/accounts';
+import { classifyTransfer } from '@/lib/classifyTransfer';
 
 export interface MerchantStat {
   merchant: string;
@@ -39,17 +29,22 @@ export async function GET(req: NextRequest): Promise<Response> {
     const endDate = new Date(year!, mon!, 0, 23, 59, 59, 999); // last moment of last day
 
     const db = await getDb();
-    // Fetch all transactions for the month (no limit — aggregate over full month)
-    const { transactions } = await listTransactions(db, { startDate, endDate, limit: 5000 });
+    const [{ transactions }, accounts] = await Promise.all([
+      listTransactions(db, { startDate, endDate, limit: 5000 }),
+      listAccounts(db),
+    ]);
+    const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
 
     let income = 0;
     let expenses = 0;
     const merchantMap = new Map<string, { total: number; count: number }>();
 
     for (const txn of transactions) {
+      if (txn.pending) continue;
+      if (txn.isTransfer ?? classifyTransfer(txn, creditAccountIds)) continue;
       if (txn.amount > 0) {
         income += txn.amount;
-      } else if (!isTransfer(txn.description)) {
+      } else {
         expenses += Math.abs(txn.amount);
         const key = txn.description.trim();
         const existing = merchantMap.get(key) ?? { total: 0, count: 0 };
