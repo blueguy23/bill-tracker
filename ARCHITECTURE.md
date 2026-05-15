@@ -68,7 +68,7 @@
 | **Sync** | `adapters/syncLog.ts` — pure CRUD | 4 |
 | **Cat** | `adapters/categoryRules.ts` — pure CRUD; `upsertTransaction` accepts pre-categorized transactions | 4 |
 | **Xfer** | `adapters/accounts.ts:markTransfersById` — pure update | 4 |
-| **Bills** | `adapters/bills.ts` — **creates payment record on isPaid transition (line 108)** — business rule in adapter | 3 |
+| **Bills** | `adapters/bills.ts` — pure CRUD, no side effects | 4 |
 | **Subs** | `adapters/subscriptions.ts` — dismiss tracking | 4 |
 | **AutoPay** | Implicit — uses bills adapter | 3 |
 | **Budget** | `adapters/budgets.ts`, `adapters/transactions.ts` — pure CRUD | 4 |
@@ -109,7 +109,7 @@
 | ~~**C2**~~ | ~~`getCashFlowHistory()` — 77 lines duplicating the same amortization + bucketing pattern~~ | ~~`adapters/cashFlowHistory.ts:12–77`~~ | ~~`lib/cashFlow.ts` (shared with C1)~~ | ~~**FIXED**~~ |
 | ~~**C3**~~ | ~~`isTransfer()` — hardcoded transfer keywords, diverges from canonical `classifyTransfer.ts`~~ | ~~`app/api/v1/summary/route.ts:5–13`~~ | ~~Should use `classifyTransfer` or stored `isTransfer` field~~ | ~~**FIXED**~~ |
 | ~~**C4**~~ | ~~`categorize()` called during `upsertTransaction()`~~ | ~~`adapters/accounts.ts:23–25`~~ | ~~`handlers/sync.ts` (pre-categorize before passing to adapter)~~ | ~~**FIXED**~~ |
-| **C5** | Payment record creation on `isPaid` transition | `adapters/bills.ts:108–114` | `handlers/bills.ts` (after update confirmation) | **LOW** |
+| ~~**C5**~~ | ~~Payment record creation on `isPaid` transition~~ | ~~`adapters/bills.ts:108–114`~~ | ~~`handlers/bills.ts` (after update confirmation)~~ | ~~**FIXED**~~ |
 | **C6** | `escapeCSV()` + `buildCSV()` inline in API route | `app/api/v1/export/route.ts:7–34` | `lib/export.ts` or `handlers/export.ts` | **LOW** |
 | **C7** | Onboarding step computation inline in API route | `app/api/v1/onboarding/route.ts:33–38` | `handlers/onboarding.ts` | **LOW** |
 

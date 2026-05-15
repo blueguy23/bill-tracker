@@ -1,5 +1,6 @@
 import type { StrictDB } from 'strictdb';
 import { listBills, updateBill } from '@/adapters/bills';
+import { createPayment } from '@/adapters/payments';
 import { notifyPriceIncrease } from '@/handlers/notifications';
 import type { Transaction } from '@/lib/simplefin/types';
 import type { Bill } from '@/types/bill';
@@ -86,6 +87,9 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
 
     // Mark paid and record the actual charged amount for drift tracking
     await updateBill(db, bill._id, { isPaid: true });
+    if (!bill.isPaid) {
+      await createPayment(db, { billId: bill._id, billName: bill.name, amount: bill.amount });
+    }
     // StrictDB's updateOne filter type doesn't expose MongoDB's _id query shape
     await db.updateOne<Bill>(
       'bills',

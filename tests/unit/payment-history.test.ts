@@ -125,7 +125,7 @@ describe('handleListPayments', () => {
 describe('payment creation on isPaid toggle', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it('should create a payment record when isPaid changes from false to true', async () => {
+  it('adapter should NOT create a payment record (side effect removed)', async () => {
     const { updateBill } = await import('@/adapters/bills');
     const existingBill = { _id: 'bill-1', name: 'Netflix', amount: 15.99, isPaid: false };
     const insertOne = vi.fn().mockResolvedValue({ insertedCount: 1 });
@@ -135,6 +135,14 @@ describe('payment creation on isPaid toggle', () => {
       insertOne,
     });
     await updateBill(db, 'bill-1', { isPaid: true });
+    expect(insertOne).not.toHaveBeenCalled();
+  });
+
+  it('createPayment should be callable with correct shape', async () => {
+    const { createPayment } = await import('@/adapters/payments');
+    const insertOne = vi.fn().mockResolvedValue({ insertedCount: 1 });
+    const db = makeMockDb({ insertOne });
+    await createPayment(db, { billId: 'bill-1', billName: 'Netflix', amount: 15.99 });
     expect(insertOne).toHaveBeenCalledOnce();
     const inserted = (insertOne.mock.calls[0] as unknown[])[1] as PaymentRecord;
     expect(inserted.billId).toBe('bill-1');

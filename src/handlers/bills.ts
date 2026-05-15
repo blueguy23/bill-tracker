@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { StrictDB } from 'strictdb';
-import { listBills, createBill, updateBill, deleteBill } from '@/adapters/bills';
+import { listBills, getBillById, createBill, updateBill, deleteBill } from '@/adapters/bills';
+import { createPayment } from '@/adapters/payments';
 import { BILL_CATEGORIES, RECURRENCE_INTERVALS } from '@/types/bill';
 import type { Bill, BillCategory, BillResponse, CreateBillDto, RecurrenceInterval, UpdateBillDto } from '@/types/bill';
 
@@ -153,8 +154,16 @@ export async function handleUpdateBill(db: StrictDB, req: NextRequest, id: strin
   const validationError = validateUpdateDto(cleaned);
   if (validationError) return NextResponse.json({ error: validationError }, { status: 400 });
 
+  const existing = await getBillById(db, id);
+  if (!existing) return NextResponse.json({ error: 'Bill not found' }, { status: 404 });
+
   const bill = await updateBill(db, id, cleaned as UpdateBillDto);
   if (!bill) return NextResponse.json({ error: 'Bill not found' }, { status: 404 });
+
+  if ((cleaned as UpdateBillDto).isPaid === true && !existing.isPaid) {
+    await createPayment(db, { billId: existing._id, billName: existing.name, amount: existing.amount });
+  }
+
   return NextResponse.json({ bill: serializeBill(bill) });
 }
 

@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import type { StrictDB, StrictFilter } from 'strictdb';
 import type { Bill, CreateBillDto, UpdateBillDto } from '@/types/bill';
-import { createPayment } from '@/adapters/payments';
 import type { ClassificationMeta } from '@/types/bill';
 
 const COLLECTION = 'bills';
@@ -104,16 +103,6 @@ export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto):
 
   await db.updateOne<Bill>(COLLECTION, byId(id), { $set: updates });
 
-  // Create payment record only on false → true transition
-  if (data.isPaid === true && existing && !existing.isPaid) {
-    await createPayment(db, {
-      billId: existing._id,
-      billName: existing.name,
-      amount: existing.amount,
-    });
-  }
-
-  // Returns null if document never existed (or was concurrently deleted) — handler maps to 404
   return getBillById(db, id);
 }
 
