@@ -53,7 +53,7 @@
 | **Subs** | `lib/subscriptions/detect.ts`, `classify.ts`, `normalize.ts`, `autoMatch.ts`; `handlers/subscriptions.ts` | 5 |
 | **AutoPay** | `handlers/autoPayDetect.ts` — matching + price-increase detection | 4 |
 | **Budget** | `lib/budget/engine.ts` (pure computations), `rollover.ts`, `dedup.ts`; `handlers/budgets.ts` | 5 |
-| **CFlow** | **Missing** — no `lib/cashFlow.ts` or handler; logic lives in adapters | 1 |
+| **CFlow** | `lib/cashFlow.ts` — pure functions: `computeCashFlow`, `computeCashFlowSimple`, `spreadAmortized`, `bucketByMonth` | 4 |
 | **QAdd** | `handlers/quickAdd.ts` — validation | 4 |
 | **Credit** | `handlers/credit.ts` — score computation, utilization calculations | 4 |
 | **AZEO** | `handlers/creditAdvisor.ts` — anchor card strategy, payment plans | 4 |
@@ -72,7 +72,7 @@
 | **Subs** | `adapters/subscriptions.ts` — dismiss tracking | 4 |
 | **AutoPay** | Implicit — uses bills adapter | 3 |
 | **Budget** | `adapters/budgets.ts`, `adapters/transactions.ts` — pure CRUD | 4 |
-| **CFlow** | **`adapters/accounts.ts:getCashFlowThisMonth` + `getCashFlowForRange`** — 75 lines of business logic (amortization, transfer classification, income/expense bucketing). `adapters/cashFlowHistory.ts` — another 77 lines of the same pattern. | 2 |
+| **CFlow** | `adapters/accounts.ts` fetches data + delegates to `lib/cashFlow.ts`; `adapters/cashFlowHistory.ts` — same pattern | 4 |
 | **QAdd** | `adapters/quickAdd.ts` — pure CRUD | 4 |
 | **Credit** | `adapters/credit.ts`, `adapters/accountMeta.ts` — pure queries | 4 |
 | **AZEO** | Uses `adapters/accountMeta.ts` | 4 |
@@ -105,8 +105,8 @@
 
 | # | What | Where it is | Where it belongs | Severity |
 |---|------|-------------|-----------------|----------|
-| **C1** | `getCashFlowThisMonth()` + `getCashFlowForRange()` — 75 lines of amortization, transfer classification, income/expense bucketing | `adapters/accounts.ts:79–154` | `lib/cashFlow.ts` or `handlers/cashFlow.ts` | **HIGH** |
-| **C2** | `getCashFlowHistory()` — 77 lines duplicating the same amortization + bucketing pattern | `adapters/cashFlowHistory.ts:12–77` | `lib/cashFlow.ts` (shared with C1) | **HIGH** |
+| ~~**C1**~~ | ~~`getCashFlowThisMonth()` + `getCashFlowForRange()` — 75 lines of amortization, transfer classification, income/expense bucketing~~ | ~~`adapters/accounts.ts:79–154`~~ | ~~`lib/cashFlow.ts` or `handlers/cashFlow.ts`~~ | ~~**FIXED**~~ |
+| ~~**C2**~~ | ~~`getCashFlowHistory()` — 77 lines duplicating the same amortization + bucketing pattern~~ | ~~`adapters/cashFlowHistory.ts:12–77`~~ | ~~`lib/cashFlow.ts` (shared with C1)~~ | ~~**FIXED**~~ |
 | ~~**C3**~~ | ~~`isTransfer()` — hardcoded transfer keywords, diverges from canonical `classifyTransfer.ts`~~ | ~~`app/api/v1/summary/route.ts:5–13`~~ | ~~Should use `classifyTransfer` or stored `isTransfer` field~~ | ~~**FIXED**~~ |
 | **C4** | `categorize()` called during `upsertTransaction()` | `adapters/accounts.ts:23–25` | `handlers/sync.ts` (pre-categorize before passing to adapter) | **MEDIUM** |
 | **C5** | Payment record creation on `isPaid` transition | `adapters/bills.ts:108–114` | `handlers/bills.ts` (after update confirmation) | **LOW** |
