@@ -53,7 +53,8 @@ RUN mkdir -p /home/garci/actions-runner \
 COPY chrony.conf /etc/chrony/chrony.conf
 COPY entrypoint.sh /entrypoint.sh
 COPY deep-healthcheck.sh /deep-healthcheck.sh
-RUN chmod +x /entrypoint.sh /deep-healthcheck.sh
+COPY scripts/preflight-check.sh /preflight-check.sh
+RUN chmod +x /entrypoint.sh /deep-healthcheck.sh /preflight-check.sh
 
 # Readiness check — queries GitHub API to confirm the runner is actually online,
 # not just that the process exists. autoheal restarts on unhealthy, so this

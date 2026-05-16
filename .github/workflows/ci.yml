@@ -1,4 +1,14 @@
 name: CI
+# Required GitHub Actions Secrets:
+#   AUTH_SECRET        — used by: Integration Tests
+#   AUTH_PASSWORD      — used by: Integration Tests
+#   GITHUB_PAT        — used by: self-hosted runner (container .env, not referenced in this file)
+#   DOCKERHUB_USERNAME — used by: self-hosted runner (container .env, not referenced in this file)
+#   DOCKERHUB_TOKEN   — used by: self-hosted runner (container .env, not referenced in this file)
+#
+# ACTION REQUIRED: rotate AUTH_SECRET and AUTH_PASSWORD in GitHub repo settings
+# after this commit — old values are in repo history.
+
 # Job execution order:
 #   dora-start ──────────────────────────────────────────┐
 #   [SAST, Security Audit, Lint, TypeScript]  (parallel) │
@@ -169,8 +179,8 @@ jobs:
           STRICTDB_URI: mongodb://localhost:27017/bill-tracker-integration
           DATABASE_NAME: bill-tracker-integration
           NODE_ENV: test
-          AUTH_SECRET: test-secret-for-ci-only-not-used-in-prod
-          AUTH_PASSWORD: testpassword
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
 
   # ── 5. E2E tests ──────────────────────────────────────────────────────────────
   e2e:
