@@ -31,7 +31,7 @@ async function processBatch(
           await db.updateOne<Transaction>(
             TRANSACTIONS,
             { _id: txn._id },
-            { $set: { category, categorySource: 'trove', merchantName: troveResult.name, merchantDomain: troveResult.domain } },
+            { $set: { category, categorySource: 'trove' as const, merchantName: troveResult.name, merchantDomain: troveResult.domain } },
             false,
           );
           return 'trove' as const;
@@ -44,7 +44,7 @@ async function processBatch(
         await db.updateOne<Transaction>(
           TRANSACTIONS,
           { _id: txn._id },
-          { $set: { category, categorySource: 'auto' } },
+          { $set: { category, categorySource: 'keyword' as const } },
           false,
         );
       }
@@ -67,12 +67,12 @@ export async function enrichWithTrove(
   }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const userSources = ['user-override', 'user'];
   const query =
     mode === 'recent'
-      ? { categorySource: { $ne: 'user' as const }, posted: { $gte: sevenDaysAgo } }
-      : { categorySource: { $ne: 'user' as const } };
+      ? { categorySource: { $nin: userSources }, posted: { $gte: sevenDaysAgo } }
+      : { categorySource: { $nin: userSources } };
 
-  // StrictDB's $ne operator requires a literal type — cast needed here
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const txns = await db.queryMany<Transaction>(TRANSACTIONS, query as any, { limit: 10000 });
   const userRules = await listCategoryRules(db);

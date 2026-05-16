@@ -33,6 +33,7 @@ export interface RawSFINTransaction {
 
 export interface RawSFINAccount {
   id: string;
+  conn_id?: string;
   org?: RawSFINOrg;
   name: string;
   currency: string;
@@ -47,6 +48,14 @@ export interface RawSFINAccount {
   };
 }
 
+export interface RawSFINConnection {
+  conn_id: string;
+  name?: string;
+  org_id?: string;
+  org_url?: string;
+  sfin_url?: string;
+}
+
 export type SFINErrorType = 'RATE_LIMIT' | 'NO_DATA' | 'UNAVAILABLE' | string;
 
 export interface RawSFINError {
@@ -55,9 +64,17 @@ export interface RawSFINError {
   message?: string;
 }
 
+export interface RawSFINErrListEntry {
+  conn_id: string;
+  type: SFINErrorType;
+  message?: string;
+}
+
 export interface RawSFINResponse {
   accounts: RawSFINAccount[];
+  connections?: RawSFINConnection[];
   errors: RawSFINError[];
+  errlist?: RawSFINErrListEntry[];
   'x-api-message'?: string[];
 }
 
@@ -70,18 +87,24 @@ export interface Holding {
   ticker: string | null;
   description: string | null;
   marketValue: number;
+  costBasis: number | null;
+  quantity: number | null;
+  purchasedAt: Date | null;
   currency: string;
 }
 
 export interface SFINError {
   type: SFINErrorType;
   accountId?: string;
+  connectionId?: string;
   message?: string;
 }
 
 export interface Account {
   _id: string;
+  connectionId?: string;
   orgName: string;
+  orgUrl?: string;
   name: string;
   currency: string;
   balance: number;
@@ -105,8 +128,10 @@ export interface Transaction {
   pending: boolean;
   importedAt: Date;
   extra?: Record<string, unknown>;
+  bridgeCategory?: string;
+  bridgeMappedCategory?: import('@/lib/categorization/types').TransactionCategory;
   category?: import('@/lib/categorization/types').TransactionCategory;
-  categorySource?: 'auto' | 'user' | 'trove';
+  categorySource?: 'keyword' | 'trove' | 'bridge' | 'user-override';
   merchantName?: string | null;
   merchantDomain?: string | null;
   tags?: string[];

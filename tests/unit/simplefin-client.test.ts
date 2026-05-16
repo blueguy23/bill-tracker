@@ -180,6 +180,50 @@ describe('SimpleFINClient', () => {
       expect(result.accounts).toHaveLength(1);
       expect(result.errors).toHaveLength(0);
     });
+
+    it('should populate connectionId and orgUrl from connections array', async () => {
+      const body = makeRawResponse({
+        accounts: [{
+          id: 'acc-1', conn_id: 'conn-chase',
+          org: { name: 'Chase' }, name: 'Checking', currency: 'USD',
+          balance: '500.00', 'balance-date': 1743200000, transactions: [],
+        }],
+        connections: [{ conn_id: 'conn-chase', org_url: 'https://chase.com' }],
+      });
+      vi.stubGlobal('fetch', mockFetch(body));
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const result = await client.fetchAccounts({});
+      expect(result.accounts[0]!.connectionId).toBe('conn-chase');
+      expect(result.accounts[0]!.orgUrl).toBe('https://chase.com');
+    });
+
+    it('should prefer errlist over deprecated errors when present', async () => {
+      const body = makeRawResponse({
+        accounts: [],
+        errors: [{ type: 'RATE_LIMIT', 'account-id': 'acc-old' }],
+        errlist: [{ conn_id: 'conn-1', type: 'NO_DATA', message: 'stale' }],
+      });
+      vi.stubGlobal('fetch', mockFetch(body));
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const result = await client.fetchAccounts({});
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]!.connectionId).toBe('conn-1');
+      expect(result.errors[0]!.type).toBe('NO_DATA');
+      expect(result.errors[0]!.accountId).toBeUndefined();
+    });
+
+    it('should fall back to deprecated errors when errlist is absent', async () => {
+      const body = makeRawResponse({
+        accounts: [],
+        errors: [{ type: 'UNAVAILABLE', 'account-id': 'acc-2' }],
+      });
+      vi.stubGlobal('fetch', mockFetch(body));
+      const client = new SimpleFINClient({ url: BASE_URL });
+      const result = await client.fetchAccounts({});
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]!.accountId).toBe('acc-2');
+      expect(result.errors[0]!.connectionId).toBeUndefined();
+    });
   });
 
   describe('error handling', () => {

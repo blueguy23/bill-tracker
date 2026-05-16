@@ -71,7 +71,7 @@ function mkTxn(
   category: TransactionCategory,
 ): Transaction {
   return { _id: id, accountId, posted, amount, description,
-           memo: null, pending: false, importedAt: NOW, category, categorySource: 'auto' };
+           memo: null, pending: false, importedAt: NOW, category, categorySource: 'keyword' };
 }
 
 function maybePush(

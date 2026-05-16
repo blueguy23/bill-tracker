@@ -5,9 +5,10 @@ import { getTodayLog, incrementUrlUnits, markHistoricalDone } from '@/adapters/s
 import { upsertAccount, upsertTransaction, getTransaction, markTransfersById } from '@/adapters/accounts';
 import { listCategoryRules } from '@/adapters/categoryRules';
 import { getUserProfile } from '@/adapters/userProfile';
-import { categorize } from '@/lib/categorization/engine';
+import { categorize, mapBridgeCategory } from '@/lib/categorization/engine';
 import { buildTransferRe, classifyTransfer } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
+import { syncLinkedGoals } from '@/handlers/goalSync';
 
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
 const DAILY_QUOTA = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
@@ -45,11 +46,14 @@ async function syncFetch(
   let transactionsUpserted = 0;
   for (const txn of transactions) {
     const existing = await getTransaction(db, txn._id);
-    const preserveCategory = existing?.categorySource === 'user';
+    const source = existing?.categorySource as string | undefined;
+    const preserveCategory = source === 'user-override' || source === 'user';
+    const bridgeMapped = txn.bridgeCategory ? mapBridgeCategory(txn.bridgeCategory) ?? undefined : undefined;
     const prepared: Transaction = {
       ...txn,
-      category: preserveCategory ? existing.category : categorize(txn.description, txn.memo, rules),
-      categorySource: preserveCategory ? 'user' : 'auto',
+      category: preserveCategory ? existing!.category : categorize(txn.description, txn.memo, rules),
+      categorySource: preserveCategory ? 'user-override' : 'keyword',
+      bridgeMappedCategory: bridgeMapped,
       isTransfer: classifyTransfer(txn, creditAccountIds, transferRe),
     };
     const inserted = await upsertTransaction(db, prepared);
@@ -58,10 +62,13 @@ async function syncFetch(
 
   const warnings: string[] = [];
   for (const err of errors) {
+    const target = err.connectionId
+      ? `Connection ${err.connectionId}`
+      : `Account ${err.accountId ?? 'unknown'}`;
     if (err.type === 'NO_DATA') {
-      warnings.push(`Account ${err.accountId ?? 'unknown'} requires re-authentication (NO_DATA)`);
+      warnings.push(`${target} requires re-authentication (NO_DATA)`);
     } else if (err.type === 'UNAVAILABLE') {
-      warnings.push(`Account ${err.accountId ?? 'unknown'} is temporarily unavailable`);
+      warnings.push(`${target} is temporarily unavailable`);
     }
   }
 
@@ -95,7 +102,10 @@ export async function runDailySync(
     console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
   }
 
-  const pairedIds = await detectPairedTransfers(db);
+  const [pairedIds] = await Promise.all([
+    detectPairedTransfers(db),
+    syncLinkedGoals(db),
+  ]);
   if (pairedIds.length) await markTransfersById(db, pairedIds);
 
   return {
@@ -149,9 +159,11 @@ export async function runHistoricalImport(
     console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
   }
 
-  // Pair transfers across all 90 days of imported data
-  const pairedIds = await detectPairedTransfers(db, CHUNK_DAYS * CHUNKS);
-  if (pairedIds.length) await markTransfersById(db, pairedIds);
+  const [pairedIds2] = await Promise.all([
+    detectPairedTransfers(db, CHUNK_DAYS * CHUNKS),
+    syncLinkedGoals(db),
+  ]);
+  if (pairedIds2.length) await markTransfersById(db, pairedIds2);
 
   return {
     accountsUpdated: totalAccounts,

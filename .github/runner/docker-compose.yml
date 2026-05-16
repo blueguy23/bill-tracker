@@ -17,6 +17,7 @@ services:
       REPO_NAME: ${REPO_NAME:-bill-tracker}
       DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME:-}
       DOCKERHUB_TOKEN: ${DOCKERHUB_TOKEN:-}
+      SESSION_CONFLICT_WAIT: ${SESSION_CONFLICT_WAIT:-30}
 
     # GID of the host Docker socket — lets runner user call docker CLI without root.
     # Correct for WSL2: matches GID 1001 of /var/run/docker.sock on this machine.
@@ -57,7 +58,7 @@ services:
       interval: 30s
       timeout: 15s
       start_period: 120s
-      retries: 1
+      retries: 3
 
     logging:
       driver: "json-file"

@@ -3,6 +3,7 @@ import type {
   RawSFINHolding,
   RawSFINTransaction,
   RawSFINError,
+  RawSFINErrListEntry,
   Account,
   AccountType,
   Holding,
@@ -84,14 +85,23 @@ export function transformHolding(raw: RawSFINHolding): Holding {
     ticker: raw.ticker ?? null,
     description: raw.description ?? null,
     marketValue: raw['market-value'] ? parseFloat(raw['market-value']) : 0,
+    costBasis: raw['cost-basis'] ? parseFloat(raw['cost-basis']) : null,
+    quantity: raw.quantity ? parseFloat(raw.quantity) : null,
+    purchasedAt: raw['purchased-at'] ? new Date(raw['purchased-at'] * 1000) : null,
     currency: raw.currency ?? 'USD',
   };
 }
 
-export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): Account {
+export interface ConnectionMeta {
+  orgUrl?: string;
+}
+
+export function transformAccount(raw: RawSFINAccount, now: Date = new Date(), connectionMeta?: ConnectionMeta): Account {
   const account: Account = {
     _id: raw.id,
+    connectionId: raw.conn_id,
     orgName: inferOrgName(raw.org?.name, raw.name),
+    orgUrl: connectionMeta?.orgUrl,
     name: raw.name,
     currency: raw.currency,
     balance: parseFloat(raw.balance),
@@ -115,6 +125,8 @@ export function transformTransaction(raw: RawSFINTransaction, accountId: string,
     ? new Date(raw.transacted_at * 1000)
     : new Date(raw.posted * 1000);
 
+  const bridgeCategory = typeof raw.extra?.category === 'string' ? raw.extra.category : undefined;
+
   return {
     _id: raw.id,
     accountId,
@@ -127,6 +139,7 @@ export function transformTransaction(raw: RawSFINTransaction, accountId: string,
     pending: isPending,
     importedAt: now,
     extra: raw.extra,
+    bridgeCategory,
   };
 }
 
@@ -134,6 +147,14 @@ export function transformError(raw: RawSFINError): SFINError {
   return {
     type: raw.type,
     accountId: raw['account-id'],
+    message: raw.message != null ? stripHtml(raw.message) : undefined,
+  };
+}
+
+export function transformErrListEntry(raw: RawSFINErrListEntry): SFINError {
+  return {
+    type: raw.type,
+    connectionId: raw.conn_id,
     message: raw.message != null ? stripHtml(raw.message) : undefined,
   };
 }

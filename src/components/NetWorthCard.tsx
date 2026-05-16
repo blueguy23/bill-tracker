@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import type { Account } from '@/lib/simplefin/types';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -27,6 +30,46 @@ function timeAgo(date: Date | string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+interface InstitutionGroup {
+  key: string;
+  orgName: string;
+  orgUrl?: string;
+  accounts: Account[];
+  subtotal: number;
+}
+
+function groupByInstitution(accounts: Account[]): InstitutionGroup[] {
+  const map = new Map<string, Account[]>();
+  for (const a of accounts) {
+    const key = a.connectionId ?? a._id;
+    const group = map.get(key);
+    if (group) group.push(a);
+    else map.set(key, [a]);
+  }
+  return Array.from(map.entries()).map(([key, accts]) => ({
+    key,
+    orgName: accts[0]!.orgName,
+    orgUrl: accts[0]!.orgUrl,
+    accounts: accts,
+    subtotal: accts.reduce((sum, a) => sum + a.balance, 0),
+  }));
+}
+
+function Favicon({ orgUrl }: { orgUrl: string }) {
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
+  return (
+    <img
+      src={`${orgUrl}/favicon.ico`}
+      alt=""
+      width={14}
+      height={14}
+      className="rounded-sm shrink-0"
+      onError={() => setHidden(true)}
+    />
+  );
+}
+
 interface NetWorthCardProps {
   accounts: Account[];
 }
@@ -36,6 +79,7 @@ export function NetWorthCard({ accounts }: NetWorthCardProps) {
 
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
   const isPositive = totalBalance >= 0;
+  const groups = groupByInstitution(accounts);
 
   return (
     <div className="rounded-xl border border-white/[0.06] bg-zinc-900 overflow-hidden flex flex-col">
@@ -47,21 +91,37 @@ export function NetWorthCard({ accounts }: NetWorthCardProps) {
         </span>
       </div>
 
-      {/* Account list */}
-      <div className="divide-y divide-white/[0.03] flex-1">
-        {accounts.map((a) => (
-          <div key={a._id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-zinc-300 truncate">{a.orgName}</p>
-              <p className="text-[11px] text-zinc-600 truncate">{a.name}</p>
+      {/* Grouped account list */}
+      <div className="flex-1">
+        {groups.map((group) => (
+          <div key={group.key}>
+            <div className="flex items-center justify-between px-4 py-2 bg-white/[0.02]">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {group.orgUrl && <Favicon orgUrl={group.orgUrl} />}
+                <p className="text-[11px] font-semibold text-zinc-400 truncate">{group.orgName}</p>
+              </div>
+              {group.accounts.length > 1 && (
+                <span className={`text-[11px] font-medium tabular-nums ${group.subtotal < 0 ? 'text-red-400/70' : 'text-zinc-500'}`}>
+                  {USD.format(group.subtotal)}
+                </span>
+              )}
             </div>
-            <div className="flex flex-col items-end gap-0.5 shrink-0">
-              <span className={`text-xs font-medium tabular-nums ${a.balance < 0 ? 'text-red-400' : 'text-zinc-200'}`}>
-                {USD.format(a.balance)}
-              </span>
-              <span className={`text-[10px] font-medium px-1.5 py-px rounded-full ${TYPE_COLORS[a.accountType] ?? TYPE_COLORS['other']}`}>
-                {TYPE_LABELS[a.accountType] ?? 'Other'}
-              </span>
+            <div className="divide-y divide-white/[0.03]">
+              {group.accounts.map((a) => (
+                <div key={a._id} className="flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-zinc-300 truncate">{a.name}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    <span className={`text-xs font-medium tabular-nums ${a.balance < 0 ? 'text-red-400' : 'text-zinc-200'}`}>
+                      {USD.format(a.balance)}
+                    </span>
+                    <span className={`text-[10px] font-medium px-1.5 py-px rounded-full ${TYPE_COLORS[a.accountType] ?? TYPE_COLORS['other']}`}>
+                      {TYPE_LABELS[a.accountType] ?? 'Other'}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
