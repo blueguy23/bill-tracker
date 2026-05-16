@@ -3,6 +3,8 @@ set -euo pipefail
 
 # ── Privilege drop ────────────────────────────────────────────────────────────
 if [ "$(id -u)" = "0" ]; then
+  /preflight-check.sh || exit $?
+
   # Clock sync must run as root with SYS_TIME capability (set in docker-compose.yml).
   # chronyd -q = one-shot sync, no daemon needed. Falls back to ntpdate.
   # WSL2 desyncs after host sleep — fix before gosu so TLS ops don't fail.
