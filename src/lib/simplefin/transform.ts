@@ -84,6 +84,9 @@ export function transformHolding(raw: RawSFINHolding): Holding {
     ticker: raw.ticker ?? null,
     description: raw.description ?? null,
     marketValue: raw['market-value'] ? parseFloat(raw['market-value']) : 0,
+    costBasis: raw['cost-basis'] ? parseFloat(raw['cost-basis']) : null,
+    quantity: raw.quantity ? parseFloat(raw.quantity) : null,
+    purchasedAt: raw['purchased-at'] ? new Date(raw['purchased-at'] * 1000) : null,
     currency: raw.currency ?? 'USD',
   };
 }
@@ -115,6 +118,8 @@ export function transformTransaction(raw: RawSFINTransaction, accountId: string,
     ? new Date(raw.transacted_at * 1000)
     : new Date(raw.posted * 1000);
 
+  const bridgeCategory = typeof raw.extra?.category === 'string' ? raw.extra.category : undefined;
+
   return {
     _id: raw.id,
     accountId,
@@ -127,6 +132,7 @@ export function transformTransaction(raw: RawSFINTransaction, accountId: string,
     pending: isPending,
     importedAt: now,
     extra: raw.extra,
+    bridgeCategory,
   };
 }
 

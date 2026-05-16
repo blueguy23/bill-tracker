@@ -11,13 +11,14 @@ export async function POST(): Promise<Response> {
     const db = await getDb();
     const rules = await listCategoryRules(db);
 
-    const all = await db.queryMany<Transaction>(TRANSACTIONS, { categorySource: { $ne: 'user' } }, { limit: 10000 });
+    // $nin includes legacy 'user' value for backward compatibility
+    const all = await db.queryMany<Transaction>(TRANSACTIONS, { categorySource: { $nin: ['user-override', 'user'] as string[] } } as Record<string, unknown>, { limit: 10000 });
 
     let updated = 0;
     for (const txn of all) {
       const category = categorize(txn.description, txn.memo ?? null, rules);
       if (category !== txn.category) {
-        await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: { category, categorySource: 'auto' } }, false);
+        await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: { category, categorySource: 'keyword' as const } }, false);
         updated++;
       }
     }

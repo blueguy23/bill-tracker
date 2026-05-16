@@ -5,7 +5,7 @@ import { getTodayLog, incrementUrlUnits, markHistoricalDone } from '@/adapters/s
 import { upsertAccount, upsertTransaction, getTransaction, markTransfersById } from '@/adapters/accounts';
 import { listCategoryRules } from '@/adapters/categoryRules';
 import { getUserProfile } from '@/adapters/userProfile';
-import { categorize } from '@/lib/categorization/engine';
+import { categorize, mapBridgeCategory } from '@/lib/categorization/engine';
 import { buildTransferRe, classifyTransfer } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
 
@@ -45,11 +45,14 @@ async function syncFetch(
   let transactionsUpserted = 0;
   for (const txn of transactions) {
     const existing = await getTransaction(db, txn._id);
-    const preserveCategory = existing?.categorySource === 'user';
+    const source = existing?.categorySource as string | undefined;
+    const preserveCategory = source === 'user-override' || source === 'user';
+    const bridgeMapped = txn.bridgeCategory ? mapBridgeCategory(txn.bridgeCategory) ?? undefined : undefined;
     const prepared: Transaction = {
       ...txn,
-      category: preserveCategory ? existing.category : categorize(txn.description, txn.memo, rules),
-      categorySource: preserveCategory ? 'user' : 'auto',
+      category: preserveCategory ? existing!.category : categorize(txn.description, txn.memo, rules),
+      categorySource: preserveCategory ? 'user-override' : 'keyword',
+      bridgeMappedCategory: bridgeMapped,
       isTransfer: classifyTransfer(txn, creditAccountIds, transferRe),
     };
     const inserted = await upsertTransaction(db, prepared);

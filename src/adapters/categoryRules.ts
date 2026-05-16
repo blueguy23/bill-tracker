@@ -40,7 +40,7 @@ export async function setTransactionCategory(
   const result = await db.updateOne<Transaction>(
     'transactions',
     { _id: transactionId },
-    { $set: { category, categorySource: 'user' } },
+    { $set: { category, categorySource: 'user-override' as const } },
   );
   return result !== null;
 }

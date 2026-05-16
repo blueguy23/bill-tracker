@@ -47,7 +47,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
   const accountMap = useMemo(() => new Map(accounts.map(a => [a._id, a])), [accounts]);
 
   const onCategoryChanged = useCallback((id: string, cat: TransactionCategory) =>
-    setTransactions(p => p.map(t => t._id === id ? { ...t, category: cat, categorySource: 'user' } : t)), []);
+    setTransactions(p => p.map(t => t._id === id ? { ...t, category: cat, categorySource: 'user-override' } : t)), []);
   const onTagsChanged = useCallback((id: string, tags: string[]) =>
     setTransactions(p => p.map(t => t._id === id ? { ...t, tags } : t)), []);
   const onNotesChanged = useCallback((id: string, notes: string | null) =>

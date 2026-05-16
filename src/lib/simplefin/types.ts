@@ -70,6 +70,9 @@ export interface Holding {
   ticker: string | null;
   description: string | null;
   marketValue: number;
+  costBasis: number | null;
+  quantity: number | null;
+  purchasedAt: Date | null;
   currency: string;
 }
 
@@ -105,8 +108,10 @@ export interface Transaction {
   pending: boolean;
   importedAt: Date;
   extra?: Record<string, unknown>;
+  bridgeCategory?: string;
+  bridgeMappedCategory?: import('@/lib/categorization/types').TransactionCategory;
   category?: import('@/lib/categorization/types').TransactionCategory;
-  categorySource?: 'auto' | 'user' | 'trove';
+  categorySource?: 'keyword' | 'trove' | 'bridge' | 'user-override';
   merchantName?: string | null;
   merchantDomain?: string | null;
   tags?: string[];
