@@ -32,12 +32,108 @@ if [ "$(id -u)" = "0" ]; then
 fi
 
 # ── From here: running as garci ───────────────────────────────────────────────
-REPO_URL="https://github.com/blueguy23/bill-tracker"
+REPO_OWNER="${REPO_OWNER:-blueguy23}"
+REPO_NAME="${REPO_NAME:-bill-tracker}"
+REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
 RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
 SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"
 GITHUB_API="https://api.github.com"
+CURL_CMD="${CURL_CMD:-curl}"
 
 log() { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"; }
+
+# ── Registration functions (testable via CURL_CMD override) ──────────────────
+
+_get_registration_token() {
+  if [ -z "${GITHUB_PAT:-}" ]; then
+    log "ERROR: GITHUB_PAT is not set"
+    return 1
+  fi
+
+  local RESPONSE TOKEN
+  RESPONSE=$($CURL_CMD -fsSL -X POST \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" 2>/dev/null) || {
+    log "ERROR: Failed to get registration token (HTTP error or network failure)"
+    return 1
+  }
+
+  TOKEN=$(echo "$RESPONSE" | jq -r '.token')
+  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+    log "ERROR: Failed to get runner registration token. Check GITHUB_PAT has 'repo' scope."
+    return 1
+  fi
+
+  echo "$TOKEN"
+}
+
+_get_remove_token() {
+  if [ -z "${GITHUB_PAT:-}" ]; then
+    log "ERROR: GITHUB_PAT is not set"
+    return 1
+  fi
+
+  local RESPONSE TOKEN
+  RESPONSE=$($CURL_CMD -fsSL -X POST \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/remove-token" 2>/dev/null) || {
+    log "ERROR: Failed to get remove token (HTTP error or network failure)"
+    return 1
+  }
+
+  TOKEN=$(echo "$RESPONSE" | jq -r '.token')
+  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+    log "ERROR: Failed to get runner remove token. Check GITHUB_PAT has 'repo' scope."
+    return 1
+  fi
+
+  echo "$TOKEN"
+}
+
+_register_runner() {
+  local REG_TOKEN="${1:?_register_runner requires a registration token as \$1}"
+
+  rm -f .runner .credentials
+
+  ./config.sh \
+    --url           "$REPO_URL" \
+    --token         "$REG_TOKEN" \
+    --name          "$RUNNER_NAME" \
+    --labels        "self-hosted,Linux,X64" \
+    --work          _work \
+    --unattended \
+    --replace \
+    --ephemeral \
+    --disableupdate
+}
+
+_deregister_runner() {
+  local RUNNER_ID
+  RUNNER_ID=$($CURL_CMD -sf --max-time 10 \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners" \
+    | jq -r --arg name "$RUNNER_NAME" '.runners[] | select(.name == $name) | .id') || true
+
+  if [ -n "$RUNNER_ID" ] && [ "$RUNNER_ID" != "null" ]; then
+    log "Deregistering runner (id=${RUNNER_ID}) from GitHub..."
+    local HTTP_CODE
+    HTTP_CODE=$($CURL_CMD -s -o /dev/null -w '%{http_code}' --max-time 10 -X DELETE \
+      -H "Authorization: token ${GITHUB_PAT}" \
+      -H "Accept: application/vnd.github+json" \
+      "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/${RUNNER_ID}")
+
+    if [ "$HTTP_CODE" = "204" ]; then
+      log "Runner deregistered."
+    elif [ "$HTTP_CODE" = "403" ]; then
+      log "ERROR: Deregistration returned 403 — GITHUB_PAT may lack 'repo' or 'manage_runners:org' scope"
+    else
+      log "WARNING: Deregistration returned HTTP ${HTTP_CODE} (GitHub will clean up eventually)"
+    fi
+  fi
+}
 
 # ── 1. Docker Hub auth (optional — prevents anonymous pull rate limits) ───────
 if [ -n "${DOCKERHUB_USERNAME:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
@@ -67,31 +163,6 @@ cd /home/garci/actions-runner
 
 # ── 3. Graceful shutdown ─────────────────────────────────────────────────────
 STOP=0
-_deregister_runner() {
-  local RUNNER_ID
-  RUNNER_ID=$(curl -sf --max-time 10 \
-    -H "Authorization: token ${GITHUB_PAT}" \
-    -H "Accept: application/vnd.github+json" \
-    "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners" \
-    | jq -r --arg name "$RUNNER_NAME" '.runners[] | select(.name == $name) | .id')
-
-  if [ -n "$RUNNER_ID" ] && [ "$RUNNER_ID" != "null" ]; then
-    log "Deregistering runner (id=${RUNNER_ID}) from GitHub..."
-    local HTTP_CODE
-    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X DELETE \
-      -H "Authorization: token ${GITHUB_PAT}" \
-      -H "Accept: application/vnd.github+json" \
-      "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners/${RUNNER_ID}")
-
-    if [ "$HTTP_CODE" = "204" ]; then
-      log "Runner deregistered."
-    elif [ "$HTTP_CODE" = "403" ]; then
-      log "ERROR: Deregistration returned 403 — GITHUB_PAT may lack 'repo' or 'manage_runners:org' scope"
-    else
-      log "WARNING: Deregistration returned HTTP ${HTTP_CODE} (GitHub will clean up eventually)"
-    fi
-  fi
-}
 
 _cleanup() {
   log "Caught signal — stopping runner loop..."
@@ -114,29 +185,9 @@ register() {
   _deregister_runner
 
   local REG_TOKEN
-  REG_TOKEN=$(curl -fsSL -X POST \
-    -H "Authorization: token ${GITHUB_PAT}" \
-    -H "Accept: application/vnd.github+json" \
-    "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners/registration-token" \
-    | jq -r '.token')
+  REG_TOKEN=$(_get_registration_token) || return 1
 
-  if [[ "$REG_TOKEN" == "null" || -z "$REG_TOKEN" ]]; then
-    log "ERROR: Failed to get runner registration token. Check GITHUB_PAT has 'repo' scope."
-    return 1
-  fi
-
-  rm -f .runner .credentials
-
-  ./config.sh \
-    --url           "$REPO_URL" \
-    --token         "$REG_TOKEN" \
-    --name          "$RUNNER_NAME" \
-    --labels        "self-hosted,Linux,X64" \
-    --work          _work \
-    --unattended \
-    --replace \
-    --ephemeral \
-    --disableupdate
+  _register_runner "$REG_TOKEN"
 }
 
 while [ "$STOP" -eq 0 ]; do
@@ -164,7 +215,7 @@ while [ "$STOP" -eq 0 ]; do
       if tail -3 "$RUNNER_LOG" 2>/dev/null | grep -q "Retrying until reconnected"; then
         log "Watchdog: runner stuck in retry loop — waiting 30s before forcing exit"
         sleep 30
-        if tail -5 "$RUNNER_LOG" 2>/dev/null | grep -qE "reconnected\.|Listening for Jobs"; then
+        if tail -5 "$RUNNER_LOG" 2>/dev/null | grep -q "Listening for Jobs"; then
           log "Watchdog: runner recovered — standing down"
           continue
         fi
