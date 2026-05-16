@@ -107,24 +107,19 @@ Set in `next.config.ts`:
 | `quantity` | Holding | Per-holding share count displayed in PortfolioWidget |
 | `purchased-at` | Holding | Stored as `purchasedAt` on Holding for future holding-period tracking |
 | `extra.category` | Transaction | Extracted as `bridgeCategory` — used as last-resort fallback in categorization engine (after user rules, keyword rules, and Trove) |
+| `conn_id` | Account | Stored as `connectionId` — powers institution grouping in NetWorthCard, org-name propagation for Unknown accounts, and per-connection error reporting |
+| `Connection` object | Top-level (AccountSet) | `RawSFINConnection` type with `conn_id`, `name`, `org_id`, `org_url`, `sfin_url`. `org_url` is stored as `orgUrl` on Account for favicon rendering |
+| `org_url` | Connection | Stored as `orgUrl` on Account — renders institution favicon via `{orgUrl}/favicon.ico` in NetWorthCard |
+| `errlist` | AccountSet | Preferred over deprecated `errors` array — provides per-connection error reporting via `conn_id`. Falls back to `errors` when `errlist` is absent |
 
 ### Tier 2 — Backlog (typed but not yet surfaced)
 
 | Field | Object | Potential use |
 |-------|--------|--------------|
-| `conn_id` | Account | Read ad-hoc in client.ts for org-name propagation; should be stored as a first-class field to enable institution grouping, connection health monitoring, and per-connection error reporting |
 | `org.sfin-url` | Organization | Could link to institution's SimpleFIN server for connection diagnostics |
+| `org_id` | Connection | Stable institution ID for grouping accounts across multiple connections (typed in `RawSFINConnection` but not yet stored on Account) |
 | `account.extra` | Account | Stored in MongoDB but never queried — contains `account-open-date` (credit age calculation) and other institution-specific metadata |
 | `transaction.extra` | Transaction | Stored but only `pending` and `category` are extracted — may contain institution-specific fields worth surfacing |
-
-### Tier 3 — Not yet captured (spec fields missing from types)
-
-| Field | Object | Potential use |
-|-------|--------|--------------|
-| `Connection` object | Top-level (AccountSet) | Full connection metadata (name, org_id, org_url, sfin_url) — enables institution grouping, connection status page, favicon/logo fetching via `org_url` |
-| `org_id` | Connection | Stable institution ID for grouping accounts across multiple connections |
-| `org_url` | Connection | Institution domain — auto-populate bill URLs, fetch favicons for account display |
-| `errlist` | AccountSet | Replaces deprecated `errors` array with richer per-connection error structure |
 
 ## Service Ports
 

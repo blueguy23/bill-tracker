@@ -3,6 +3,7 @@ import type {
   RawSFINHolding,
   RawSFINTransaction,
   RawSFINError,
+  RawSFINErrListEntry,
   Account,
   AccountType,
   Holding,
@@ -91,10 +92,16 @@ export function transformHolding(raw: RawSFINHolding): Holding {
   };
 }
 
-export function transformAccount(raw: RawSFINAccount, now: Date = new Date()): Account {
+export interface ConnectionMeta {
+  orgUrl?: string;
+}
+
+export function transformAccount(raw: RawSFINAccount, now: Date = new Date(), connectionMeta?: ConnectionMeta): Account {
   const account: Account = {
     _id: raw.id,
+    connectionId: raw.conn_id,
     orgName: inferOrgName(raw.org?.name, raw.name),
+    orgUrl: connectionMeta?.orgUrl,
     name: raw.name,
     currency: raw.currency,
     balance: parseFloat(raw.balance),
@@ -140,6 +147,14 @@ export function transformError(raw: RawSFINError): SFINError {
   return {
     type: raw.type,
     accountId: raw['account-id'],
+    message: raw.message != null ? stripHtml(raw.message) : undefined,
+  };
+}
+
+export function transformErrListEntry(raw: RawSFINErrListEntry): SFINError {
+  return {
+    type: raw.type,
+    connectionId: raw.conn_id,
     message: raw.message != null ? stripHtml(raw.message) : undefined,
   };
 }

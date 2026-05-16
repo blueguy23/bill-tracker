@@ -62,10 +62,13 @@ async function syncFetch(
 
   const warnings: string[] = [];
   for (const err of errors) {
+    const target = err.connectionId
+      ? `Connection ${err.connectionId}`
+      : `Account ${err.accountId ?? 'unknown'}`;
     if (err.type === 'NO_DATA') {
-      warnings.push(`Account ${err.accountId ?? 'unknown'} requires re-authentication (NO_DATA)`);
+      warnings.push(`${target} requires re-authentication (NO_DATA)`);
     } else if (err.type === 'UNAVAILABLE') {
-      warnings.push(`Account ${err.accountId ?? 'unknown'} is temporarily unavailable`);
+      warnings.push(`${target} is temporarily unavailable`);
     }
   }
 

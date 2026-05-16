@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { transformAccount, transformTransaction, transformError } from './transform';
+import { transformAccount, transformTransaction, transformError, transformErrListEntry } from './transform';
 import type {
   RawSFINResponse,
   Account,
@@ -174,33 +174,35 @@ export class SimpleFINClient {
     const accounts: Account[] = [];
     const transactions: Transaction[] = [];
 
+    const connMeta = new Map<string, { orgUrl?: string }>();
+    for (const conn of raw.connections ?? []) {
+      connMeta.set(conn.conn_id, { orgUrl: conn.org_url });
+    }
+
     for (const rawAccount of raw.accounts) {
-      accounts.push(transformAccount(rawAccount, now));
+      const meta = rawAccount.conn_id ? connMeta.get(rawAccount.conn_id) : undefined;
+      accounts.push(transformAccount(rawAccount, now, meta));
       for (const rawTxn of rawAccount.transactions ?? []) {
         transactions.push(transformTransaction(rawTxn, rawAccount.id, now));
       }
     }
 
-    // MX bridge sends conn_id (not org) — group by it and propagate known names to Unknown siblings
-    const rawByAccountId = new Map(raw.accounts.map(a => [a.id, a]));
     const connIdToOrgName = new Map<string, string>();
     for (const account of accounts) {
-      const connId = (rawByAccountId.get(account._id) as Record<string, unknown> | undefined)?.conn_id as string | undefined;
-      if (connId && account.orgName !== 'Unknown') {
-        connIdToOrgName.set(connId, account.orgName);
+      if (account.connectionId && account.orgName !== 'Unknown') {
+        connIdToOrgName.set(account.connectionId, account.orgName);
       }
     }
     for (const account of accounts) {
-      if (account.orgName === 'Unknown') {
-        const connId = (rawByAccountId.get(account._id) as Record<string, unknown> | undefined)?.conn_id as string | undefined;
-        if (connId) {
-          const resolved = connIdToOrgName.get(connId);
-          if (resolved) account.orgName = resolved;
-        }
+      if (account.orgName === 'Unknown' && account.connectionId) {
+        const resolved = connIdToOrgName.get(account.connectionId);
+        if (resolved) account.orgName = resolved;
       }
     }
 
-    const errors = (raw.errors ?? []).map(transformError);
+    const errors = raw.errlist?.length
+      ? raw.errlist.map(transformErrListEntry)
+      : (raw.errors ?? []).map(transformError);
 
     return { accounts, transactions, errors };
   }

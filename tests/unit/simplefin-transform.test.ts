@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { transformAccount, transformTransaction, transformError, inferAccountType } from '@/lib/simplefin/transform';
-import type { RawSFINAccount, RawSFINTransaction, RawSFINError } from '@/lib/simplefin/types';
+import { transformAccount, transformTransaction, transformError, transformErrListEntry, inferAccountType } from '@/lib/simplefin/transform';
+import type { RawSFINAccount, RawSFINTransaction, RawSFINError, RawSFINErrListEntry } from '@/lib/simplefin/types';
 
 function makeRawAccount(overrides: Partial<RawSFINAccount> = {}): RawSFINAccount {
   return {
@@ -166,6 +166,28 @@ describe('transformTransaction', () => {
   });
 });
 
+describe('transformAccount — connectionId and orgUrl', () => {
+  it('should store conn_id as connectionId', () => {
+    const result = transformAccount(makeRawAccount({ conn_id: 'conn-chase-1' }));
+    expect(result.connectionId).toBe('conn-chase-1');
+  });
+
+  it('should leave connectionId undefined when conn_id is absent', () => {
+    const result = transformAccount(makeRawAccount());
+    expect(result.connectionId).toBeUndefined();
+  });
+
+  it('should store orgUrl from connectionMeta', () => {
+    const result = transformAccount(makeRawAccount({ conn_id: 'c1' }), new Date(), { orgUrl: 'https://chase.com' });
+    expect(result.orgUrl).toBe('https://chase.com');
+  });
+
+  it('should leave orgUrl undefined when connectionMeta is absent', () => {
+    const result = transformAccount(makeRawAccount({ conn_id: 'c1' }));
+    expect(result.orgUrl).toBeUndefined();
+  });
+});
+
 describe('transformError', () => {
   it('should map type and accountId', () => {
     const raw: RawSFINError = { type: 'NO_DATA', 'account-id': 'acc-1' };
@@ -184,6 +206,28 @@ describe('transformError', () => {
   it('should return undefined message when absent', () => {
     const raw: RawSFINError = { type: 'RATE_LIMIT' };
     const result = transformError(raw);
+    expect(result.message).toBeUndefined();
+  });
+});
+
+describe('transformErrListEntry', () => {
+  it('should map conn_id to connectionId', () => {
+    const raw: RawSFINErrListEntry = { conn_id: 'conn-1', type: 'NO_DATA' };
+    const result = transformErrListEntry(raw);
+    expect(result.connectionId).toBe('conn-1');
+    expect(result.type).toBe('NO_DATA');
+    expect(result.accountId).toBeUndefined();
+  });
+
+  it('should strip HTML from message', () => {
+    const raw: RawSFINErrListEntry = { conn_id: 'c-2', type: 'UNAVAILABLE', message: '<em>Down</em> for maintenance' };
+    const result = transformErrListEntry(raw);
+    expect(result.message).toBe('Down for maintenance');
+  });
+
+  it('should return undefined message when absent', () => {
+    const raw: RawSFINErrListEntry = { conn_id: 'c-3', type: 'RATE_LIMIT' };
+    const result = transformErrListEntry(raw);
     expect(result.message).toBeUndefined();
   });
 });
