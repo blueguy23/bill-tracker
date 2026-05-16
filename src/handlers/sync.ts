@@ -8,6 +8,7 @@ import { getUserProfile } from '@/adapters/userProfile';
 import { categorize, mapBridgeCategory } from '@/lib/categorization/engine';
 import { buildTransferRe, classifyTransfer } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
+import { syncLinkedGoals } from '@/handlers/goalSync';
 
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
 const DAILY_QUOTA = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
@@ -98,7 +99,10 @@ export async function runDailySync(
     console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
   }
 
-  const pairedIds = await detectPairedTransfers(db);
+  const [pairedIds] = await Promise.all([
+    detectPairedTransfers(db),
+    syncLinkedGoals(db),
+  ]);
   if (pairedIds.length) await markTransfersById(db, pairedIds);
 
   return {
@@ -152,9 +156,11 @@ export async function runHistoricalImport(
     console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
   }
 
-  // Pair transfers across all 90 days of imported data
-  const pairedIds = await detectPairedTransfers(db, CHUNK_DAYS * CHUNKS);
-  if (pairedIds.length) await markTransfersById(db, pairedIds);
+  const [pairedIds2] = await Promise.all([
+    detectPairedTransfers(db, CHUNK_DAYS * CHUNKS),
+    syncLinkedGoals(db),
+  ]);
+  if (pairedIds2.length) await markTransfersById(db, pairedIds2);
 
   return {
     accountsUpdated: totalAccounts,

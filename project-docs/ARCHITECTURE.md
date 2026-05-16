@@ -60,6 +60,17 @@ Cron (daily) or manual trigger
   → Discord webhook
 ```
 
+## Data Flow — Goals Sync
+
+```
+Bank sync (daily/manual/historical)
+  → src/handlers/sync.ts (post-sync hook)
+  → src/handlers/goalSync.ts
+  → listLinkedGoals()               (goals with linkedAccountId)
+  → match account balance from latest sync
+  → updateGoalSavedAmount()         (MongoDB: goals)
+```
+
 ## Collections (MongoDB)
 
 | Collection | Description |
@@ -71,6 +82,7 @@ Cron (daily) or manual trigger
 | `budgets` | Monthly budget limits by category |
 | `syncLog` | Daily sync metadata and quota tracking |
 | `accountMeta` | Credit account settings (limit, utilization target) |
+| `goals` | Savings goals with optional linked-account auto-sync |
 | `categoryRules` | User-defined keyword → category rules |
 | `notificationLogs` | Sent notification history |
 | `_migrations` | Applied DB migration tracking |

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import type { CategoryBudgetSummary } from '@/types/budget';
-import { GoalData, goalState, GoalsView } from './GoalsView';
+import type { GoalResponse } from '@/types/goal';
+import { GoalData, toGoalData, goalState, GoalsView } from './GoalsView';
 import { BudgetView } from './BudgetView';
 
 type Tab = 'budget' | 'goals';
@@ -19,11 +20,54 @@ const HERO_CIRC = 2 * Math.PI * 32; // r=32, ≈201.06
 export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
   const [tab, setTab]               = useState<Tab>(initialTab);
   const [goals, setGoals]           = useState<GoalData[]>([]);
+  const [goalsLoading, setGoalsLoading] = useState(true);
   const [showAddGoal, setShowAddGoal] = useState(false);
   const [animSpentPct, setAnimSpentPct] = useState(0);
   const [animGoalPct,  setAnimGoalPct]  = useState(0);
   const router   = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    fetch('/api/v1/goals')
+      .then(r => r.json())
+      .then((data: GoalResponse[]) => setGoals(data.map(toGoalData)))
+      .catch(err => console.error('[Goals] fetch failed', err))
+      .finally(() => setGoalsLoading(false));
+  }, []);
+
+  const handleGoalAdded = useCallback(async (g: GoalData) => {
+    const res = await fetch('/api/v1/goals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: g.name,
+        targetAmount: g.target,
+        savedAmount: g.saved,
+        monthlyContribution: g.contribution,
+        targetDate: g.dueDate,
+        linkedAccountId: g.linkedAccountId,
+      }),
+    });
+    if (!res.ok) return;
+    const created: GoalResponse = await res.json();
+    setGoals(prev => [...prev, toGoalData(created)]);
+  }, []);
+
+  const handleGoalUpdated = useCallback(async (id: string, saved: number) => {
+    const res = await fetch(`/api/v1/goals/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ savedAmount: saved }),
+    });
+    if (!res.ok) return;
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, saved } : g));
+  }, []);
+
+  const handleGoalDeleted = useCallback(async (id: string) => {
+    const res = await fetch(`/api/v1/goals/${id}`, { method: 'DELETE' });
+    if (!res.ok) return;
+    setGoals(prev => prev.filter(g => g.id !== id));
+  }, []);
 
   const now          = new Date();
   const todayDay     = now.getDate();
@@ -246,7 +290,10 @@ export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
       {tab === 'goals' && (
         <GoalsView
           goals={goals}
-          onGoalAdded={g => setGoals(prev => [...prev, g])}
+          loading={goalsLoading}
+          onGoalAdded={handleGoalAdded}
+          onGoalUpdated={handleGoalUpdated}
+          onGoalDeleted={handleGoalDeleted}
           showAddModal={showAddGoal}
           onCloseAddModal={() => setShowAddGoal(false)}
           onAddGoalClick={() => setShowAddGoal(true)}
