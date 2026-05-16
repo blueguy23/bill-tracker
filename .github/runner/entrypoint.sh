@@ -32,6 +32,7 @@ fi
 # ── From here: running as garci ───────────────────────────────────────────────
 REPO_URL="https://github.com/blueguy23/bill-tracker"
 RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
+SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"
 GITHUB_API="https://api.github.com"
 
 log() { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"; }
@@ -64,12 +65,39 @@ cd /home/garci/actions-runner
 
 # ── 3. Graceful shutdown ─────────────────────────────────────────────────────
 STOP=0
+_deregister_runner() {
+  local RUNNER_ID
+  RUNNER_ID=$(curl -sf --max-time 10 \
+    -H "Authorization: token ${GITHUB_PAT}" \
+    -H "Accept: application/vnd.github+json" \
+    "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners" \
+    | jq -r --arg name "$RUNNER_NAME" '.runners[] | select(.name == $name) | .id')
+
+  if [ -n "$RUNNER_ID" ] && [ "$RUNNER_ID" != "null" ]; then
+    log "Deregistering runner (id=${RUNNER_ID}) from GitHub..."
+    local HTTP_CODE
+    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X DELETE \
+      -H "Authorization: token ${GITHUB_PAT}" \
+      -H "Accept: application/vnd.github+json" \
+      "${GITHUB_API}/repos/blueguy23/bill-tracker/actions/runners/${RUNNER_ID}")
+
+    if [ "$HTTP_CODE" = "204" ]; then
+      log "Runner deregistered."
+    elif [ "$HTTP_CODE" = "403" ]; then
+      log "ERROR: Deregistration returned 403 — GITHUB_PAT may lack 'repo' or 'manage_runners:org' scope"
+    else
+      log "WARNING: Deregistration returned HTTP ${HTTP_CODE} (GitHub will clean up eventually)"
+    fi
+  fi
+}
+
 _cleanup() {
   log "Caught signal — stopping runner loop..."
   STOP=1
   kill "$RUNNER_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
   kill "$TAIL_PID" 2>/dev/null || true
+  _deregister_runner
   rm -f .runner .credentials
   log "Runner stopped."
 }
@@ -81,6 +109,8 @@ trap _cleanup TERM INT
 RUNNER_LOG=/tmp/runner-output.log
 
 register() {
+  _deregister_runner
+
   local REG_TOKEN
   REG_TOKEN=$(curl -fsSL -X POST \
     -H "Authorization: token ${GITHUB_PAT}" \
@@ -149,6 +179,11 @@ while [ "$STOP" -eq 0 ]; do
   kill "$TAIL_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
 
-  log "Runner exited with code ${EXIT_CODE} — re-registering..."
-  sleep 2
+  if grep -q "A session for this runner already exists" "$RUNNER_LOG" 2>/dev/null; then
+    log "Runner exited with session conflict — waiting ${SESSION_CONFLICT_WAIT}s for GitHub to clear stale session..."
+    sleep "$SESSION_CONFLICT_WAIT"
+  else
+    log "Runner exited with code ${EXIT_CODE} — re-registering..."
+    sleep 2
+  fi
 done
