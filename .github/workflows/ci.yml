@@ -9,19 +9,20 @@ name: CI
 # ACTION REQUIRED: rotate AUTH_SECRET and AUTH_PASSWORD in GitHub repo settings
 # after this commit — old values are in repo history.
 
-# Job execution order:
-#   dora-start ──────────────────────────────────────────┐
-#   [SAST, Security Audit, Lint, TypeScript]  (parallel) │
-#          ↓ (all four must pass)                        │
-#       [Unit Tests]                                     │
-#          ↓                                             │
-#       [Integration Tests]                              │
-#          ↓                                             │
-#       [E2E Tests] ────────────────────────────────── ──┤
-#          ↓                                             │
-#       [dora-emit] ◄────────────────────────────────────┘
-#          ↓
-#       [dora-summary]
+# Job dependency graph:
+#   runner-health (2min gate — fails fast if runner unavailable)
+#   ├── dora-start
+#   ├── SAST (Semgrep)
+#   ├── Security Audit
+#   ├── Lint
+#   └── TypeScript
+#       └── Unit Tests (needs: semgrep, audit, lint, typecheck)
+#           └── Integration Tests
+#               └── E2E Tests
+#                   ├── test (gate job)
+#                   └── DORA Emit (needs: dora-start, e2e; !cancelled)
+#                       └── DORA Summary (needs: dora-start, dora-emit; !cancelled)
+#   Docker Build (needs: typecheck, unit; master-only)
 
 on:
   push:
@@ -29,18 +30,33 @@ on:
   pull_request:
     branches: [master]
 
+timeout-minutes: 60
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ── Runner health gate — fails fast if runner is unreachable ─────────────────
+  runner-health:
+    name: Runner Health
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - name: Runner reachability check
+        run: |
+          echo "Runner online: $(hostname)"
+          echo "Disk: $(df -h / | tail -1 | awk '{print $5}') used"
+          echo "Uptime: $(uptime -p)"
+          echo "## ✅ Runner Online" >> $GITHUB_STEP_SUMMARY
   # ── DORA: capture pipeline start + commit timestamp ───────────────────────────
   # Runs in parallel with the first validation tier — no critical-path cost.
   # commit-epoch comes from the event payload so no checkout is needed.
   dora-start:
     name: DORA Start
     runs-on: self-hosted
-    timeout-minutes: 2
+    timeout-minutes: 5
+    needs: [runner-health]
     outputs:
       start-epoch: ${{ steps.ts.outputs.start-epoch }}
       commit-epoch: ${{ steps.ts.outputs.commit-epoch }}
@@ -65,7 +81,8 @@ jobs:
   semgrep:
     name: SAST (Semgrep)
     runs-on: self-hosted
-    timeout-minutes: 5
+    timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -80,7 +97,8 @@ jobs:
   typecheck:
     name: TypeScript
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -100,7 +118,8 @@ jobs:
   lint:
     name: Lint
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -120,7 +139,8 @@ jobs:
   audit:
     name: Security Audit
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -138,7 +158,7 @@ jobs:
   unit:
     name: Unit Tests
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     needs: [semgrep, audit, lint, typecheck]
     steps:
       - uses: actions/checkout@v5
@@ -159,7 +179,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: self-hosted
-    timeout-minutes: 6
+    timeout-minutes: 15
     needs: unit
     steps:
       - uses: actions/checkout@v5
@@ -186,7 +206,7 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: integration
     steps:
       - uses: actions/checkout@v5
@@ -257,7 +277,7 @@ jobs:
   test:
     name: test
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 5
     needs: [semgrep, typecheck, lint, audit, unit, integration, e2e]
     steps:
       - run: echo "All checks passed"
@@ -266,7 +286,7 @@ jobs:
   docker:
     name: Docker Build
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     needs: [typecheck, unit]
     # Build verification only on pushes to master (not on every PR)
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -413,3 +433,12 @@ jobs:
           ---
           *${TOTAL} pipeline runs in last ${DAYS} days · Updates automatically on every run*
           SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Pipeline failed — check runner availability and logs"
+          echo "## ❌ Pipeline Failed" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }} on ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

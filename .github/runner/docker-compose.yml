@@ -22,11 +22,13 @@ services:
     # GID of the host Docker socket — lets runner user call docker CLI without root.
     # Correct for WSL2: matches GID 1001 of /var/run/docker.sock on this machine.
     # (usermod -aG docker approach uses the container's docker GID which differs)
-    # SYS_TIME allows clock adjustment inside the container.
-    # Without it, ntpdate/chronyd can't set the kernel clock and WSL2 drift
-    # causes TLS connection failures after host sleep/wake cycles.
+    # RISK ACCEPTED: SYS_TIME broadens container escape surface.
+    # Required for chrony clock sync — no mitigation available that
+    # preserves clock correction. Accept as-is for local runner.
+    # ESCALATE BEFORE: replicating this runner pattern to shared or
+    # cloud environments.
     cap_add:
-      - SYS_TIME    # clock adjustment (chrony/ntpdate for WSL2 drift)
+      - SYS_TIME
 
     # TCP keepalive — WSL2 default is 7200s; dead connections go undetected for 2h.
     # Must be set here (Docker daemon writes at container creation time) — sysctl -w
@@ -41,6 +43,13 @@ services:
       - "${DOCKER_GID:-1001}"
 
     volumes:
+      # RISK ACCEPTED: Docker socket grants effective root on the host.
+      # Acceptable for single-user local runner executing only trusted code.
+      # ESCALATE BEFORE: running untrusted PRs (forks, Dependabot with
+      # custom scripts, external contributors) — replace with
+      # tecnativa/docker-socket-proxy whitelisting only required API calls.
+      # THREAT: compromised supply chain (malicious postinstall/test script)
+      # can reach this socket and escape the container.
       - /var/run/docker.sock:/var/run/docker.sock
       - runner-config:/home/garci/actions-runner
       - runner-work:/home/garci/actions-runner/_work

@@ -6,12 +6,15 @@ if [ "$(id -u)" = "0" ]; then
   /preflight-check.sh || exit $?
 
   # Clock sync must run as root with SYS_TIME capability (set in docker-compose.yml).
-  # chronyd -q = one-shot sync, no daemon needed. Falls back to ntpdate.
+  # Start chronyd as a daemon so chronyc can be used for periodic re-sync.
   # WSL2 desyncs after host sleep — fix before gosu so TLS ops don't fail.
   echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Syncing clock..."
-  chronyd -q 'pool pool.ntp.org iburst maxsamples 1' 2>/dev/null || \
+  chronyd 2>/dev/null || \
     ntpdate -u pool.ntp.org 2>/dev/null || \
     echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: Could not sync clock — TLS errors may follow"
+  chronyc makestep 1.0 3 >/dev/null 2>&1 || true
+  chronyc tracking 2>/dev/null | grep "System time" | \
+    awk '{print "[CLOCK] startup offset: " $4 " " $5}'
 
   # Start cron as root before dropping privileges — needs /var/run/crond.pid
   cron
@@ -161,12 +164,38 @@ log "MongoDB ready"
 
 cd /home/garci/actions-runner
 
-# ── 3. Graceful shutdown ─────────────────────────────────────────────────────
+# ── 3. Clock re-sync loop (compensates for WSL2 drift mid-job) ───────────────
+CLOCK_SYNC_PID=""
+
+_clock_sync_loop() {
+  while true; do
+    sleep 60
+    if ! chronyc makestep 1.0 3 >/dev/null 2>&1; then
+      echo "[CLOCK] WARNING: chronyc makestep failed — drift may be accumulating"
+    else
+      OFFSET=$(chronyc tracking 2>/dev/null | grep "System time" | awk '{print $4}')
+      if [ -n "$OFFSET" ]; then
+        OFFSET_ABS=$(echo "$OFFSET" | tr -d '-')
+        if awk "BEGIN {exit !($OFFSET_ABS > 2.0)}"; then
+          echo "[CLOCK] WARNING: large drift detected — ${OFFSET}s offset after sync"
+        else
+          echo "[CLOCK] sync OK — offset ${OFFSET}s"
+        fi
+      fi
+    fi
+  done
+}
+
+_clock_sync_loop &
+CLOCK_SYNC_PID=$!
+
+# ── 4. Graceful shutdown ─────────────────────────────────────────────────────
 STOP=0
 
 _cleanup() {
   log "Caught signal — stopping runner loop..."
   STOP=1
+  [ -n "${CLOCK_SYNC_PID:-}" ] && kill "$CLOCK_SYNC_PID" 2>/dev/null
   kill "$RUNNER_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
   kill "$TAIL_PID" 2>/dev/null || true
@@ -176,7 +205,7 @@ _cleanup() {
 }
 trap _cleanup TERM INT
 
-# ── 4. Ephemeral runner loop ─────────────────────────────────────────────────
+# ── 5. Ephemeral runner loop ─────────────────────────────────────────────────
 # Each iteration: get a fresh token → register as ephemeral → run one job → repeat.
 # Ephemeral runners auto-deregister after each job, so no stale cleanup needed.
 RUNNER_LOG=/tmp/runner-output.log
