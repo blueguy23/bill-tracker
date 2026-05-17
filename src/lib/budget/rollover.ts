@@ -3,6 +3,7 @@ import { listBudgets, updateRollover } from '@/adapters/budgets';
 import { listUnmatchedQuickAdds } from '@/adapters/quickAdd';
 import { listTransactionsForMonth } from '@/adapters/transactions';
 import { computeSpending, computeRollover } from './engine';
+import type { Bill } from '@/types/bill';
 
 /**
  * Runs at the end of a given month (YYYY-MM) to persist rollover balances.
@@ -22,5 +23,11 @@ export async function applyMonthEndRollover(db: StrictDB, month: string): Promis
       const newBalance = computeRollover(budget, spent);
       await updateRollover(db, budget.category, newBalance, month);
     }),
+  );
+
+  await db.updateMany<Bill>(
+    'bills',
+    { isRecurring: true } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    { $set: { isPaid: false } },
   );
 }

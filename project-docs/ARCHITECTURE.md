@@ -71,6 +71,51 @@ Bank sync (daily/manual/historical)
   → updateGoalSavedAmount()         (MongoDB: goals)
 ```
 
+## Data Flow — Bill isPaid Lifecycle (CMM Stage 3 — Infrastructure)
+
+```
+Month-end rollover (cron-budget-rollover.ts)
+  → applyMonthEndRollover(db, month)
+  → [budget rollover logic]
+  → db.updateMany('bills', { isRecurring: true }, { $set: { isPaid: false } })
+
+Display layer (all pages with serializeBill)
+  → isPaidThisMonth(bill): isPaid && paidMonth === currentYYYYMM()
+  → Recurring bills only show as paid when paidMonth matches current month
+```
+
+## Data Flow — Auto-Pay Detection (CMM Stage 3 — Infrastructure, Stage 4 — Business Logic)
+
+```
+Cron (every 2h) or manual sync
+  → scripts/cron-sync.ts / POST /api/v1/sync
+  → runDailySync()                        (transactions imported)
+  → detectAutoPayments(db)                (awaited in cron, fire-and-forget in HTTP)
+    → listBills() → filter unpaid recurring bills for current month
+    → query transactions (negative, non-pending, posted this month)
+    → findBestMatch() per bill:
+        1. paymentDescriptionHint match (confidence: 'hint')
+        2. longest word (≥4 chars) from bill name (confidence: 'name')
+        3. ±30% amount tolerance gate
+    → updateBill(isPaid: true) + createPayment() + lastChargedAmount stamp
+```
+
+## Data Flow — Cash Flow Forecast (CMM Stage 3 — Cross-Domain)
+
+```
+Dashboard page load (server component)
+  → src/adapters/forecast.ts
+  → listAccounts()                   (current balances)
+  → listBills()                      (recurring due dates + amounts)
+  → listTransactionsForDetection()   (90-day transaction window)
+  → detectSubscriptions()            (recurring expense patterns)
+  → detectIncomePatterns()           (recurring income/paycheck detection)
+  → buildForecast()                  (90-day daily balance projection)
+  → ForecastChart                    (Chart.js line chart on dashboard)
+```
+
+Cross-domain: combines accounts (balances), bills (due dates), subscriptions (detected patterns), and transactions (income detection) into a single forward-looking projection. Income detection reuses the subscription detection algorithm from `src/lib/subscriptions/detect.ts` (same `INTERVAL_WINDOWS`, normalization, and grouping) but filters for positive non-transfer amounts.
+
 ## Collections (MongoDB)
 
 | Collection | Description |

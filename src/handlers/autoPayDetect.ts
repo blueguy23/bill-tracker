@@ -8,36 +8,67 @@ import { logger } from '@/lib/logger';
 
 const PRICE_INCREASE_PCT   = 0.05;  // >5% triggers alert
 const PRICE_INCREASE_MIN   = 0.50;  // must be >$0.50 absolute to avoid noise
-const AMOUNT_MATCH_WINDOW  = 0.30;  // ±30% window to find candidate transactions
+export const AMOUNT_MATCH_WINDOW  = 0.30;  // ±30% window to find candidate transactions
 
 function currentYYYYMM(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function billMatchesTransaction(billName: string, description: string): boolean {
+export type MatchConfidence = 'hint' | 'name' | 'fuzzy';
+
+function billMatchesTransaction(
+  billName: string,
+  description: string,
+  hint: string | undefined,
+): { matched: boolean; confidence: MatchConfidence } {
   const normalize = (s: string) =>
     s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-  const desc  = normalize(description);
-  const words = normalize(billName).split(' ').filter((w) => w.length >= 3);
-  if (!words.length) return false;
-  return words.every((word) => desc.includes(word));
+  const desc = normalize(description);
+
+  if (hint) {
+    const normalizedHint = normalize(hint);
+    const hintWords = normalizedHint.split(' ').filter((w) => w.length >= 3);
+    if (hintWords.length && hintWords.every((word) => desc.includes(word))) {
+      return { matched: true, confidence: 'hint' };
+    }
+    return { matched: false, confidence: 'hint' };
+  }
+
+  const words = normalize(billName).split(' ').filter((w) => w.length >= 4);
+  if (!words.length) return { matched: false, confidence: 'name' };
+
+  const longest = words.sort((a, b) => b.length - a.length)[0]!;
+  if (desc.includes(longest)) {
+    return { matched: true, confidence: 'name' };
+  }
+
+  return { matched: false, confidence: 'fuzzy' };
 }
 
-function findBestMatch(bill: Bill, txns: Transaction[]): Transaction | null {
-  const matchName = bill.paymentDescriptionHint ?? bill.name;
-  const candidates = txns.filter(
-    (txn) =>
-      billMatchesTransaction(matchName, txn.description) &&
-      Math.abs(Math.abs(txn.amount) - bill.amount) / bill.amount <= AMOUNT_MATCH_WINDOW,
-  );
+export interface MatchResult {
+  transaction: Transaction;
+  confidence: MatchConfidence;
+}
+
+export function findBestMatch(bill: Bill, txns: Transaction[]): MatchResult | null {
+  const hint = bill.paymentDescriptionHint;
+  const candidates: { txn: Transaction; confidence: MatchConfidence }[] = [];
+
+  for (const txn of txns) {
+    if (Math.abs(Math.abs(txn.amount) - bill.amount) / bill.amount > AMOUNT_MATCH_WINDOW) continue;
+    const { matched, confidence } = billMatchesTransaction(bill.name, txn.description, hint);
+    if (matched) candidates.push({ txn, confidence });
+  }
+
   if (!candidates.length) return null;
-  // Closest amount wins
-  return candidates.sort(
+  candidates.sort(
     (a, b) =>
-      Math.abs(Math.abs(a.amount) - bill.amount) -
-      Math.abs(Math.abs(b.amount) - bill.amount),
-  )[0] ?? null;
+      Math.abs(Math.abs(a.txn.amount) - bill.amount) -
+      Math.abs(Math.abs(b.txn.amount) - bill.amount),
+  );
+  const best = candidates[0]!;
+  return { transaction: best.txn, confidence: best.confidence };
 }
 
 export async function detectAutoPayments(db: StrictDB): Promise<void> {
@@ -50,18 +81,25 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
 
   const now        = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const LOOKBACK_DAYS = 5;
+  const lookbackStart = new Date(monthStart.getTime() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
   // StrictDB's queryMany filter type doesn't expose MongoDB operator shapes ($lt, $gte)
   const txns = await db.queryMany<Transaction>(
     'transactions',
-    { amount: { $lt: 0 }, pending: false, posted: { $gte: monthStart } } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+    { amount: { $lt: 0 }, pending: false, posted: { $gte: lookbackStart } } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     { limit: 5000 },
   );
 
-  for (const bill of candidates) {
-    const match = findBestMatch(bill, txns);
-    if (!match) continue;
+  const txnsThisMonth = txns.filter((t) => t.posted >= monthStart);
 
+  for (const bill of candidates) {
+    const dueDay = typeof bill.dueDate === 'number' ? bill.dueDate : null;
+    const eligibleTxns = (dueDay !== null && dueDay <= 7) ? txns : txnsThisMonth;
+    const result = findBestMatch(bill, eligibleTxns);
+    if (!result) continue;
+
+    const { transaction: match, confidence } = result;
     const chargedAmt  = Math.abs(match.amount);
     const expectedAmt = bill.amount;
     const absDiff     = chargedAmt - expectedAmt;
@@ -97,6 +135,6 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
       { $set: { lastChargedAmount: chargedAmt } },
       false,
     );
-    logger.info('autoPayDetect.markedPaid', { billName: bill.name, month, chargedAmt });
+    logger.info('autoPayDetect.markedPaid', { billName: bill.name, month, chargedAmt, matchConfidence: confidence });
   }
 }

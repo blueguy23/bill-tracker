@@ -10,11 +10,22 @@ export const metadata: Metadata = { title: 'Payments' };
 
 type Tab = 'payments' | 'calendar';
 
+function currentYYYYMM(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function isPaidThisMonth(bill: Bill): boolean {
+  if (!bill.isPaid) return false;
+  if (!bill.isRecurring) return bill.isPaid;
+  return bill.paidMonth === currentYYYYMM();
+}
+
 function serializeBill(bill: Bill): BillResponse {
   return {
     _id: bill._id, name: bill.name, amount: bill.amount,
     dueDate: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : bill.dueDate,
-    category: bill.category, isPaid: bill.isPaid, isAutoPay: bill.isAutoPay,
+    category: bill.category, isPaid: isPaidThisMonth(bill), isAutoPay: bill.isAutoPay,
     isRecurring: bill.isRecurring, recurrenceInterval: bill.recurrenceInterval,
     paidMonth: bill.paidMonth, lastChargedAmount: bill.lastChargedAmount,
     isSubscription: bill.isSubscription, detectionId: bill.detectionId,
