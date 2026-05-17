@@ -19,14 +19,17 @@ services:
       DOCKERHUB_TOKEN: ${DOCKERHUB_TOKEN:-}
       SESSION_CONFLICT_WAIT: ${SESSION_CONFLICT_WAIT:-30}
 
-    # GID of the host Docker socket — lets runner user call docker CLI without root.
-    # Correct for WSL2: matches GID 1001 of /var/run/docker.sock on this machine.
-    # (usermod -aG docker approach uses the container's docker GID which differs)
-    # SYS_TIME allows clock adjustment inside the container.
-    # Without it, ntpdate/chronyd can't set the kernel clock and WSL2 drift
-    # causes TLS connection failures after host sleep/wake cycles.
+    # ╭─ RISK ACCEPTANCE: SYS_TIME capability ─────────────────────────────────╮
+    # │ Threat: Container can manipulate host kernel clock (affects all        │
+    # │         containers and the host). Could invalidate TLS certs, corrupt  │
+    # │         log timestamps, or break time-based auth (TOTP).              │
+    # │ Mitigation: Single-tenant host (no other workloads affected).          │
+    # │ Accepted because: WSL2 drifts 100s+ of seconds after host sleep.      │
+    # │         Without correction, TLS handshakes fail and CI jobs hang.      │
+    # │ Reviewed: 2026-05-17                                                   │
+    # ╰────────────────────────────────────────────────────────────────────────╯
     cap_add:
-      - SYS_TIME    # clock adjustment (chrony/ntpdate for WSL2 drift)
+      - SYS_TIME
 
     # TCP keepalive — WSL2 default is 7200s; dead connections go undetected for 2h.
     # Must be set here (Docker daemon writes at container creation time) — sysctl -w
@@ -40,6 +43,16 @@ services:
     group_add:
       - "${DOCKER_GID:-1001}"
 
+    # ╭─ RISK ACCEPTANCE: Docker socket mount ─────────────────────────────────╮
+    # │ Threat: Container processes with socket access have effective root on  │
+    # │         the host — can spawn privileged containers, read host fs, etc. │
+    # │ Mitigation: Runner executes as unprivileged user (garci); only the     │
+    # │         GitHub Actions runner process uses the socket for docker build. │
+    # │ Accepted because: CI jobs need `docker build` for image verification.  │
+    # │         Alternative (TCP proxy + TLS) adds complexity with minimal     │
+    # │         gain on a single-tenant dev machine.                           │
+    # │ Reviewed: 2026-05-17                                                   │
+    # ╰────────────────────────────────────────────────────────────────────────╯
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - runner-config:/home/garci/actions-runner

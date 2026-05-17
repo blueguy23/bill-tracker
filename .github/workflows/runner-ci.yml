@@ -1,0 +1,41 @@
+name: Runner CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.github/runner/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/runner/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Runner Tests
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run registration test harness
+        run: bash .github/runner/scripts/test-registration.sh
+
+      - name: Validate entrypoint syntax
+        run: bash -n .github/runner/entrypoint.sh
+
+      - name: Validate preflight script syntax
+        run: bash -n .github/runner/scripts/preflight-check.sh
+
+      - name: Lint shell scripts (shellcheck)
+        run: |
+          set -euo pipefail
+          docker run --rm -v "${{ github.workspace }}:/src" \
+            koalaman/shellcheck:stable \
+            /src/.github/runner/entrypoint.sh \
+            /src/.github/runner/scripts/preflight-check.sh \
+            /src/.github/runner/scripts/test-registration.sh
