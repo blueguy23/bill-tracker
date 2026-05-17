@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { SimpleFINClient } from '@/lib/simplefin/client';
 import { runHistoricalImport } from '@/handlers/sync';
+import { logger } from '@/lib/logger';
 
 function getClient() {
   return new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
@@ -20,7 +21,7 @@ export async function POST(): Promise<Response> {
     const result = await runHistoricalImport(db, client);
     return NextResponse.json({ synced: true, ...result });
   } catch (err) {
-    console.error('[POST /api/v1/sync/historical]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { getTodayLog, getLastSyncAt } from '@/adapters/syncLog';
+import { logger } from '@/lib/logger';
 
 const QUOTA_LIMIT = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
@@ -36,7 +37,7 @@ export async function GET(): Promise<Response> {
       simplefinConfigured: Boolean(process.env.SIMPLEFIN_URL),
     });
   } catch (err) {
-    console.error('[GET /api/v1/sync/status]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

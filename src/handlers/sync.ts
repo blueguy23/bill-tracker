@@ -9,6 +9,7 @@ import { categorize, mapBridgeCategory } from '@/lib/categorization/engine';
 import { buildTransferRe, classifyTransfer } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
 import { syncLinkedGoals } from '@/handlers/goalSync';
+import { logger } from '@/lib/logger';
 
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
 const DAILY_QUOTA = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
@@ -99,7 +100,7 @@ export async function runDailySync(
   const quotaWarning = unitsAfter >= QUOTA_WARN;
 
   if (quotaWarning) {
-    console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
+    logger.warn('simplefin.quotaWarning', { unitsUsed: unitsAfter, dailyQuota: DAILY_QUOTA });
   }
 
   const [pairedIds] = await Promise.all([
@@ -156,7 +157,7 @@ export async function runHistoricalImport(
   const unitsAfter = currentUnits + CHUNKS;
 
   if (unitsAfter >= QUOTA_WARN) {
-    console.warn(`[SimpleFIN] Quota warning: ${unitsAfter}/${DAILY_QUOTA} units used today.`);
+    logger.warn('simplefin.quotaWarning', { unitsUsed: unitsAfter, dailyQuota: DAILY_QUOTA });
   }
 
   const [pairedIds2] = await Promise.all([
