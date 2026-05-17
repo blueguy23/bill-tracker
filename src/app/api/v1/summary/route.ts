@@ -3,6 +3,7 @@ import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
 import { classifyTransfer } from '@/lib/classifyTransfer';
 import type { SummaryResponse, MerchantStat } from '@/types/summary';
+import { logger } from '@/lib/logger';
 
 export type { SummaryResponse, MerchantStat };
 
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       topMerchants,
     } satisfies SummaryResponse);
   } catch (err) {
-    console.error('[GET /api/v1/summary]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

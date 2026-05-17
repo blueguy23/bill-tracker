@@ -3,6 +3,7 @@ import { getDb } from '@/adapters/db';
 import { listCategoryRules } from '@/adapters/categoryRules';
 import { categorize } from '@/lib/categorization/engine';
 import type { Transaction } from '@/lib/simplefin/types';
+import { logger } from '@/lib/logger';
 
 const TRANSACTIONS = 'transactions';
 
@@ -25,7 +26,7 @@ export async function POST(): Promise<Response> {
 
     return NextResponse.json({ total: all.length, updated });
   } catch (err) {
-    console.error('[POST /api/v1/transactions/recategorize]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

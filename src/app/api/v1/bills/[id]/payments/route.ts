@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleListPayments } from '@/handlers/payments';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   _req: Request,
@@ -12,7 +13,7 @@ export async function GET(
     const db = await getDb();
     return handleListPayments(db, id);
   } catch (err) {
-    console.error('[GET /api/v1/bills/:id/payments]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

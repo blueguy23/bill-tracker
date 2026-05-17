@@ -28,6 +28,7 @@ import { listCreditAccounts } from '@/adapters/credit';
 import { listAccountMeta } from '@/adapters/accountMeta';
 import { buildAccountSummaries } from '@/handlers/credit';
 import { nextStatementCloseDate } from '@/handlers/creditAdvisor';
+import { logger } from '@/lib/logger';
 
 const HOUR = 60 * 60 * 1000;
 
@@ -64,7 +65,7 @@ async function dispatchNotification(
       payload: JSON.stringify(embed),
     });
   } catch (err) {
-    console.error(`[notifications] failed to send ${event}:`, err);
+    logger.error('notifications.sendFailed', { event, error: err instanceof Error ? err.message : String(err) });
   }
 }
 

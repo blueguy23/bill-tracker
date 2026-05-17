@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { logger } from '@/lib/logger';
 import { transformAccount, transformTransaction, transformError, transformErrListEntry } from './transform';
 import type {
   RawSFINResponse,
@@ -166,8 +167,8 @@ export class SimpleFINClient {
 
     const raw = await res.json() as RawSFINResponse;
 
-    if (process.env.NODE_ENV === 'development' && raw['x-api-message']?.length) {
-      console.warn('[SimpleFIN Bridge]', raw['x-api-message'].join(' | '));
+    if (raw['x-api-message']?.length) {
+      logger.warn('simplefin.apiMessage', { messages: raw['x-api-message'].join(' | ') });
     }
 
     const now = new Date();

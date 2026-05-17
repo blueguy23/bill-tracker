@@ -10,6 +10,7 @@ import { listTransactionsForMonth } from '@/adapters/transactions';
 import { listUnmatchedQuickAdds } from '@/adapters/quickAdd';
 import { computeSpending, computeEffectiveBudget, computeCategoryStatus } from '@/lib/budget/engine';
 import type { BillCategory } from '@/types/bill';
+import { logger } from '@/lib/logger';
 
 const DIGEST_COOLDOWN_MS = 20 * 60 * 60 * 1000;
 const DIGEST_KEY = 'daily_digest:global';
@@ -106,7 +107,7 @@ export async function runDailyDigest(db: StrictDB): Promise<DigestResult> {
       payload: JSON.stringify(embed),
     });
   } catch (err) {
-    console.error('[digest] failed to send webhook:', err);
+    logger.error('digest.sendFailed', { error: err instanceof Error ? err.message : String(err) });
     return { ...empty, reason: 'send_failed' };
   }
 

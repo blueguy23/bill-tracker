@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { getAccountMeta, upsertAccountMeta } from '@/adapters/accountMeta';
+import { logger } from '@/lib/logger';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams): Promise<
     await upsertAccountMeta(db, { ...existing, customOrgName: body.customOrgName ?? null });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error('[PATCH /api/v1/accounts/[id]/meta]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
