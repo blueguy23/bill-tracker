@@ -5,6 +5,7 @@ import { runDailySync, QuotaExceededError } from '@/handlers/sync';
 import { notifySyncCompleted, notifySyncFailed, checkCreditAlerts } from '@/handlers/notifications';
 import { enrichWithTrove } from '@/handlers/troveEnrich';
 import { detectAutoPayments } from '@/handlers/autoPayDetect';
+import { logger } from '@/lib/logger';
 
 function getClient() {
   return new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
@@ -38,7 +39,7 @@ export async function POST(): Promise<Response> {
       );
     }
     void notifySyncFailed(db, { errorMessage: String(err) });
-    console.error('[POST /api/v1/sync]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

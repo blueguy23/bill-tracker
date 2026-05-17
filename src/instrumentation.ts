@@ -14,11 +14,11 @@ export async function register() {
     process.on('SIGTERM', () => db.gracefulShutdown(0));
     process.on('SIGINT', () => db.gracefulShutdown(0));
     process.on('uncaughtException', (err) => {
-      console.error('Uncaught Exception:', err);
+      logger.error('process.uncaughtException', { error: err instanceof Error ? err.message : String(err) });
       db.gracefulShutdown(1);
     });
     process.on('unhandledRejection', (reason) => {
-      console.error('Unhandled Rejection:', reason);
+      logger.error('process.unhandledRejection', { error: reason instanceof Error ? reason.message : String(reason) });
       db.gracefulShutdown(1);
     });
 
@@ -39,12 +39,12 @@ export async function register() {
           const client = new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
           runDailySync(appDb, client, 'manual')
             .then((r) => logger.info('startup.autoSync.done', { transactionsUpserted: r.transactionsUpserted, accountsUpdated: r.accountsUpdated }))
-            .catch((err) => console.error('[startup] Auto-sync failed:', err));
+            .catch((err) => logger.error('startup.autoSync.failed', { error: err instanceof Error ? err.message : String(err) }));
         } else {
           logger.info('startup.autoSync.skipped', { reason: 'sync is recent' });
         }
       } catch (err) {
-        console.error('[startup] Auto-sync setup failed:', err);
+        logger.error('startup.autoSync.setupFailed', { error: err instanceof Error ? err.message : String(err) });
       }
     }
   }

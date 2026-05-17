@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: NextRequest): Promise<Response> {
   try {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
     return NextResponse.json({ transactions, accounts, hasMore });
   } catch (err) {
-    console.error('[GET /api/v1/transactions]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

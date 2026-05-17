@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleListSubscriptions } from '@/handlers/subscriptions';
+import { logger } from '@/lib/logger';
 
 export async function GET(): Promise<Response> {
   try {
     const db = await getDb();
     return handleListSubscriptions(db);
   } catch (err) {
-    console.error('[GET /api/v1/subscriptions]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

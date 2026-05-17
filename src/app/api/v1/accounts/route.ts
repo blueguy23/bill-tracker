@@ -3,6 +3,7 @@ import { getDb } from '@/adapters/db';
 import { getTodayLog } from '@/adapters/syncLog';
 import { listAccounts, listRecentTransactions } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
+import { logger } from '@/lib/logger';
 
 export async function GET(): Promise<Response> {
   try {
@@ -29,7 +30,7 @@ export async function GET(): Promise<Response> {
       simplefinConfigured: Boolean(process.env.SIMPLEFIN_URL),
     });
   } catch (err) {
-    console.error('[GET /api/v1/accounts]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

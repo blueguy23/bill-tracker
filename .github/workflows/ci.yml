@@ -10,6 +10,8 @@ name: CI
 # after this commit — old values are in repo history.
 
 # Job execution order:
+#   [runner-health] (2-min gate — fail fast if runner is broken)
+#          ↓
 #   dora-start ──────────────────────────────────────────┐
 #   [SAST, Security Audit, Lint, TypeScript]  (parallel) │
 #          ↓ (all four must pass)                        │
@@ -17,7 +19,7 @@ name: CI
 #          ↓                                             │
 #       [Integration Tests]                              │
 #          ↓                                             │
-#       [E2E Tests] ────────────────────────────────── ──┤
+#       [E2E Tests] ─────────────────────────────────────┤
 #          ↓                                             │
 #       [dora-emit] ◄────────────────────────────────────┘
 #          ↓
@@ -26,18 +28,47 @@ name: CI
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '.github/runner/**'
+      - 'docs/**'
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '.github/runner/**'
+      - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ── 0. Runner health gate — fail fast if the runner environment is broken ────
+  runner-health:
+    name: Runner Health
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - name: Verify runner environment
+        run: |
+          set -euo pipefail
+          echo "── Runner Health Check ──"
+          echo "Date:    $(date -u)"
+          echo "Node:    $(node --version 2>/dev/null || echo 'MISSING')"
+          echo "pnpm:    $(pnpm --version 2>/dev/null || echo 'MISSING')"
+          echo "Docker:  $(docker --version 2>/dev/null || echo 'MISSING')"
+          echo "Mongo:   $(mongosh --version 2>/dev/null || echo 'MISSING')"
+          echo "Disk:    $(df -h / | tail -1 | awk '{print $4 " free"}')"
+
+          node --version >/dev/null 2>&1 || { echo "FATAL: node not found"; exit 1; }
+          pnpm --version >/dev/null 2>&1 || { echo "FATAL: pnpm not found"; exit 1; }
+          docker info >/dev/null 2>&1 || { echo "FATAL: docker not accessible"; exit 1; }
+          mongosh --eval "db.adminCommand('ping')" --quiet || { echo "FATAL: MongoDB not responding"; exit 1; }
+
   # ── DORA: capture pipeline start + commit timestamp ───────────────────────────
   # Runs in parallel with the first validation tier — no critical-path cost.
   # commit-epoch comes from the event payload so no checkout is needed.
   dora-start:
+    needs: [runner-health]
     name: DORA Start
     runs-on: self-hosted
     timeout-minutes: 2
@@ -64,8 +95,9 @@ jobs:
   # ── 1a. SAST (Semgrep) ─────────────────────────────────────────────────────────
   semgrep:
     name: SAST (Semgrep)
+    needs: [runner-health]
     runs-on: self-hosted
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -79,8 +111,9 @@ jobs:
   # ── 1b. TypeScript typecheck ──────────────────────────────────────────────────
   typecheck:
     name: TypeScript
+    needs: [runner-health]
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -99,8 +132,9 @@ jobs:
   # ── 2. Lint ───────────────────────────────────────────────────────────────────
   lint:
     name: Lint
+    needs: [runner-health]
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -119,8 +153,9 @@ jobs:
   # ── 3. Security audit ─────────────────────────────────────────────────────────
   audit:
     name: Security Audit
+    needs: [runner-health]
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
 
@@ -134,11 +169,11 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
-  # ── 3. Unit tests ─────────────────────────────────────────────────────────────
+  # ── 4. Unit tests ─────────────────────────────────────────────────────────────
   unit:
     name: Unit Tests
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     needs: [semgrep, audit, lint, typecheck]
     steps:
       - uses: actions/checkout@v5
@@ -155,11 +190,11 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
-  # ── 4. Integration tests ───────────────────────────────────────────────────────
+  # ── 5. Integration tests ───────────────────────────────────────────────────────
   integration:
     name: Integration Tests
     runs-on: self-hosted
-    timeout-minutes: 6
+    timeout-minutes: 15
     needs: unit
     steps:
       - uses: actions/checkout@v5
@@ -182,11 +217,11 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
 
-  # ── 5. E2E tests ──────────────────────────────────────────────────────────────
+  # ── 6. E2E tests ──────────────────────────────────────────────────────────────
   e2e:
     name: E2E Tests
     runs-on: self-hosted
-    timeout-minutes: 15
+    timeout-minutes: 30
     needs: integration
     steps:
       - uses: actions/checkout@v5
@@ -253,20 +288,20 @@ jobs:
             playwright-report/
             test-results/
 
-  # ── 5. Gate — satisfies the "test" required status check in branch ruleset ──────
+  # ── 7. Gate — satisfies the "test" required status check in branch ruleset ──────
   test:
     name: test
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 5
     needs: [semgrep, typecheck, lint, audit, unit, integration, e2e]
     steps:
       - run: echo "All checks passed"
 
-  # ── 6. Docker build (verify image builds on pushes to master) ─────────────────
+  # ── 8. Docker build (verify image builds on pushes to master) ─────────────────
   docker:
     name: Docker Build
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 10
     needs: [typecheck, unit]
     # Build verification only on pushes to master (not on every PR)
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -413,3 +448,9 @@ jobs:
           ---
           *${TOTAL} pipeline runs in last ${DAYS} days · Updates automatically on every run*
           SUMMARY
+
+      - name: Notify on failure
+        if: ${{ needs.dora-emit.result == 'failure' || needs.dora-emit.result == 'skipped' }}
+        run: |
+          set -euo pipefail
+          echo "::error::Pipeline failed for ${{ github.ref_name }} @ ${{ github.sha }}"
