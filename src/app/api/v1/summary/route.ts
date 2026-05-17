@@ -2,20 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
 import { classifyTransfer } from '@/lib/classifyTransfer';
+import type { SummaryResponse, MerchantStat } from '@/types/summary';
 
-export interface MerchantStat {
-  merchant: string;
-  total: number;
-  count: number;
-}
-
-export interface SummaryResponse {
-  income: number;
-  expenses: number;
-  net: number;
-  transactionCount: number;
-  topMerchants: MerchantStat[];
-}
+export type { SummaryResponse, MerchantStat };
 
 export async function GET(req: NextRequest): Promise<Response> {
   try {

@@ -5,7 +5,7 @@ import type { BillCategory, BillResponse } from '@/types/bill';
 import { BILL_CATEGORIES } from '@/types/bill';
 import { CategoryBadge } from './CategoryBadge';
 import { SpendingSection } from './SpendingSection';
-import type { SummaryResponse } from '@/app/api/v1/summary/route';
+import type { SummaryResponse } from '@/types/summary';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
