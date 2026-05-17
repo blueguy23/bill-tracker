@@ -7,6 +7,7 @@ import { listUnmatchedQuickAdds } from '@/adapters/quickAdd';
 import { computeSpending, computeEffectiveBudget, computeBurnRate, computeCategoryStatus } from '@/lib/budget/engine';
 import type { Budget } from '@/types/budget';
 import type { BillCategory } from '@/types/bill';
+import { logger } from '@/lib/logger';
 
 async function checkBudgetNotifications(db: Awaited<ReturnType<typeof getDb>>, budget: Budget): Promise<void> {
   try {
@@ -25,7 +26,7 @@ async function checkBudgetNotifications(db: Awaited<ReturnType<typeof getDb>>, b
     if (status === 'over_budget') void notifyBudgetExceeded(db, payload);
     else if (status === 'warning') void notifyBudgetWarning(db, payload);
   } catch (err) {
-    console.error('[budget-notification]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
   }
 }
 

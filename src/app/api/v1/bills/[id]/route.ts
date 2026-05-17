@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleUpdateBill, handleDeleteBill } from '@/handlers/bills';
 import { checkBillNotifications } from '@/handlers/notifications';
+import { logger } from '@/lib/logger';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -17,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext): Promise
     }
     return res;
   } catch (err) {
-    console.error('[PATCH /api/v1/bills/:id]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -28,7 +29,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext): Promi
     const db = await getDb();
     return handleDeleteBill(db, id);
   } catch (err) {
-    console.error('[DELETE /api/v1/bills/:id]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listAccounts } from '@/adapters/accounts';
 import { listAccountMeta } from '@/adapters/accountMeta';
+import { logger } from '@/lib/logger';
 
 export async function GET(): Promise<Response> {
   try {
@@ -20,7 +21,7 @@ export async function GET(): Promise<Response> {
     const totalBalance = accountsWithNames.reduce((sum, a) => sum + a.balance, 0);
     return NextResponse.json({ accounts: accountsWithNames, totalBalance });
   } catch (err) {
-    console.error('[GET /api/v1/accounts/balances]', err);
+    logger.error('route.error', { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
