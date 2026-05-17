@@ -23,6 +23,8 @@ import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 import type { Budget as _Budget } from '@/types/budget';
 import type { Holding } from '@/lib/simplefin/types';
 import { PortfolioWidget } from '@/components/PortfolioWidget';
+import { ForecastChart } from '@/components/ForecastChart';
+import { getForecast } from '@/adapters/forecast';
 
 function periodToRange(p: Period): { start: Date; end: Date; historyMonths: number; label: string } {
   const now = new Date();
@@ -48,13 +50,25 @@ function periodToRange(p: Period): { start: Date; end: Date; historyMonths: numb
 const USD  = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
+function currentYYYYMM(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function isPaidThisMonth(bill: Bill): boolean {
+  if (!bill.isPaid) return false;
+  if (!bill.isRecurring) return bill.isPaid;
+  return bill.paidMonth === currentYYYYMM();
+}
+
 function serializeBill(bill: Bill): BillResponse {
   return {
     _id: bill._id, name: bill.name, amount: bill.amount,
     dueDate: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : bill.dueDate,
-    category: bill.category, isPaid: bill.isPaid, isAutoPay: bill.isAutoPay,
+    category: bill.category, isPaid: isPaidThisMonth(bill), isAutoPay: bill.isAutoPay,
     isRecurring: bill.isRecurring, recurrenceInterval: bill.recurrenceInterval,
     url: bill.url, notes: bill.notes, renewalNote: bill.renewalNote,
+    paidMonth: bill.paidMonth,
     createdAt: bill.createdAt instanceof Date ? bill.createdAt.toISOString() : String(bill.createdAt),
     updatedAt: bill.updatedAt instanceof Date ? bill.updatedAt.toISOString() : String(bill.updatedAt),
   };
@@ -167,13 +181,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const db = await getDb();
 
-  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history] = await Promise.all([
+  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, forecastResult] = await Promise.all([
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
     getCashFlowForRange(db, start, end, viewMode === 'normalized'),
     listBudgets(db),
     getCashFlowHistory(db, historyMonths, viewMode === 'normalized'),
+    getForecast(db),
   ]);
 
   const metaList = allAccounts.length > 0 ? await listAccountMeta(db, allAccounts.map(a => a._id)) : [];
@@ -341,6 +356,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         {/* Cash flow chart */}
         <div style={{ marginBottom: 12 }}>
           <DashboardCharts history={history} />
+        </div>
+
+        {/* 90-day forecast */}
+        <div style={{ marginBottom: 12 }}>
+          <ForecastChart forecast={forecastResult.days} />
         </div>
 
         <PortfolioWidget holdings={portfolioHoldings} />

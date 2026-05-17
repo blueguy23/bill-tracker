@@ -23,11 +23,22 @@ function serializeDetected(d: DetectedSubscription): DetectedSubscriptionRespons
   };
 }
 
+function currentYYYYMM(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function isPaidThisMonth(bill: Bill): boolean {
+  if (!bill.isPaid) return false;
+  if (!bill.isRecurring) return bill.isPaid;
+  return bill.paidMonth === currentYYYYMM();
+}
+
 function serializeBill(b: Bill): BillResponse {
   return {
     _id: b._id, name: b.name, amount: b.amount,
     dueDate: b.dueDate instanceof Date ? b.dueDate.toISOString() : b.dueDate,
-    category: b.category, isPaid: b.isPaid, isAutoPay: b.isAutoPay,
+    category: b.category, isPaid: isPaidThisMonth(b), isAutoPay: b.isAutoPay,
     isRecurring: b.isRecurring, recurrenceInterval: b.recurrenceInterval,
     paidMonth: b.paidMonth, lastChargedAmount: b.lastChargedAmount,
     isSubscription: b.isSubscription, detectionId: b.detectionId,

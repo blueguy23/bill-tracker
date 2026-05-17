@@ -14,6 +14,7 @@ import 'dotenv/config';
 import { getDb } from '../src/adapters/db.js';
 import { SimpleFINClient } from '../src/lib/simplefin/client.js';
 import { runDailySync, runHistoricalImport, QuotaExceededError } from '../src/handlers/sync.js';
+import { detectAutoPayments } from '../src/handlers/autoPayDetect.js';
 
 const isHistorical = process.argv.includes('--historical');
 const timestamp = new Date().toISOString();
@@ -44,6 +45,14 @@ async function main() {
         }
       }
     }
+
+    try {
+      await detectAutoPayments(db);
+      console.log(`[${timestamp}] Auto-pay detection complete.`);
+    } catch (detectErr) {
+      console.error(`[${timestamp}] Auto-pay detection failed:`, detectErr);
+    }
+
     process.exit(0);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
