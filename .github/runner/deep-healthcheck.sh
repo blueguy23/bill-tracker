@@ -11,6 +11,10 @@ FAIL_FILE="/tmp/healthcheck-offline-streak"
 RUNNER_LOG="/tmp/runner-output.log"
 MAX_IDLE_SECONDS=300
 
+if [ -f /tmp/token-invalid ]; then
+  echo "[HEALTH] token-invalid sentinel present — PAT may be expired"
+fi
+
 RUNNER_STATUS=$(curl -sf --max-time 10 \
   -H "Authorization: token ${GITHUB_PAT}" \
   -H "Accept: application/vnd.github+json" \

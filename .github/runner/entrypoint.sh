@@ -166,6 +166,7 @@ cd /home/garci/actions-runner
 
 # ── 3. Clock re-sync loop (compensates for WSL2 drift mid-job) ───────────────
 CLOCK_SYNC_PID=""
+TOKEN_WATCH_PID=""
 
 _clock_sync_loop() {
   while true; do
@@ -189,12 +190,37 @@ _clock_sync_loop() {
 _clock_sync_loop &
 CLOCK_SYNC_PID=$!
 
+# ── 3b. PAT re-validation loop (detects token expiry while runner is live) ───
+_token_watch_loop() {
+  while true; do
+    sleep 21600  # 6 hours
+    HTTP_STATUS=$(${CURL_CMD:-curl} -s -o /dev/null -w "%{http_code}" \
+      -H "Authorization: Bearer $GITHUB_PAT" \
+      -H "Accept: application/vnd.github+json" \
+      https://api.github.com/user)
+    if [ "$HTTP_STATUS" = "200" ]; then
+      echo "[TOKEN] re-validation OK — PAT still valid"
+      rm -f /tmp/token-invalid
+    elif [ "$HTTP_STATUS" = "000" ]; then
+      echo "[TOKEN] WARNING: GitHub API unreachable (HTTP 000) — skipping sentinel"
+    else
+      echo "[TOKEN] WARNING: PAT re-validation failed — HTTP ${HTTP_STATUS}"
+      echo "[TOKEN] Runner will continue but registration renewal may fail"
+      touch /tmp/token-invalid
+    fi
+  done
+}
+
+_token_watch_loop &
+TOKEN_WATCH_PID=$!
+
 # ── 4. Graceful shutdown ─────────────────────────────────────────────────────
 STOP=0
 
 _cleanup() {
   log "Caught signal — stopping runner loop..."
   STOP=1
+  [ -n "${TOKEN_WATCH_PID:-}" ] && kill "$TOKEN_WATCH_PID" 2>/dev/null
   [ -n "${CLOCK_SYNC_PID:-}" ] && kill "$CLOCK_SYNC_PID" 2>/dev/null
   kill "$RUNNER_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
