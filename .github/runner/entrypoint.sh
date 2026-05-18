@@ -5,14 +5,16 @@ set -euo pipefail
 if [ "$(id -u)" = "0" ]; then
   /preflight-check.sh || exit $?
 
-  # Clock sync: start chronyd as a daemon so it corrects drift continuously.
-  # WSL2 desyncs after host sleep AND mid-job — one-shot isn't enough.
-  # Falls back to ntpdate one-shot if chronyd fails to start.
-  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Starting chronyd for continuous clock sync..."
-  chronyd -f /etc/chrony/chrony.conf 2>/dev/null || \
+  # Clock sync must run as root with SYS_TIME capability (set in docker-compose.yml).
+  # Start chronyd as a daemon so chronyc can be used for periodic re-sync.
+  # WSL2 desyncs after host sleep — fix before gosu so TLS ops don't fail.
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Syncing clock..."
+  chronyd 2>/dev/null || \
     ntpdate -u pool.ntp.org 2>/dev/null || \
     echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: Could not sync clock — TLS errors may follow"
-  chronyc tracking 2>/dev/null | grep "System time" | awk '{print "[CLOCK] startup offset: " $4 " " $5}' || true
+  chronyc makestep 1.0 3 >/dev/null 2>&1 || true
+  chronyc tracking 2>/dev/null | grep "System time" | \
+    awk '{print "[CLOCK] startup offset: " $4 " " $5}'
 
   # Start cron as root before dropping privileges — needs /var/run/crond.pid
   cron
@@ -162,20 +164,28 @@ log "MongoDB ready"
 
 cd /home/garci/actions-runner
 
-# ── 3. Periodic clock re-sync ────────────────────────────────────────────────
-# chronyd handles drift correction, but WSL2 can jump by minutes after host
-# sleep. This loop logs offset every 60s for observability and forces a step
-# correction if chronyd hasn't caught up.
+# ── 3. Clock re-sync loop (compensates for WSL2 drift mid-job) ───────────────
+CLOCK_SYNC_PID=""
+
 _clock_sync_loop() {
   while true; do
     sleep 60
-    local OFFSET
-    OFFSET=$(chronyc tracking 2>/dev/null | grep "System time" | awk '{print $4}') || continue
-    if [ -n "$OFFSET" ]; then
-      log "[CLOCK] current offset: ${OFFSET}s"
+    if ! chronyc makestep 1.0 3 >/dev/null 2>&1; then
+      echo "[CLOCK] WARNING: chronyc makestep failed — drift may be accumulating"
+    else
+      OFFSET=$(chronyc tracking 2>/dev/null | grep "System time" | awk '{print $4}')
+      if [ -n "$OFFSET" ]; then
+        OFFSET_ABS=$(echo "$OFFSET" | tr -d '-')
+        if awk "BEGIN {exit !($OFFSET_ABS > 2.0)}"; then
+          echo "[CLOCK] WARNING: large drift detected — ${OFFSET}s offset after sync"
+        else
+          echo "[CLOCK] sync OK — offset ${OFFSET}s"
+        fi
+      fi
     fi
   done
 }
+
 _clock_sync_loop &
 CLOCK_SYNC_PID=$!
 
@@ -185,7 +195,7 @@ STOP=0
 _cleanup() {
   log "Caught signal — stopping runner loop..."
   STOP=1
-  kill "$CLOCK_SYNC_PID" 2>/dev/null || true
+  [ -n "${CLOCK_SYNC_PID:-}" ] && kill "$CLOCK_SYNC_PID" 2>/dev/null
   kill "$RUNNER_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
   kill "$TAIL_PID" 2>/dev/null || true
