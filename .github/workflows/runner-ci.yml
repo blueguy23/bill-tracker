@@ -9,6 +9,7 @@ on:
     branches: [master]
     paths:
       - '.github/runner/**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
