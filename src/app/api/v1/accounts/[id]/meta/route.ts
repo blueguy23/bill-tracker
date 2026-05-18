@@ -2,12 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { getAccountMeta, upsertAccountMeta } from '@/adapters/accountMeta';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function PATCH(req: NextRequest, { params }: RouteParams): Promise<Response> {
+async function _PATCH(req: NextRequest, { params }: RouteParams): Promise<Response> {
   try {
     const { id } = await params;
     const body = await req.json() as { customOrgName?: string | null };
@@ -20,3 +21,5 @@ export async function PATCH(req: NextRequest, { params }: RouteParams): Promise<
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const PATCH = withRequestLogging(_PATCH);

@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listCategoryRules } from '@/adapters/categoryRules';
 import { categorize } from '@/lib/categorization/engine';
 import type { Transaction } from '@/lib/simplefin/types';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 const TRANSACTIONS = 'transactions';
 
-export async function POST(): Promise<Response> {
+async function _POST(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     const rules = await listCategoryRules(db);
@@ -30,3 +31,5 @@ export async function POST(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRequestLogging(_POST);

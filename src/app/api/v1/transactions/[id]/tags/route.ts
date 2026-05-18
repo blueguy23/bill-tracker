@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { setTransactionTags } from '@/adapters/transactionTags';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function PATCH(
+async function _PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -37,3 +38,5 @@ export async function PATCH(
 
   return NextResponse.json({ ok: true, id, tags });
 }
+
+export const PATCH = withRequestLogging(_PATCH);

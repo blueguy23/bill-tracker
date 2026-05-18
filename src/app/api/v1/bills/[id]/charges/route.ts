@@ -4,8 +4,9 @@ import { getBillById } from '@/adapters/bills';
 import { listChargesForBill } from '@/adapters/chargeHistory';
 import type { ChargeRecordResponse } from '@/adapters/chargeHistory';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(
+async function _GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -28,3 +29,5 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

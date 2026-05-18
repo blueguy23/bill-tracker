@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { deleteCategoryRule } from '@/adapters/categoryRules';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function DELETE(
+async function _DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -17,3 +18,5 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true, id });
 }
+
+export const DELETE = withRequestLogging(_DELETE);

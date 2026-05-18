@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleListPayments } from '@/handlers/payments';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(
+async function _GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
@@ -17,3 +18,5 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

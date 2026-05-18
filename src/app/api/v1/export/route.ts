@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
 import type { Transaction, Account } from '@/lib/simplefin/types';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 function escapeCSV(val: string | number | null | undefined): string {
   if (val === null || val === undefined) return '';
@@ -33,7 +34,7 @@ function buildCSV(transactions: Transaction[], accountMap: Map<string, Account>)
   return [headers.join(','), ...rows].join('\r\n');
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function _GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
 
   const startDateParam = searchParams.get('startDate');
@@ -73,3 +74,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   });
 }
+
+export const GET = withRequestLogging(_GET);
