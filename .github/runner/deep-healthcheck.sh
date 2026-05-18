@@ -15,6 +15,10 @@ if [ -f /tmp/token-invalid ]; then
   echo "[HEALTH] token-invalid sentinel present — PAT may be expired"
 fi
 
+if [ -f /tmp/watchdog-circuit-open ]; then
+  echo "[HEALTH] watchdog circuit open — chronic reconnection issue"
+fi
+
 RUNNER_STATUS=$(curl -sf --max-time 10 \
   -H "Authorization: token ${GITHUB_PAT}" \
   -H "Accept: application/vnd.github+json" \

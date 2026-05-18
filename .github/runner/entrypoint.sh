@@ -235,6 +235,26 @@ trap _cleanup TERM INT
 # Each iteration: get a fresh token → register as ephemeral → run one job → repeat.
 # Ephemeral runners auto-deregister after each job, so no stale cleanup needed.
 RUNNER_LOG=/tmp/runner-output.log
+WATCHDOG_FIRES=0
+WATCHDOG_WINDOW_START=$(date +%s)
+WATCHDOG_MAX_FIRES="${WATCHDOG_MAX_FIRES:-5}"
+
+_check_watchdog_circuit() {
+  local now=$(date +%s)
+  local window_age=$(( now - WATCHDOG_WINDOW_START ))
+
+  if [ "$window_age" -ge 3600 ]; then
+    WATCHDOG_FIRES=0
+    WATCHDOG_WINDOW_START=$now
+  fi
+
+  WATCHDOG_FIRES=$(( WATCHDOG_FIRES + 1 ))
+
+  if [ "$WATCHDOG_FIRES" -gt "$WATCHDOG_MAX_FIRES" ]; then
+    return 1
+  fi
+  return 0
+}
 
 register() {
   _deregister_runner
@@ -275,6 +295,7 @@ while [ "$STOP" -eq 0 ]; do
           continue
         fi
         log "Watchdog: still stuck — killing runner to re-register"
+        touch /tmp/watchdog-killed
         kill "$RUNNER_PID" 2>/dev/null || true
         break
       fi
@@ -286,6 +307,20 @@ while [ "$STOP" -eq 0 ]; do
   EXIT_CODE=$?
   kill "$TAIL_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
+
+  if [ -f /tmp/watchdog-killed ]; then
+    rm -f /tmp/watchdog-killed
+    if ! _check_watchdog_circuit; then
+      log "[WATCHDOG] circuit open — ${WATCHDOG_FIRES} restarts in 60min"
+      log "[WATCHDOG] backing off for 10 minutes before next attempt"
+      touch /tmp/watchdog-circuit-open
+      sleep 600
+      rm -f /tmp/watchdog-circuit-open
+      WATCHDOG_FIRES=0
+      WATCHDOG_WINDOW_START=$(date +%s)
+      log "[WATCHDOG] circuit reset — resuming normal operation"
+    fi
+  fi
 
   if grep -q "A session for this runner already exists" "$RUNNER_LOG" 2>/dev/null; then
     log "Runner exited with session conflict — waiting ${SESSION_CONFLICT_WAIT}s for GitHub to clear stale session..."
