@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { runDailyDigest } from '@/handlers/notificationDigest';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function POST(): Promise<Response> {
+async function _POST(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     const result = await runDailyDigest(db);
@@ -13,3 +14,5 @@ export async function POST(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRequestLogging(_POST);

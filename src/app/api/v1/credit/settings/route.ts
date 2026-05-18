@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleGetCreditSettings, handleSaveCreditSettings } from '@/handlers/creditSettings';
 import type { SaveCreditSettingsDto } from '@/types/creditAdvisor';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(): Promise<Response> {
+async function _GET(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     return handleGetCreditSettings(db);
@@ -14,7 +15,7 @@ export async function GET(): Promise<Response> {
   }
 }
 
-export async function POST(req: Request): Promise<Response> {
+async function _POST(req: Request): Promise<Response> {
   try {
     const body = await req.json() as SaveCreditSettingsDto;
     if (!Array.isArray(body.settings)) {
@@ -27,3 +28,6 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);
+export const POST = withRequestLogging(_POST);

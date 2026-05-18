@@ -4,10 +4,11 @@ import { listTransactions, listAccounts } from '@/adapters/accounts';
 import { classifyTransfer } from '@/lib/classifyTransfer';
 import type { SummaryResponse, MerchantStat } from '@/types/summary';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 export type { SummaryResponse, MerchantStat };
 
-export async function GET(req: NextRequest): Promise<Response> {
+async function _GET(req: NextRequest): Promise<Response> {
   try {
     const month = req.nextUrl.searchParams.get('month');
     if (!month || !/^\d{4}-\d{2}$/.test(month)) {
@@ -61,3 +62,5 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

@@ -1,4 +1,4 @@
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleSetBudget } from '@/handlers/budgets';
 import { notifyBudgetWarning, notifyBudgetExceeded } from '@/handlers/notifications';
@@ -8,6 +8,7 @@ import { computeSpending, computeEffectiveBudget, computeBurnRate, computeCatego
 import type { Budget } from '@/types/budget';
 import type { BillCategory } from '@/types/bill';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 async function checkBudgetNotifications(db: Awaited<ReturnType<typeof getDb>>, budget: Budget): Promise<void> {
   try {
@@ -30,7 +31,7 @@ async function checkBudgetNotifications(db: Awaited<ReturnType<typeof getDb>>, b
   }
 }
 
-export async function PUT(
+async function _PUT(
   req: NextRequest,
   { params }: { params: Promise<{ category: string }> },
 ) {
@@ -43,3 +44,5 @@ export async function PUT(
   }
   return res;
 }
+
+export const PUT = withRequestLogging(_PUT);

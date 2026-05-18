@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listAccounts } from '@/adapters/accounts';
 import { listBills } from '@/adapters/bills';
 import { listBudgets } from '@/adapters/budgets';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 export interface OnboardingStatus {
   simplefinConfigured: boolean;
@@ -13,7 +14,7 @@ export interface OnboardingStatus {
   currentStep: 1 | 2 | 3 | 4 | 5;
 }
 
-export async function GET(): Promise<NextResponse<OnboardingStatus>> {
+async function _GET(_req: NextRequest) : Promise<NextResponse<OnboardingStatus>> {
   // Canonical env var is SIMPLEFIN_URL — the resolved access URL used by the sync client.
   // SIMPLEFIN_ACCESS_URL is the one-time claim URL (not yet resolved), so checking it here
   // would give a false positive. Match the sync route's check.
@@ -44,3 +45,5 @@ export async function GET(): Promise<NextResponse<OnboardingStatus>> {
     currentStep,
   });
 }
+
+export const GET = withRequestLogging(_GET);

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { SimpleFINClient } from '@/lib/simplefin/client';
 import { runDailySync, QuotaExceededError } from '@/handlers/sync';
@@ -6,12 +6,13 @@ import { notifySyncCompleted, notifySyncFailed, checkCreditAlerts } from '@/hand
 import { enrichWithTrove } from '@/handlers/troveEnrich';
 import { detectAutoPayments } from '@/handlers/autoPayDetect';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 function getClient() {
   return new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
 }
 
-export async function POST(): Promise<Response> {
+async function _POST(_req: NextRequest) : Promise<Response> {
   if (!process.env.SIMPLEFIN_URL) {
     return NextResponse.json(
       { error: 'SimpleFIN not configured. Set SIMPLEFIN_URL in your environment.' },
@@ -43,3 +44,5 @@ export async function POST(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRequestLogging(_POST);

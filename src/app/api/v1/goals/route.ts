@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleListGoals, handleCreateGoal } from '@/handlers/goals';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(): Promise<Response> {
+async function _GET(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     return handleListGoals(db);
@@ -14,7 +15,7 @@ export async function GET(): Promise<Response> {
   }
 }
 
-export async function POST(req: NextRequest): Promise<Response> {
+async function _POST(req: NextRequest): Promise<Response> {
   try {
     const db = await getDb();
     return handleCreateGoal(db, req);
@@ -23,3 +24,6 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);
+export const POST = withRequestLogging(_POST);
