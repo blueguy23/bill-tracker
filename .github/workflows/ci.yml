@@ -27,26 +27,41 @@ name: CI
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '.github/runner/**'
+      - 'docs/**'
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '.github/runner/**'
+      - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── Runner health gate — fails fast if runner is unreachable ─────────────────
+  # ── 0. Runner health gate — fail fast if the runner environment is broken ────
   runner-health:
     name: Runner Health
     runs-on: self-hosted
     timeout-minutes: 2
     steps:
-      - name: Runner reachability check
+      - name: Verify runner environment
         run: |
-          echo "Runner online: $(hostname)"
-          echo "Disk: $(df -h / | tail -1 | awk '{print $5}') used"
-          echo "Uptime: $(uptime -p)"
-          echo "## ✅ Runner Online" >> $GITHUB_STEP_SUMMARY
+          set -euo pipefail
+          echo "── Runner Health Check ──"
+          echo "Date:    $(date -u)"
+          echo "Node:    $(node --version 2>/dev/null || echo 'MISSING')"
+          echo "pnpm:    $(pnpm --version 2>/dev/null || echo 'MISSING')"
+          echo "Docker:  $(docker --version 2>/dev/null || echo 'MISSING')"
+          echo "Mongo:   $(mongosh --version 2>/dev/null || echo 'MISSING')"
+          echo "Disk:    $(df -h / | tail -1 | awk '{print $4 " free"}')"
+
+          node --version >/dev/null 2>&1 || { echo "FATAL: node not found"; exit 1; }
+          pnpm --version >/dev/null 2>&1 || { echo "FATAL: pnpm not found"; exit 1; }
+          docker info >/dev/null 2>&1 || { echo "FATAL: docker not accessible"; exit 1; }
+          mongosh --eval "db.adminCommand('ping')" --quiet || { echo "FATAL: MongoDB not responding"; exit 1; }
   # ── DORA: capture pipeline start + commit timestamp ───────────────────────────
   # Runs in parallel with the first validation tier — no critical-path cost.
   # commit-epoch comes from the event payload so no checkout is needed.
