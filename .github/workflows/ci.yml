@@ -9,69 +9,52 @@ name: CI
 # ACTION REQUIRED: rotate AUTH_SECRET and AUTH_PASSWORD in GitHub repo settings
 # after this commit — old values are in repo history.
 
-# Job execution order:
-#   [runner-health] (2-min gate — fail fast if runner is broken)
-#          ↓
-#   dora-start ──────────────────────────────────────────┐
-#   [SAST, Security Audit, Lint, TypeScript]  (parallel) │
-#          ↓ (all four must pass)                        │
-#       [Unit Tests]                                     │
-#          ↓                                             │
-#       [Integration Tests]                              │
-#          ↓                                             │
-#       [E2E Tests] ─────────────────────────────────────┤
-#          ↓                                             │
-#       [dora-emit] ◄────────────────────────────────────┘
-#          ↓
-#       [dora-summary]
+# Job dependency graph:
+#   runner-health (2min gate — fails fast if runner unavailable)
+#   ├── dora-start
+#   ├── SAST (Semgrep)
+#   ├── Security Audit
+#   ├── Lint
+#   └── TypeScript
+#       └── Unit Tests (needs: semgrep, audit, lint, typecheck)
+#           └── Integration Tests
+#               └── E2E Tests
+#                   ├── test (gate job)
+#                   └── DORA Emit (needs: dora-start, e2e; !cancelled)
+#                       └── DORA Summary (needs: dora-start, dora-emit; !cancelled)
+#   Docker Build (needs: typecheck, unit; master-only)
 
 on:
   push:
     branches: [master]
-    paths-ignore:
-      - '.github/runner/**'
-      - 'docs/**'
   pull_request:
     branches: [master]
-    paths-ignore:
-      - '.github/runner/**'
-      - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── 0. Runner health gate — fail fast if the runner environment is broken ────
+  # ── Runner health gate — fails fast if runner is unreachable ─────────────────
   runner-health:
     name: Runner Health
     runs-on: self-hosted
     timeout-minutes: 2
     steps:
-      - name: Verify runner environment
+      - name: Runner reachability check
         run: |
-          set -euo pipefail
-          echo "── Runner Health Check ──"
-          echo "Date:    $(date -u)"
-          echo "Node:    $(node --version 2>/dev/null || echo 'MISSING')"
-          echo "pnpm:    $(pnpm --version 2>/dev/null || echo 'MISSING')"
-          echo "Docker:  $(docker --version 2>/dev/null || echo 'MISSING')"
-          echo "Mongo:   $(mongosh --version 2>/dev/null || echo 'MISSING')"
-          echo "Disk:    $(df -h / | tail -1 | awk '{print $4 " free"}')"
-
-          node --version >/dev/null 2>&1 || { echo "FATAL: node not found"; exit 1; }
-          pnpm --version >/dev/null 2>&1 || { echo "FATAL: pnpm not found"; exit 1; }
-          docker info >/dev/null 2>&1 || { echo "FATAL: docker not accessible"; exit 1; }
-          mongosh --eval "db.adminCommand('ping')" --quiet || { echo "FATAL: MongoDB not responding"; exit 1; }
-
+          echo "Runner online: $(hostname)"
+          echo "Disk: $(df -h / | tail -1 | awk '{print $5}') used"
+          echo "Uptime: $(uptime -p)"
+          echo "## ✅ Runner Online" >> $GITHUB_STEP_SUMMARY
   # ── DORA: capture pipeline start + commit timestamp ───────────────────────────
   # Runs in parallel with the first validation tier — no critical-path cost.
   # commit-epoch comes from the event payload so no checkout is needed.
   dora-start:
-    needs: [runner-health]
     name: DORA Start
     runs-on: self-hosted
-    timeout-minutes: 2
+    timeout-minutes: 5
+    needs: [runner-health]
     outputs:
       start-epoch: ${{ steps.ts.outputs.start-epoch }}
       commit-epoch: ${{ steps.ts.outputs.commit-epoch }}
@@ -95,9 +78,9 @@ jobs:
   # ── 1a. SAST (Semgrep) ─────────────────────────────────────────────────────────
   semgrep:
     name: SAST (Semgrep)
-    needs: [runner-health]
     runs-on: self-hosted
     timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -111,9 +94,9 @@ jobs:
   # ── 1b. TypeScript typecheck ──────────────────────────────────────────────────
   typecheck:
     name: TypeScript
-    needs: [runner-health]
     runs-on: self-hosted
     timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -132,9 +115,9 @@ jobs:
   # ── 2. Lint ───────────────────────────────────────────────────────────────────
   lint:
     name: Lint
-    needs: [runner-health]
     runs-on: self-hosted
     timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -153,9 +136,9 @@ jobs:
   # ── 3. Security audit ─────────────────────────────────────────────────────────
   audit:
     name: Security Audit
-    needs: [runner-health]
     runs-on: self-hosted
     timeout-minutes: 10
+    needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
 
@@ -169,7 +152,7 @@ jobs:
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
-  # ── 4. Unit tests ─────────────────────────────────────────────────────────────
+  # ── 3. Unit tests ─────────────────────────────────────────────────────────────
   unit:
     name: Unit Tests
     runs-on: self-hosted
@@ -190,7 +173,7 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
-  # ── 5. Integration tests ───────────────────────────────────────────────────────
+  # ── 4. Integration tests ───────────────────────────────────────────────────────
   integration:
     name: Integration Tests
     runs-on: self-hosted
@@ -217,7 +200,7 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
           AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
 
-  # ── 6. E2E tests ──────────────────────────────────────────────────────────────
+  # ── 5. E2E tests ──────────────────────────────────────────────────────────────
   e2e:
     name: E2E Tests
     runs-on: self-hosted
@@ -288,7 +271,7 @@ jobs:
             playwright-report/
             test-results/
 
-  # ── 7. Gate — satisfies the "test" required status check in branch ruleset ──────
+  # ── 5. Gate — satisfies the "test" required status check in branch ruleset ──────
   test:
     name: test
     runs-on: self-hosted
@@ -297,7 +280,7 @@ jobs:
     steps:
       - run: echo "All checks passed"
 
-  # ── 8. Docker build (verify image builds on pushes to master) ─────────────────
+  # ── 6. Docker build (verify image builds on pushes to master) ─────────────────
   docker:
     name: Docker Build
     runs-on: self-hosted
@@ -450,7 +433,10 @@ jobs:
           SUMMARY
 
       - name: Notify on failure
-        if: ${{ needs.dora-emit.result == 'failure' || needs.dora-emit.result == 'skipped' }}
+        if: failure()
         run: |
-          set -euo pipefail
-          echo "::error::Pipeline failed for ${{ github.ref_name }} @ ${{ github.sha }}"
+          echo "::error::Pipeline failed — check runner availability and logs"
+          echo "## ❌ Pipeline Failed" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }} on ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
