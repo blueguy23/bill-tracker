@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleAnchorSubscription } from '@/handlers/subscriptions';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function POST(req: NextRequest): Promise<Response> {
+async function _POST(req: NextRequest): Promise<Response> {
   try {
     const db = await getDb();
     return handleAnchorSubscription(db, req);
@@ -13,3 +14,5 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRequestLogging(_POST);

@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleGetForecast } from '@/handlers/forecast';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(): Promise<Response> {
+async function _GET(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     return handleGetForecast(db);
@@ -12,3 +13,5 @@ export async function GET(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

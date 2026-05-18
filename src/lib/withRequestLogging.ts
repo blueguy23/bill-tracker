@@ -1,28 +1,28 @@
-/**
- * withRequestLogging — wraps a Next.js Route Handler to emit a structured
- * log line per request: method, path, status, duration, and request ID.
- *
- * Usage (in any route.ts):
- *   export const GET = withRequestLogging(_GET);
- *
- * The X-Request-Id header is forwarded from the client when present;
- * otherwise a short random ID is generated so correlated log lines
- * can be traced through the stack.
- */
-
-import { type NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 
-type RouteHandler = (req: NextRequest, ctx: unknown) => Promise<NextResponse> | NextResponse;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RouteHandler = (req: NextRequest, ctx?: any) => Promise<Response> | Response;
+
+export function getRequestId(req: Request): string {
+  return req.headers.get('x-request-id') ?? 'unknown';
+}
 
 export function withRequestLogging(handler: RouteHandler): RouteHandler {
-  return async (req: NextRequest, ctx: unknown): Promise<NextResponse> => {
+  return async (req: NextRequest, ctx: unknown): Promise<Response> => {
     const start = Date.now();
     const requestId = req.headers.get('x-request-id') ?? Math.random().toString(36).slice(2, 10);
 
-    let response: NextResponse;
+    const enrichedReq = new NextRequest(req.url, {
+      method: req.method,
+      headers: new Headers(req.headers),
+      body: req.body,
+    });
+    enrichedReq.headers.set('x-request-id', requestId);
+
+    let response: Response;
     try {
-      response = await handler(req, ctx);
+      response = await handler(enrichedReq, ctx);
     } catch (err) {
       const ms = Date.now() - start;
       logger.error('request.unhandled', {
@@ -47,7 +47,8 @@ export function withRequestLogging(handler: RouteHandler): RouteHandler {
       durationMs: ms,
     });
 
-    response.headers.set('x-request-id', requestId);
-    return response;
+    const res = new NextResponse(response.body, response);
+    res.headers.set('x-request-id', requestId);
+    return res;
   };
 }

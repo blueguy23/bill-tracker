@@ -1,8 +1,9 @@
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleDeleteQuickAdd } from '@/handlers/quickAdd';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function DELETE(
+async function _DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -10,3 +11,5 @@ export async function DELETE(
   const db = await getDb();
   return handleDeleteQuickAdd(db, id);
 }
+
+export const DELETE = withRequestLogging(_DELETE);

@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listRecentTransactions } from '@/adapters/accounts';
 import { listBills } from '@/adapters/bills';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(): Promise<Response> {
+async function _GET(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     const [transactions, bills] = await Promise.all([
@@ -19,3 +20,5 @@ export async function GET(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

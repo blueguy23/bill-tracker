@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listCategoryRules, upsertCategoryRule } from '@/adapters/categoryRules';
 import { TRANSACTION_CATEGORIES } from '@/lib/categorization/types';
 import type { TransactionCategory } from '@/lib/categorization/types';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(): Promise<NextResponse> {
+async function _GET(_req: NextRequest) : Promise<NextResponse> {
   const db = await getDb();
   const rules = await listCategoryRules(db);
   return NextResponse.json({ rules });
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+async function _POST(req: NextRequest): Promise<NextResponse> {
   let body: { pattern?: unknown; category?: unknown; isRegex?: unknown };
   try {
     body = await req.json() as typeof body;
@@ -52,3 +53,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   return NextResponse.json({ ok: true });
 }
+
+export const GET = withRequestLogging(_GET);
+export const POST = withRequestLogging(_POST);

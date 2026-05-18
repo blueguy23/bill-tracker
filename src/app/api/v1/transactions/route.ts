@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { listTransactions, listAccounts } from '@/adapters/accounts';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(req: NextRequest): Promise<Response> {
+async function _GET(req: NextRequest): Promise<Response> {
   try {
     const { searchParams } = req.nextUrl;
     const accountId = searchParams.get('accountId') ?? undefined;
@@ -24,3 +25,5 @@ export async function GET(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

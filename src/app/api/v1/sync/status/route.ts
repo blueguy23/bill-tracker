@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { getTodayLog, getLastSyncAt } from '@/adapters/syncLog';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 const QUOTA_LIMIT = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
@@ -22,7 +23,7 @@ function nextScheduledSync(cronExpr: string): string | null {
   }
 }
 
-export async function GET(): Promise<Response> {
+async function _GET(_req: NextRequest) : Promise<Response> {
   try {
     const db = await getDb();
     const [log, lastSyncAt] = await Promise.all([getTodayLog(db), getLastSyncAt(db)]);
@@ -41,3 +42,5 @@ export async function GET(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRequestLogging(_GET);

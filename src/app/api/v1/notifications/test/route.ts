@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { isWebhookConfigured } from '@/lib/discord/webhook';
 import { notifyTest } from '@/handlers/notifications';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function POST(): Promise<Response> {
+async function _POST(_req: NextRequest) : Promise<Response> {
   if (!isWebhookConfigured()) {
     return NextResponse.json(
       { error: 'DISCORD_WEBHOOK_URL is not configured' },
@@ -20,3 +21,5 @@ export async function POST(): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRequestLogging(_POST);

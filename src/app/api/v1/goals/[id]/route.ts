@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import { handleUpdateGoal, handleDeleteGoal } from '@/handlers/goals';
 import { logger } from '@/lib/logger';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function PATCH(req: NextRequest, { params }: RouteContext): Promise<Response> {
+async function _PATCH(req: NextRequest, { params }: RouteContext): Promise<Response> {
   try {
     const { id } = await params;
     const db = await getDb();
@@ -17,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext): Promise
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: RouteContext): Promise<Response> {
+async function _DELETE(_req: NextRequest, { params }: RouteContext): Promise<Response> {
   try {
     const { id } = await params;
     const db = await getDb();
@@ -27,3 +28,6 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext): Promi
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const PATCH = withRequestLogging(_PATCH);
+export const DELETE = withRequestLogging(_DELETE);

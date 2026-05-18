@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
 import type { Transaction } from '@/lib/simplefin/types';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function _GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get('q')?.trim() ?? '';
   const limit = Math.min(Number(searchParams.get('limit') ?? 10), 50);
@@ -34,3 +35,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     })),
   });
 }
+
+export const GET = withRequestLogging(_GET);

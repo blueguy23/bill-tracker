@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse , NextRequest } from 'next/server';
 import { getDb } from '@/adapters/db';
+import { withRequestLogging } from '@/lib/withRequestLogging';
 
-export async function GET() {
+async function _GET(_req: NextRequest) {
   const start = Date.now();
 
   // Verify DB connectivity — a failed ping means the app is not healthy.
@@ -30,3 +31,5 @@ export async function GET() {
 
   return NextResponse.json(body, { status: healthy ? 200 : 503 });
 }
+
+export const GET = withRequestLogging(_GET);

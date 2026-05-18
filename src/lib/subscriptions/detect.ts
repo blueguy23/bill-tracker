@@ -69,7 +69,7 @@ export function detectSubscriptions(
       const prev = sorted[i - 1];
       const curr = sorted[i];
       if (prev && curr) {
-        gaps.push((curr.posted.getTime() - prev.posted.getTime()) / MS_PER_DAY);
+        gaps.push(Math.round((curr.posted.getTime() - prev.posted.getTime()) / MS_PER_DAY));
       }
     }
 
