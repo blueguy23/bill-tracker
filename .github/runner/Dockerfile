@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ── Install everything in one layer ──────────────────────────────────────────
 # --no-install-recommends drops ~300MB of suggested packages (docs, debug tools)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git jq gosu lsof tini chrony ntpdate cron \
+    git jq gosu lsof tini chrony ntpdate cron shellcheck \
     docker-ce-cli \
     nodejs \
     mongodb-org \
