@@ -240,7 +240,8 @@ WATCHDOG_WINDOW_START=$(date +%s)
 WATCHDOG_MAX_FIRES="${WATCHDOG_MAX_FIRES:-5}"
 
 _check_watchdog_circuit() {
-  local now=$(date +%s)
+  local now
+  now=$(date +%s)
   local window_age=$(( now - WATCHDOG_WINDOW_START ))
 
   if [ "$window_age" -ge 3600 ]; then

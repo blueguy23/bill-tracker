@@ -75,11 +75,11 @@ mock_curl_deregister_403() {
 # ── Provide jq if not installed (test environments may lack it) ──────────────
 if ! command -v jq >/dev/null 2>&1; then
   jq() {
-    local raw=false filter="" input
+    local filter="" input
     # Parse flags: -r, --arg name value
     while [ $# -gt 0 ]; do
       case "$1" in
-        -r) raw=true; shift ;;
+        -r) shift ;;
         --arg) shift; shift; shift ;;  # skip --arg <name> <value>
         *) filter="$1"; shift ;;
       esac
@@ -212,7 +212,7 @@ fi
 TESTS_RUN=$((TESTS_RUN + 1))
 SAVED_PAT="$GITHUB_PAT"
 unset GITHUB_PAT
-CURL_CMD=mock_curl_registration_success
+export CURL_CMD=mock_curl_registration_success
 _deregister_runner 2>/dev/null
 RESULT=$?
 export GITHUB_PAT="$SAVED_PAT"
