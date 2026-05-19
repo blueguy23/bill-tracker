@@ -5,6 +5,7 @@ name: CI
 #   GITHUB_PAT        — used by: self-hosted runner (container .env, not referenced in this file)
 #   DOCKERHUB_USERNAME — used by: self-hosted runner (container .env, not referenced in this file)
 #   DOCKERHUB_TOKEN   — used by: self-hosted runner (container .env, not referenced in this file)
+#   DISCORD_CI_WEBHOOK_URL — used by: Discord CI notifications (notify-discord job)
 #
 # ACTION REQUIRED: rotate AUTH_SECRET and AUTH_PASSWORD in GitHub repo settings
 # after this commit — old values are in repo history.
@@ -22,6 +23,7 @@ name: CI
 #                   ├── test (gate job)
 #                   └── DORA Emit (needs: dora-start, e2e; !cancelled)
 #                       └── DORA Summary (needs: dora-start, dora-emit; !cancelled)
+#                           └── Discord Notify (needs: test, dora-summary; !cancelled)
 #   Docker Build (needs: typecheck, unit; master-only)
 
 on:
@@ -486,3 +488,46 @@ jobs:
           echo "**Workflow:** ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
           echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
           echo "**Triggered by:** ${{ github.actor }} on ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+  # ── Discord notification — fires on success and failure ─────────────────────
+  notify-discord:
+    name: Discord Notify
+    runs-on: self-hosted
+    timeout-minutes: 2
+    needs: [test, dora-summary]
+    if: ${{ !cancelled() }}
+    env:
+      WEBHOOK_URL: ${{ secrets.DISCORD_CI_WEBHOOK_URL }}
+    steps:
+      - name: Send Discord notification
+        if: ${{ env.WEBHOOK_URL != '' }}
+        run: |
+          set -euo pipefail
+
+          TEST_RESULT="${{ needs.test.result }}"
+          if [ "$TEST_RESULT" = "success" ]; then
+            COLOR=3066993
+            STATUS="passed"
+            EMOJI="white_check_mark"
+          else
+            COLOR=15158332
+            STATUS="failed"
+            EMOJI="x"
+          fi
+
+          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -1 | cut -c1-80 | sed 's/"/\\"/g')
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          curl -fsSL -H "Content-Type: application/json" -d "{
+            \"embeds\": [{
+              \"title\": \":${EMOJI}: CI ${STATUS}\",
+              \"description\": \"**${COMMIT_MSG}**\",
+              \"color\": ${COLOR},
+              \"fields\": [
+                { \"name\": \"Repo\",   \"value\": \"\`${{ github.repository }}\`\", \"inline\": true },
+                { \"name\": \"Branch\", \"value\": \"\`${{ github.ref_name }}\`\",    \"inline\": true },
+                { \"name\": \"Run\",    \"value\": \"[#${{ github.run_number }}](${RUN_URL})\", \"inline\": true }
+              ],
+              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+            }]
+          }" "$WEBHOOK_URL"
