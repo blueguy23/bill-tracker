@@ -36,6 +36,6 @@ jobs:
 
       - name: Shellcheck all scripts
         run: |
-          FILES=$(find .github/runner -name "*.sh" | sed 's|^|/src/|')
-          docker run --rm -v "$(pwd):/src" koalaman/shellcheck:stable \
-            --severity=warning $FILES
+          docker run --rm -v "${{ github.workspace }}:/src" -w /src \
+            koalaman/shellcheck:stable --severity=warning \
+            $(find .github/runner -name "*.sh")
