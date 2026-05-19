@@ -34,10 +34,12 @@ jobs:
       - name: Validate preflight script syntax
         run: bash -n .github/runner/scripts/preflight-check.sh
 
-      - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
-
       - name: Shellcheck all scripts
         run: |
+          if ! command -v shellcheck &>/dev/null; then
+            curl -fsSL https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz \
+              | tar -xJ --strip-components=1 -C /tmp shellcheck-stable/shellcheck
+            export PATH="/tmp:$PATH"
+          fi
           find .github/runner -name "*.sh" -print0 \
             | xargs -0 shellcheck --severity=warning
