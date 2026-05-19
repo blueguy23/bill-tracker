@@ -166,6 +166,7 @@ cd /home/garci/actions-runner
 
 # ── 3. Clock re-sync loop (compensates for WSL2 drift mid-job) ───────────────
 CLOCK_SYNC_PID=""
+TOKEN_WATCH_PID=""
 
 _clock_sync_loop() {
   while true; do
@@ -189,12 +190,37 @@ _clock_sync_loop() {
 _clock_sync_loop &
 CLOCK_SYNC_PID=$!
 
+# ── 3b. PAT re-validation loop (detects token expiry while runner is live) ───
+_token_watch_loop() {
+  while true; do
+    sleep 21600  # 6 hours
+    HTTP_STATUS=$(${CURL_CMD:-curl} -s -o /dev/null -w "%{http_code}" \
+      -H "Authorization: Bearer $GITHUB_PAT" \
+      -H "Accept: application/vnd.github+json" \
+      https://api.github.com/user)
+    if [ "$HTTP_STATUS" = "200" ]; then
+      echo "[TOKEN] re-validation OK — PAT still valid"
+      rm -f /tmp/token-invalid
+    elif [ "$HTTP_STATUS" = "000" ]; then
+      echo "[TOKEN] WARNING: GitHub API unreachable (HTTP 000) — skipping sentinel"
+    else
+      echo "[TOKEN] WARNING: PAT re-validation failed — HTTP ${HTTP_STATUS}"
+      echo "[TOKEN] Runner will continue but registration renewal may fail"
+      touch /tmp/token-invalid
+    fi
+  done
+}
+
+_token_watch_loop &
+TOKEN_WATCH_PID=$!
+
 # ── 4. Graceful shutdown ─────────────────────────────────────────────────────
 STOP=0
 
 _cleanup() {
   log "Caught signal — stopping runner loop..."
   STOP=1
+  [ -n "${TOKEN_WATCH_PID:-}" ] && kill "$TOKEN_WATCH_PID" 2>/dev/null
   [ -n "${CLOCK_SYNC_PID:-}" ] && kill "$CLOCK_SYNC_PID" 2>/dev/null
   kill "$RUNNER_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
@@ -209,6 +235,26 @@ trap _cleanup TERM INT
 # Each iteration: get a fresh token → register as ephemeral → run one job → repeat.
 # Ephemeral runners auto-deregister after each job, so no stale cleanup needed.
 RUNNER_LOG=/tmp/runner-output.log
+WATCHDOG_FIRES=0
+WATCHDOG_WINDOW_START=$(date +%s)
+WATCHDOG_MAX_FIRES="${WATCHDOG_MAX_FIRES:-5}"
+
+_check_watchdog_circuit() {
+  local now=$(date +%s)
+  local window_age=$(( now - WATCHDOG_WINDOW_START ))
+
+  if [ "$window_age" -ge 3600 ]; then
+    WATCHDOG_FIRES=0
+    WATCHDOG_WINDOW_START=$now
+  fi
+
+  WATCHDOG_FIRES=$(( WATCHDOG_FIRES + 1 ))
+
+  if [ "$WATCHDOG_FIRES" -gt "$WATCHDOG_MAX_FIRES" ]; then
+    return 1
+  fi
+  return 0
+}
 
 register() {
   _deregister_runner
@@ -249,6 +295,7 @@ while [ "$STOP" -eq 0 ]; do
           continue
         fi
         log "Watchdog: still stuck — killing runner to re-register"
+        touch /tmp/watchdog-killed
         kill "$RUNNER_PID" 2>/dev/null || true
         break
       fi
@@ -260,6 +307,20 @@ while [ "$STOP" -eq 0 ]; do
   EXIT_CODE=$?
   kill "$TAIL_PID" 2>/dev/null || true
   kill "$WATCHDOG_PID" 2>/dev/null || true
+
+  if [ -f /tmp/watchdog-killed ]; then
+    rm -f /tmp/watchdog-killed
+    if ! _check_watchdog_circuit; then
+      log "[WATCHDOG] circuit open — ${WATCHDOG_FIRES} restarts in 60min"
+      log "[WATCHDOG] backing off for 10 minutes before next attempt"
+      touch /tmp/watchdog-circuit-open
+      sleep 600
+      rm -f /tmp/watchdog-circuit-open
+      WATCHDOG_FIRES=0
+      WATCHDOG_WINDOW_START=$(date +%s)
+      log "[WATCHDOG] circuit reset — resuming normal operation"
+    fi
+  fi
 
   if grep -q "A session for this runner already exists" "$RUNNER_LOG" 2>/dev/null; then
     log "Runner exited with session conflict — waiting ${SESSION_CONFLICT_WAIT}s for GitHub to clear stale session..."

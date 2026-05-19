@@ -5,10 +5,13 @@ on:
     branches: [master]
     paths:
       - '.github/runner/**'
+      - '.github/workflows/runner-ci.yml'
   pull_request:
     branches: [master]
     paths:
       - '.github/runner/**'
+      - '.github/workflows/runner-ci.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

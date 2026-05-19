@@ -25,16 +25,47 @@ name: CI
 #   Docker Build (needs: typecheck, unit; master-only)
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
-    paths-ignore:
-      - '.github/runner/**'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
+      - 'next.config.ts'
+      - 'tailwind.config.ts'
+      - 'postcss.config.mjs'
+      - 'eslint.config.mjs'
+      - 'vitest.config.ts'
+      - 'vitest.integration.config.ts'
+      - 'playwright.config.ts'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [master]
-    paths-ignore:
-      - '.github/runner/**'
-      - 'docs/**'
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
+      - 'next.config.ts'
+      - 'tailwind.config.ts'
+      - 'postcss.config.mjs'
+      - 'eslint.config.mjs'
+      - 'vitest.config.ts'
+      - 'vitest.integration.config.ts'
+      - 'playwright.config.ts'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.github/workflows/ci.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
