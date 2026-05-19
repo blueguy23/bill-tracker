@@ -25,6 +25,7 @@ name: CI
 #   Docker Build (needs: typecheck, unit; master-only)
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
     paths:
