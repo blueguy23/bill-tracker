@@ -34,11 +34,7 @@ jobs:
       - name: Validate preflight script syntax
         run: bash -n .github/runner/scripts/preflight-check.sh
 
-      - name: Lint shell scripts (shellcheck)
-        continue-on-error: true
+      - name: Shellcheck all scripts
         run: |
-          set -euo pipefail
-          for f in .github/runner/entrypoint.sh .github/runner/scripts/preflight-check.sh .github/runner/scripts/test-registration.sh; do
-            echo "── shellcheck: $f ──"
-            docker run --rm -i koalaman/shellcheck:stable -S warning --shell=bash - < "$f" || true
-          done
+          find .github/runner -name "*.sh" -print0 \
+            | xargs -0 shellcheck --severity=warning

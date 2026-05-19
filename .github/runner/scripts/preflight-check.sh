@@ -75,10 +75,9 @@ check_dockerhub_token() {
     return 0
   fi
 
-  local OUTPUT
-  OUTPUT=$(echo "${DOCKERHUB_TOKEN}" | docker login \
+  echo "${DOCKERHUB_TOKEN}" | docker login \
     --username "${DOCKERHUB_USERNAME}" \
-    --password-stdin 2>&1) || {
+    --password-stdin >/dev/null 2>&1 || {
     fail "DOCKERHUB_TOKEN — login failed"
     return 1
   }

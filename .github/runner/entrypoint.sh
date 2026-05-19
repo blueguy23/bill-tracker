@@ -14,7 +14,7 @@ if [ "$(id -u)" = "0" ]; then
     echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] WARNING: Could not sync clock — TLS errors may follow"
   chronyc makestep 1.0 3 >/dev/null 2>&1 || true
   chronyc tracking 2>/dev/null | grep "System time" | \
-    awk '{print "[CLOCK] startup offset: " $4 " " $5}'
+    awk '{print "[CLOCK] startup offset: " $4 " " $5}' || true
 
   # Start cron as root before dropping privileges — needs /var/run/crond.pid
   cron
@@ -240,7 +240,8 @@ WATCHDOG_WINDOW_START=$(date +%s)
 WATCHDOG_MAX_FIRES="${WATCHDOG_MAX_FIRES:-5}"
 
 _check_watchdog_circuit() {
-  local now=$(date +%s)
+  local now
+  now=$(date +%s)
   local window_age=$(( now - WATCHDOG_WINDOW_START ))
 
   if [ "$window_age" -ge 3600 ]; then
