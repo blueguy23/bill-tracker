@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { openDetailPanel } from './PanelTrigger';
 
 interface Alert {
   id: string;
@@ -20,14 +21,21 @@ const TYPE_STYLES = {
   info:    { color: 'oklch(0.68 0.22 265)', bg: 'oklch(0.68 0.22 265 / 0.1)', border: 'oklch(0.68 0.22 265 / 0.2)' },
 };
 
-function NotificationItem({ alert, onRead }: { alert: Alert; onRead: (id: string) => void }) {
+function NotificationItem({ alert, onRead, onClose }: { alert: Alert; onRead: (id: string) => void; onClose: () => void }) {
   const [hov, setHov] = useState(false);
   const s = TYPE_STYLES[alert.type];
+  const isBillAlert = alert.id.startsWith('bill-');
   return (
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      onClick={() => onRead(alert.id)}
+      onClick={() => {
+        onRead(alert.id);
+        if (isBillAlert) {
+          onClose();
+          openDetailPanel('bills');
+        }
+      }}
       style={{
         display: 'flex', gap: 12, padding: '12px 16px',
         background: hov ? 'rgba(237,237,245,0.03)' : 'transparent',
@@ -120,7 +128,7 @@ function NotificationsPanel({ open, onClose, alerts, onMarkRead, onMarkAllRead }
       <div style={{ overflowY: 'auto', flex: 1 }}>
         {filtered.length === 0
           ? <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text3)', fontSize: 13, fontFamily: 'var(--sans)' }}>All clear ✓</div>
-          : filtered.map(a => <NotificationItem key={a.id} alert={a} onRead={onMarkRead} />)
+          : filtered.map(a => <NotificationItem key={a.id} alert={a} onRead={onMarkRead} onClose={onClose} />)
         }
       </div>
     </div>
@@ -137,6 +145,9 @@ interface NotificationBellProps {
 export function NotificationBell({ budgetAlerts = [], billAlerts = [], priceAlerts = [], renewalAlerts = [] }: NotificationBellProps) {
   const [open, setOpen]   = useState(false);
   const [hov, setHov]     = useState(false);
+
+  const urgentBillCount = billAlerts.filter(b => b.isOverdue || (b.daysUntilDue >= 0 && b.daysUntilDue <= 3)).length;
+
   const [alerts, setAlerts] = useState<Alert[]>(() => {
     const list: Alert[] = [];
 
@@ -185,10 +196,14 @@ export function NotificationBell({ budgetAlerts = [], billAlerts = [], priceAler
 
   const unread = alerts.filter(a => !a.read).length;
 
+  function handleBellClick() {
+    setOpen(p => !p);
+  }
+
   return (
     <div style={{ position: 'relative' }}>
       <button
-        onClick={() => setOpen(p => !p)}
+        onClick={handleBellClick}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
         style={{
@@ -200,9 +215,20 @@ export function NotificationBell({ budgetAlerts = [], billAlerts = [], priceAler
         }}
       >
         🔔
-        {unread > 0 && (
+        {urgentBillCount > 0 ? (
+          <div style={{
+            position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16,
+            borderRadius: 8, background: '#ef4444', border: '2px solid var(--bg)',
+            boxShadow: '0 0 6px #ef444480',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 9, fontWeight: 700, color: '#fff', fontFamily: 'var(--mono)',
+            padding: '0 3px',
+          }}>
+            {urgentBillCount}
+          </div>
+        ) : unread > 0 ? (
           <div style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#ef4444', border: '2px solid var(--bg)', boxShadow: '0 0 6px #ef444480' }} />
-        )}
+        ) : null}
       </button>
       <NotificationsPanel
         open={open}
