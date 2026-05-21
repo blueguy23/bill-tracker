@@ -94,7 +94,7 @@ jobs:
           node --version >/dev/null 2>&1 || { echo "FATAL: node not found"; exit 1; }
           pnpm --version >/dev/null 2>&1 || { echo "FATAL: pnpm not found"; exit 1; }
           docker info >/dev/null 2>&1 || { echo "FATAL: docker not accessible"; exit 1; }
-          mongosh --eval "db.adminCommand('ping')" --quiet || { echo "FATAL: MongoDB not responding"; exit 1; }
+          mongosh mongodb://mongo:27017 --eval "db.adminCommand('ping')" --quiet || { echo "FATAL: MongoDB not responding"; exit 1; }
   # ── DORA: capture pipeline start + commit timestamp ───────────────────────────
   # Runs in parallel with the first validation tier — no critical-path cost.
   # commit-epoch comes from the event payload so no checkout is needed.
@@ -242,7 +242,7 @@ jobs:
       - name: Integration tests
         run: pnpm test:integration
         env:
-          STRICTDB_URI: mongodb://localhost:27017/bill-tracker-integration
+          STRICTDB_URI: mongodb://mongo:27017/bill-tracker-integration
           DATABASE_NAME: bill-tracker-integration
           NODE_ENV: test
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
@@ -280,7 +280,7 @@ jobs:
       - name: E2E tests
         run: pnpm test:e2e
         env:
-          STRICTDB_URI: mongodb://localhost:27017/bill-tracker
+          STRICTDB_URI: mongodb://mongo:27017/bill-tracker
           NODE_ENV: test
 
       - name: Print E2E failures
@@ -379,7 +379,7 @@ jobs:
           PIPELINE_DURATION=$(( NOW - START ))
           LEAD_TIME=$(( NOW - COMMIT ))
 
-          mongosh mongodb://localhost:27017/bill-tracker --quiet --eval "
+          mongosh mongodb://mongo:27017/bill-tracker --quiet --eval "
             db.dora_runs.insertOne({
               sha:               '${{ github.sha }}',
               branch:            '${{ github.ref_name }}',
@@ -409,7 +409,7 @@ jobs:
           set -euo pipefail
           DAYS=30
 
-          RECORDS=$(mongosh mongodb://localhost:27017/bill-tracker --quiet --eval "
+          RECORDS=$(mongosh mongodb://mongo:27017/bill-tracker --quiet --eval "
             JSON.stringify(
               db.dora_runs
                 .find({ timestamp: { \$gte: new Date(Date.now() - ${DAYS} * 86400000) } })

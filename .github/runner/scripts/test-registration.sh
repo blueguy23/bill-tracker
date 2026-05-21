@@ -101,12 +101,9 @@ if ! command -v jq >/dev/null 2>&1; then
   }
 fi
 
-# ── Extract and eval the functions under test ────────────────────────────────
+# ── Source the functions under test ───────────────────────────────────────────
 
-ENTRYPOINT="$(dirname "$SCRIPT_DIR")/entrypoint.sh"
-
-# Extract function definitions between the marker comment and the Docker Hub section
-eval "$(sed -n '/^# ── Registration functions/,/^# ── 1\. Docker Hub/{ /^# ── 1\./d; p; }' "$ENTRYPOINT")"
+source "$SCRIPT_DIR/registration.sh"
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 
