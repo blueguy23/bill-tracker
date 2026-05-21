@@ -206,28 +206,31 @@ NextAuth v5 credentials provider. Required in `.env`:
 ## CI/CD
 
 - GitHub Actions workflow: `.github/workflows/ci.yml` — runs on push/PR to `master`
-- Self-hosted runner: containerized — config lives in `.github/runner/`
-- Start the runner: `docker compose -f .github/runner/docker-compose.yml up -d`
+- Self-hosted runners: 2 containers (`ci-runner-1`, `ci-runner-2`) + shared MongoDB — config in `.github/runner/`
+- Start: `docker compose -f .github/runner/docker-compose.yml up -d`
 - Pipeline: typecheck → lint → security audit → unit tests → E2E (Chromium only) → docker build
-- E2E uses MongoDB running inside the runner container (`localhost:27017`)
+- CI jobs connect to MongoDB at `mongo:27017` (compose service name, not localhost)
 - Monitor: `gh run watch`
 
 ### Runner operations
 
 ```bash
-# Start/restart
+# Start/restart all (mongo + 2 runners + sidecars)
 cd .github/runner && docker compose up -d
 
-# View logs
-docker compose logs -f runner
+# View logs (all runners)
+docker compose logs -f runner-1 runner-2
 
-# Stop (deregisters from GitHub automatically)
+# View logs (single runner)
+docker compose logs -f runner-1
+
+# Stop (deregisters both runners from GitHub automatically)
 docker compose down
 ```
 
 **Upgrading the runner binary:**
 1. Download new tarball: `curl -fsSL <url> -o .github/runner/actions-runner.tar.gz`
-2. Delete the config volume so it repopulates: `docker volume rm runner_runner-config`
+2. Delete both config volumes: `docker volume rm runner_runner-1-config runner_runner-2-config`
 3. Rebuild: `docker compose build && docker compose up -d`
 
 **Runner requires:** `GITHUB_PAT` (repo scope) in `.github/runner/.env`

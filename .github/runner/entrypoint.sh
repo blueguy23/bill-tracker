@@ -29,114 +29,29 @@ if [ "$(id -u)" = "0" ]; then
   getent group "$SOCK_GID" >/dev/null 2>&1 || groupadd -g "$SOCK_GID" docker-sock
   usermod -aG "$SOCK_GID" garci
 
-  mkdir -p /home/garci/actions-runner/_work /data/db
-  chown -R garci:garci /home/garci /data/db
+  mkdir -p /home/garci/actions-runner/_work
+  if [ "${EXTERNAL_MONGODB:-}" != "true" ]; then
+    mkdir -p /data/db
+    chown garci:garci /data/db
+  fi
+  chown -R garci:garci /home/garci
   exec gosu garci "$0" "$@"
 fi
 
 # ── From here: running as garci ───────────────────────────────────────────────
-REPO_OWNER="${REPO_OWNER:-blueguy23}"
-REPO_NAME="${REPO_NAME:-bill-tracker}"
-REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
-RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
-SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"
-GITHUB_API="https://api.github.com"
-CURL_CMD="${CURL_CMD:-curl}"
+# Exported for sourced scripts (registration.sh, background-loops.sh)
+export REPO_OWNER="${REPO_OWNER:-blueguy23}"
+export REPO_NAME="${REPO_NAME:-bill-tracker}"
+export REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
+export RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
+export SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"
+export GITHUB_API="https://api.github.com"
+export CURL_CMD="${CURL_CMD:-curl}"
 
 log() { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"; }
 
 # ── Registration functions (testable via CURL_CMD override) ──────────────────
-
-_get_registration_token() {
-  if [ -z "${GITHUB_PAT:-}" ]; then
-    log "ERROR: GITHUB_PAT is not set"
-    return 1
-  fi
-
-  local RESPONSE TOKEN
-  RESPONSE=$($CURL_CMD -fsSL -X POST \
-    -H "Authorization: token ${GITHUB_PAT}" \
-    -H "Accept: application/vnd.github+json" \
-    "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/registration-token" 2>/dev/null) || {
-    log "ERROR: Failed to get registration token (HTTP error or network failure)"
-    return 1
-  }
-
-  TOKEN=$(echo "$RESPONSE" | jq -r '.token')
-  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-    log "ERROR: Failed to get runner registration token. Check GITHUB_PAT has 'repo' scope."
-    return 1
-  fi
-
-  echo "$TOKEN"
-}
-
-_get_remove_token() {
-  if [ -z "${GITHUB_PAT:-}" ]; then
-    log "ERROR: GITHUB_PAT is not set"
-    return 1
-  fi
-
-  local RESPONSE TOKEN
-  RESPONSE=$($CURL_CMD -fsSL -X POST \
-    -H "Authorization: token ${GITHUB_PAT}" \
-    -H "Accept: application/vnd.github+json" \
-    "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/remove-token" 2>/dev/null) || {
-    log "ERROR: Failed to get remove token (HTTP error or network failure)"
-    return 1
-  }
-
-  TOKEN=$(echo "$RESPONSE" | jq -r '.token')
-  if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-    log "ERROR: Failed to get runner remove token. Check GITHUB_PAT has 'repo' scope."
-    return 1
-  fi
-
-  echo "$TOKEN"
-}
-
-_register_runner() {
-  local REG_TOKEN="${1:?_register_runner requires a registration token as \$1}"
-
-  rm -f .runner .credentials
-
-  ./config.sh \
-    --url           "$REPO_URL" \
-    --token         "$REG_TOKEN" \
-    --name          "$RUNNER_NAME" \
-    --labels        "self-hosted,Linux,X64" \
-    --work          _work \
-    --unattended \
-    --replace \
-    --ephemeral \
-    --disableupdate
-}
-
-_deregister_runner() {
-  local RUNNER_ID
-  RUNNER_ID=$($CURL_CMD -sf --max-time 10 \
-    -H "Authorization: token ${GITHUB_PAT}" \
-    -H "Accept: application/vnd.github+json" \
-    "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners" \
-    | jq -r --arg name "$RUNNER_NAME" '.runners[] | select(.name == $name) | .id') || true
-
-  if [ -n "$RUNNER_ID" ] && [ "$RUNNER_ID" != "null" ]; then
-    log "Deregistering runner (id=${RUNNER_ID}) from GitHub..."
-    local HTTP_CODE
-    HTTP_CODE=$($CURL_CMD -s -o /dev/null -w '%{http_code}' --max-time 10 -X DELETE \
-      -H "Authorization: token ${GITHUB_PAT}" \
-      -H "Accept: application/vnd.github+json" \
-      "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/actions/runners/${RUNNER_ID}")
-
-    if [ "$HTTP_CODE" = "204" ]; then
-      log "Runner deregistered."
-    elif [ "$HTTP_CODE" = "403" ]; then
-      log "ERROR: Deregistration returned 403 — GITHUB_PAT may lack 'repo' or 'manage_runners:org' scope"
-    else
-      log "WARNING: Deregistration returned HTTP ${HTTP_CODE} (GitHub will clean up eventually)"
-    fi
-  fi
-}
+source /scripts/registration.sh
 
 # ── 1. Docker Hub auth (optional — prevents anonymous pull rate limits) ───────
 if [ -n "${DOCKERHUB_USERNAME:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
@@ -148,68 +63,42 @@ else
 fi
 
 # ── 2. MongoDB ────────────────────────────────────────────────────────────────
-mongod \
-  --dbpath /data/db \
-  --bind_ip 127.0.0.1 \
-  --fork \
-  --logpath /tmp/mongod.log \
-  --quiet
-log "MongoDB started — waiting for readiness..."
-for i in $(seq 1 30); do
-  mongosh --eval "db.adminCommand('ping')" --quiet 2>/dev/null && break
-  sleep 1
-  [ "$i" = "30" ] && { log "ERROR: MongoDB not ready after 30s"; exit 1; }
-done
+MONGODB_URI="${MONGODB_URI:-mongodb://localhost:27017}"
+
+if [ "${EXTERNAL_MONGODB:-}" = "true" ]; then
+  log "Using external MongoDB at ${MONGODB_URI}"
+  for i in $(seq 1 30); do
+    mongosh "$MONGODB_URI" --eval "db.adminCommand('ping')" --quiet 2>/dev/null && break
+    log "Waiting for external MongoDB... ($i/30)"
+    sleep 2
+    [ "$i" = "30" ] && { log "ERROR: External MongoDB not ready after 60s"; exit 1; }
+  done
+else
+  mongod \
+    --dbpath /data/db \
+    --bind_ip 127.0.0.1 \
+    --fork \
+    --logpath /tmp/mongod.log \
+    --quiet
+  log "MongoDB started — waiting for readiness..."
+  for i in $(seq 1 30); do
+    mongosh --eval "db.adminCommand('ping')" --quiet 2>/dev/null && break
+    sleep 1
+    [ "$i" = "30" ] && { log "ERROR: MongoDB not ready after 30s"; exit 1; }
+  done
+fi
 log "MongoDB ready"
 
 cd /home/garci/actions-runner
 
-# ── 3. Clock re-sync loop (compensates for WSL2 drift mid-job) ───────────────
+# ── 3. Background loops (clock sync + PAT re-validation) ─────────────────────
 CLOCK_SYNC_PID=""
 TOKEN_WATCH_PID=""
 
-_clock_sync_loop() {
-  while true; do
-    sleep 60
-    if ! chronyc makestep 1.0 3 >/dev/null 2>&1; then
-      echo "[CLOCK] WARNING: chronyc makestep failed — drift may be accumulating"
-    else
-      OFFSET=$(chronyc tracking 2>/dev/null | grep "System time" | awk '{print $4}')
-      if [ -n "$OFFSET" ]; then
-        OFFSET_ABS=$(echo "$OFFSET" | tr -d '-')
-        if awk "BEGIN {exit !($OFFSET_ABS > 2.0)}"; then
-          echo "[CLOCK] WARNING: large drift detected — ${OFFSET}s offset after sync"
-        else
-          echo "[CLOCK] sync OK — offset ${OFFSET}s"
-        fi
-      fi
-    fi
-  done
-}
+source /scripts/background-loops.sh
 
 _clock_sync_loop &
 CLOCK_SYNC_PID=$!
-
-# ── 3b. PAT re-validation loop (detects token expiry while runner is live) ───
-_token_watch_loop() {
-  while true; do
-    sleep 21600  # 6 hours
-    HTTP_STATUS=$(${CURL_CMD:-curl} -s -o /dev/null -w "%{http_code}" \
-      -H "Authorization: Bearer $GITHUB_PAT" \
-      -H "Accept: application/vnd.github+json" \
-      https://api.github.com/user)
-    if [ "$HTTP_STATUS" = "200" ]; then
-      echo "[TOKEN] re-validation OK — PAT still valid"
-      rm -f /tmp/token-invalid
-    elif [ "$HTTP_STATUS" = "000" ]; then
-      echo "[TOKEN] WARNING: GitHub API unreachable (HTTP 000) — skipping sentinel"
-    else
-      echo "[TOKEN] WARNING: PAT re-validation failed — HTTP ${HTTP_STATUS}"
-      echo "[TOKEN] Runner will continue but registration renewal may fail"
-      touch /tmp/token-invalid
-    fi
-  done
-}
 
 _token_watch_loop &
 TOKEN_WATCH_PID=$!

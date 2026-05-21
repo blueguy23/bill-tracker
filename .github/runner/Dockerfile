@@ -45,16 +45,17 @@ RUN mkdir -p /home/garci/actions-runner \
   && /home/garci/actions-runner/bin/installdependencies.sh \
   && chown -R garci:garci /home/garci \
   && rm /tmp/actions-runner.tar.gz \
-  && mkdir -p /data/db \
-  && echo "0 */6 * * * docker system prune -f --filter 'until=24h' >> /home/garci/docker-prune.log 2>&1" \
-     | crontab -u garci -
+  && mkdir -p /data/db
 
 # ── Config files + entrypoint ─────────────────────────────────────────────────
 COPY chrony.conf /etc/chrony/chrony.conf
 COPY entrypoint.sh /entrypoint.sh
 COPY deep-healthcheck.sh /deep-healthcheck.sh
 COPY scripts/preflight-check.sh /preflight-check.sh
-RUN chmod +x /entrypoint.sh /deep-healthcheck.sh /preflight-check.sh
+COPY scripts/registration.sh /scripts/registration.sh
+COPY scripts/background-loops.sh /scripts/background-loops.sh
+RUN chmod +x /entrypoint.sh /deep-healthcheck.sh /preflight-check.sh \
+    /scripts/registration.sh /scripts/background-loops.sh
 
 # Readiness check — queries GitHub API to confirm the runner is actually online,
 # not just that the process exists. autoheal restarts on unhealthy, so this

@@ -51,15 +51,14 @@ function NavItem({ href, icon, label, active, hasAlert, collapsed }: NavItemProp
       onMouseLeave={() => setHov(false)}
       title={collapsed ? label : undefined}
       style={{
-        display: 'flex', alignItems: 'center', gap: 9,
-        padding: collapsed ? '9px 12px' : '8px 10px',
-        width: '100%', borderRadius: 8,
-        fontSize: 13, fontWeight: active ? 600 : 500,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: collapsed ? '9px 12px' : '9px 10px',
+        width: '100%', borderRadius: 6,
+        fontSize: 13, fontWeight: 500,
         fontFamily: 'var(--sans)',
-        color: active ? 'var(--text)' : hov ? 'var(--text2)' : 'var(--text2)',
-        background: active ? 'var(--surface)' : hov ? 'rgba(237,237,245,0.04)' : 'transparent',
-        textDecoration: 'none', transition: 'all .1s',
-        borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
+        color: active ? 'var(--accent)' : hov ? 'var(--text)' : 'var(--text2)',
+        background: active ? 'var(--accent-a)' : hov ? 'var(--raised)' : 'transparent',
+        textDecoration: 'none', transition: 'all .15s',
         marginBottom: 2,
         justifyContent: collapsed ? 'center' : 'flex-start',
         boxSizing: 'border-box',
@@ -127,8 +126,6 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
     } catch { setSyncState('error'); setErrorMsg('Network error'); setTimeout(() => setSyncState('idle'), 5000); }
   }
 
-  const syncLabel = syncState === 'syncing' ? 'SYNCING…' : syncState === 'done' ? '✓ SYNCED' : syncState === 'quota' ? 'QUOTA' : syncState === 'error' ? (errorMsg?.toUpperCase() ?? 'ERROR') : 'SYNC NOW';
-  const syncColor = syncState === 'done' ? 'var(--green)' : (syncState === 'error' || syncState === 'quota') ? 'var(--red)' : syncState === 'syncing' ? 'var(--accent)' : 'var(--text3)';
 
   const w = collapsed ? 64 : 224;
 
@@ -166,23 +163,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
           <button onClick={() => onCollapseChange(false)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: '8px 20px', fontSize: 14 }}>›</button>
         )}
 
-        {/* Net Worth */}
-        {!collapsed && (
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', fontFamily: 'var(--mono)', marginBottom: 4 }}>Net Worth</div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: 20, fontWeight: 400, color: 'var(--text)', letterSpacing: '-.01em', lineHeight: 1.2 }}>
-              {netWorth > 0 ? USD0.format(netWorth) : '—'}
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4, fontFamily: 'var(--mono)' }}>
-              {accountCount} linked account{accountCount !== 1 ? 's' : ''}
-            </div>
-            {mtdChange !== null && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, fontFamily: 'var(--mono)', background: mtdChange >= 0 ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)', color: mtdChange >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                {mtdChange >= 0 ? '↑' : '↓'} {mtdChange >= 0 ? '+' : ''}{USD0.format(mtdChange)} MTD
-              </div>
-            )}
-          </div>
-        )}
+        {/* Net Worth — spacer pushes to bottom */}
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', overflowY: 'auto' }}>
@@ -212,33 +193,59 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
           })}
         </nav>
 
-        {/* Footer sync + theme */}
-        <div style={{ padding: collapsed ? '12px 8px' : '12px 14px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
-          <button
-            onClick={handleSync}
-            disabled={syncState === 'syncing'}
-            title="Sync accounts"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
-              gap: 8, width: '100%', padding: collapsed ? '8px' : '8px 10px',
-              borderRadius: 8, border: '1px solid var(--border)',
-              background: syncState === 'syncing' ? 'var(--accent-a)' : 'var(--raised)',
-              cursor: syncState === 'syncing' ? 'not-allowed' : 'pointer',
-              fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600,
-              color: syncColor,
-              transition: 'all .15s', letterSpacing: '.04em',
-            }}
-          >
-            <span style={{ display: 'inline-block', animation: syncState === 'syncing' ? 'btSpin 1s linear infinite' : 'none', fontSize: 12 }}>↻</span>
-            {!collapsed && syncLabel}
-          </button>
-          {!collapsed && (
-            <div style={{ display: 'flex', alignItems: 'center', marginTop: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--green)', animation: 'btPulse 2s infinite', flexShrink: 0 }} />
-                LIVE · {formatLastSync(lastSyncAt).toUpperCase()}
+        {/* Net Worth */}
+        <div
+          onClick={handleSync}
+          style={{
+            marginTop: 'auto', padding: collapsed ? '12px 8px' : '14px 10px',
+            borderTop: '1px solid var(--border)', cursor: 'pointer',
+            borderRadius: 6, transition: 'background .15s', flexShrink: 0,
+            marginLeft: collapsed ? 0 : 10, marginRight: collapsed ? 0 : 10,
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--raised)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          title={collapsed ? `${USD0.format(netWorth)} · Click to sync` : 'Click to sync'}
+        >
+          {!collapsed ? (
+            <>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Net Worth</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>
+                {netWorth > 0 ? USD0.format(netWorth) : '—'}
               </div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>
+                {accountCount} account{accountCount !== 1 ? 's' : ''}
+                {mtdChange !== null && <> · <span style={{ color: mtdChange >= 0 ? 'var(--green)' : 'var(--red)' }}>{mtdChange >= 0 ? '+' : ''}{USD0.format(mtdChange)}</span> MTD</>}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
+              {netWorth > 0 ? USD0.format(netWorth) : '—'}
             </div>
+          )}
+        </div>
+
+        {/* Sync status */}
+        <div
+          onClick={handleSync}
+          style={{
+            padding: collapsed ? '8px' : '10px 10px',
+            display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 8, fontSize: 11, color: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--text3)',
+            cursor: syncState === 'syncing' ? 'not-allowed' : 'pointer',
+            flexShrink: 0, marginLeft: collapsed ? 0 : 10, marginRight: collapsed ? 0 : 10,
+          }}
+          title="Click to sync"
+        >
+          {syncState === 'syncing' ? (
+            <span style={{ display: 'inline-block', animation: 'btSpin 1s linear infinite', fontSize: 12 }}>↻</span>
+          ) : (
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--green)', flexShrink: 0 }} />
+          )}
+          {!collapsed && (
+            syncState === 'syncing' ? 'Syncing…' :
+            syncState === 'done' ? 'Synced just now' :
+            syncState === 'error' || syncState === 'quota' ? (errorMsg ?? 'Sync failed') :
+            `Synced ${formatLastSync(lastSyncAt).toLowerCase()}`
           )}
         </div>
       </aside>
