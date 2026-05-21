@@ -18,9 +18,7 @@ test.describe('Dashboard Page (/)', () => {
       await page.goto('/');
 
       await expect(page).toHaveURL('/');
-      await expect(page.locator('h1')).toBeVisible();
-      // Greeting is time-dependent: "Good morning", "Good afternoon", or "Good evening"
-      await expect(page.locator('h1')).toContainText('Good');
+      await expect(page.getByText(/Good (morning|afternoon|evening)/)).toBeVisible();
     });
 
     test('should set the correct document title', async ({ page }) => {
@@ -29,31 +27,19 @@ test.describe('Dashboard Page (/)', () => {
       await expect(page).toHaveTitle('Folio');
     });
 
-    test('should render the three metric cards', async ({ page }) => {
+    test('should render the three KPI tiles', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('Money in vs out', { exact: true })).toBeVisible();
-      await expect(page.getByText('Bills this month', { exact: true })).toBeVisible();
-      await expect(page.getByText('Savings rate', { exact: true })).toBeVisible();
+      await expect(page.getByText('Money left after bills')).toBeVisible();
+      await expect(page.getByText('Bills covered this month')).toBeVisible();
+      await expect(page.getByText('Savings rate')).toBeVisible();
     });
 
-    test('should render metric card values as USD currency strings', async ({ page }) => {
+    test('should render KPI tile values as USD currency strings or percentages', async ({ page }) => {
       await page.goto('/');
 
-      // All three MetricCards display monetary values — find at least 3 $ signs
       const dollarTexts = page.getByText(/\$[\d,]+/).all();
-      expect((await dollarTexts).length).toBeGreaterThanOrEqual(3);
-    });
-  });
-
-  test.describe('period selector', () => {
-    test('should render the period selector buttons', async ({ page }) => {
-      await page.goto('/');
-
-      // PeriodSelector renders 1W 1M 3M YTD 1Y as buttons
-      await expect(page.getByRole('button', { name: '1M' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '3M' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '1Y' })).toBeVisible();
+      expect((await dollarTexts).length).toBeGreaterThanOrEqual(1);
     });
   });
 });
@@ -67,7 +53,7 @@ test.describe('Sidebar Navigation', () => {
     await page.goto('/');
 
     await expect(page.locator('aside')).toBeVisible();
-    await expect(page.locator('aside').getByText('Folio', { exact: true })).toBeVisible();
+    await expect(page.locator('aside').locator('text=Folio').first()).toBeVisible();
   });
 
   test('should render all navigation links', async ({ page }) => {
@@ -129,76 +115,42 @@ test.describe('Sidebar Navigation', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Cash Flow Chart Card
+// Spending by Category
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('Cash Flow Card', () => {
-  test('should render the cash flow card with heading', async ({ page }) => {
+test.describe('Spending by Category', () => {
+  test('should render the spending by category section', async ({ page }) => {
     await page.goto('/');
 
-    const card = page.locator('[data-testid="cash-flow-card"]');
-    await expect(card).toBeVisible();
-    await expect(card.getByText('Cash Flow', { exact: true })).toBeVisible();
+    await expect(page.getByText('Spending by Category')).toBeVisible();
   });
 
-  test('should show INCOME, SPEND, and NET legend labels', async ({ page }) => {
+  test('should show current month as subtitle or empty state', async ({ page }) => {
     await page.goto('/');
 
-    const card = page.locator('[data-testid="cash-flow-card"]');
-    await expect(card.getByText('INCOME', { exact: true })).toBeVisible();
-    await expect(card.getByText('SPEND', { exact: true })).toBeVisible();
-    await expect(card.getByText('NET', { exact: true })).toBeVisible();
-  });
-
-  test('should render the chart area', async ({ page }) => {
-    await page.goto('/');
-
-    // The chart area is a canvas element rendered by Chart.js inside the card
-    const card = page.locator('[data-testid="cash-flow-card"]');
-    await expect(card).toBeVisible();
-    // Chart canvas or empty state div must exist within the card
-    const chartContent = card.locator('canvas, div[style*="height"]').first();
-    await expect(chartContent).toBeVisible();
+    const month = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const hasData = await page.getByText(month).isVisible().catch(() => false);
+    const hasEmpty = await page.getByText('No spending data yet').isVisible().catch(() => false);
+    expect(hasData || hasEmpty).toBe(true);
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Spend by Category Card
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.describe('Spending Chart', () => {
-  test('should render the spend by category card', async ({ page }) => {
-    await page.goto('/');
-
-    const chart = page.locator('[data-testid="spending-chart"]');
-    await expect(chart).toBeVisible();
-    await expect(chart.getByText('Spend by Category', { exact: true })).toBeVisible();
-  });
-
-  test('should show This period subtitle or chart content', async ({ page }) => {
-    await page.goto('/');
-
-    const chart = page.locator('[data-testid="spending-chart"]');
-    await expect(chart.getByText('This period', { exact: true })).toBeVisible();
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Budget & Recent Panels (bottom row)
+// Bottom row — Upcoming Bills + Recent Transactions
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('Bottom row panels', () => {
-  test('should render a Budget panel with a View link', async ({ page }) => {
+  test('should render an Upcoming Bills panel', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('Budget', { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: 'View →' })).toBeVisible();
+    await expect(page.getByText('Upcoming Bills')).toBeVisible();
+    await expect(page.getByText('Next 14 days')).toBeVisible();
   });
 
-  test('should render a Recent transactions panel', async ({ page }) => {
+  test('should render a Recent Transactions panel with All link', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('Recent', { exact: true })).toBeVisible();
+    await expect(page.getByText('Recent Transactions')).toBeVisible();
     await expect(page.getByRole('link', { name: 'All →' })).toBeVisible();
   });
 });

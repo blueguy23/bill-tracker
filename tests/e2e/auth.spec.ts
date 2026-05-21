@@ -46,7 +46,7 @@ test.describe('Auth — login page', () => {
     await page.goto('/login');
     await submitLogin(page, PASSWORD);
     await expect(page).toHaveURL('/');
-    await expect(page.locator('h1')).toContainText(/Good (morning|afternoon|evening)/);
+    await expect(page.getByText(/Good (morning|afternoon|evening)/)).toBeVisible();
   });
 
   test('authenticated visit to /login redirects to /', async ({ page }) => {
