@@ -42,7 +42,7 @@ export function getTitle(type: PanelType | null, arg: string | number | undefine
     case 'networth':   return 'Net Worth';
     case 'category':   return String(arg ?? 'Category');
     case 'transaction': {
-      const tx = data.transactions[Number(arg) ?? -1];
+      const tx = data.transactions[Number(arg ?? -1)];
       return tx?.description ?? 'Transaction';
     }
     case 'bill-detail': return String(arg ?? 'Bill');

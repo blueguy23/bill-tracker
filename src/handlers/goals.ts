@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { StrictDB } from 'strictdb';
-import { listGoals, createGoal, getGoal, updateGoal, deleteGoal } from '@/adapters/goals';
+import { listGoals, createGoal, updateGoal, deleteGoal } from '@/adapters/goals';
 import { listAccounts } from '@/adapters/accounts';
 import type { CreateGoalDto, UpdateGoalDto, GoalResponse, Goal } from '@/types/goal';
 

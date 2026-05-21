@@ -108,7 +108,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const db = await getDb();
 
-  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, forecastResult] = await Promise.all([
+  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, _forecastResult] = await Promise.all([
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
@@ -134,7 +134,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     return [{ ...m, txnDescription: txn.description, txnAmount: Number(txn.amount), txnDate: posted.toISOString() }];
   });
 
-  const portfolioHoldings: Holding[] = accounts
+  const _portfolioHoldings: Holding[] = accounts
     .filter(a => a.accountType === 'investment' && a.holdings?.length)
     .flatMap(a => a.holdings ?? []);
 
@@ -428,8 +428,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         {/* TODO: relocate or remove */}
         {/* <DashboardCharts history={history} /> */}
-        {/* <ForecastChart forecast={forecastResult.days} /> */}
-        {/* <PortfolioWidget holdings={portfolioHoldings} /> */}
+        {/* <ForecastChart forecast={_forecastResult.days} /> */}
+        {/* <PortfolioWidget holdings={_portfolioHoldings} /> */}
       </div>
 
       <DetailPanel data={panelData} />
