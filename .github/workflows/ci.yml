@@ -459,6 +459,8 @@ jobs:
     steps:
       - name: Send Discord notification
         if: ${{ env.WEBHOOK_URL != '' }}
+        env:
+          RAW_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
 
@@ -473,7 +475,7 @@ jobs:
             EMOJI="x"
           fi
 
-          COMMIT_MSG=$(echo '${{ github.event.head_commit.message }}' | head -1 | cut -c1-80 | sed 's/"/\\"/g')
+          COMMIT_MSG=$(printf '%s' "$RAW_COMMIT_MSG" | head -1 | cut -c1-80 | sed 's/["\]/\\&/g')
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           curl -fsSL -H "Content-Type: application/json" -d "{
