@@ -30,9 +30,9 @@ test.describe('Dashboard Page (/)', () => {
     test('should render the three KPI tiles', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('Money left after bills')).toBeVisible();
-      await expect(page.getByText('Bills covered this month')).toBeVisible();
-      await expect(page.getByText('Savings rate')).toBeVisible();
+      await expect(page.getByText('Money left after bills').first()).toBeVisible();
+      await expect(page.getByText('Bills covered this month').first()).toBeVisible();
+      await expect(page.getByText('Savings rate').first()).toBeVisible();
     });
 
     test('should render KPI tile values as USD currency strings or percentages', async ({ page }) => {
@@ -52,8 +52,8 @@ test.describe('Sidebar Navigation', () => {
   test('should display the Folio brand name', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('aside')).toBeVisible();
-    await expect(page.locator('aside').locator('text=Folio').first()).toBeVisible();
+    await expect(page.locator('aside').first()).toBeVisible();
+    await expect(page.locator('aside').first().locator('text=Folio').first()).toBeVisible();
   });
 
   test('should render all navigation links', async ({ page }) => {
@@ -143,8 +143,8 @@ test.describe('Bottom row panels', () => {
   test('should render an Upcoming Bills panel', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('Upcoming Bills')).toBeVisible();
-    await expect(page.getByText('Next 14 days')).toBeVisible();
+    await expect(page.getByText('Upcoming Bills').first()).toBeVisible();
+    await expect(page.getByText('Next 14 days').first()).toBeVisible();
   });
 
   test('should render a Recent Transactions panel with All link', async ({ page }) => {
