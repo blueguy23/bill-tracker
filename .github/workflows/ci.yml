@@ -148,13 +148,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        timeout-minutes: 5
-        with:
-          node-version-file: '.node-version'
-
-      - uses: pnpm/action-setup@v4
-
       - run: pnpm install --frozen-lockfile
 
       - name: Type check
@@ -168,13 +161,6 @@ jobs:
     needs: [runner-health]
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        timeout-minutes: 5
-        with:
-          node-version-file: '.node-version'
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -190,13 +176,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
-        timeout-minutes: 5
-        with:
-          node-version-file: '.node-version'
-
-      - uses: pnpm/action-setup@v4
-
       - name: pnpm audit
         run: pnpm audit --audit-level=high
 
@@ -208,13 +187,6 @@ jobs:
     needs: [semgrep, audit, lint, typecheck]
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        timeout-minutes: 5
-        with:
-          node-version-file: '.node-version'
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -229,13 +201,6 @@ jobs:
     needs: unit
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        timeout-minutes: 5
-        with:
-          node-version-file: '.node-version'
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 
@@ -256,13 +221,6 @@ jobs:
     needs: integration
     steps:
       - uses: actions/checkout@v5
-
-      - uses: actions/setup-node@v5
-        timeout-minutes: 5
-        with:
-          node-version-file: '.node-version'
-
-      - uses: pnpm/action-setup@v4
 
       - run: pnpm install --frozen-lockfile
 

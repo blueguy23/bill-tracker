@@ -35,20 +35,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g pnpm@10
 
-# ── Pre-populate actions/setup-node tool cache ───────────────────────────────
-# setup-node downloads Node on every job unless it finds the version in
-# $RUNNER_TOOL_CACHE. Symlink the apt-installed Node into the cache so
-# parallel jobs don't fight over bandwidth downloading ~200MB each.
-RUN NODE_VER=$(node --version | sed 's/^v//') \
-  && CACHE_DIR="/opt/hostedtoolcache/node/${NODE_VER}/x64" \
-  && mkdir -p "$CACHE_DIR/bin" \
-  && for bin in node npm npx corepack; do \
-       ln -s "/usr/bin/$bin" "$CACHE_DIR/bin/$bin"; \
-     done \
-  && touch "/opt/hostedtoolcache/node/${NODE_VER}/x64.complete"
-
-ENV RUNNER_TOOL_CACHE=/opt/hostedtoolcache
-
 # ── Runner user, binary, dirs, cron ──────────────────────────────────────────
 # User must be 'garci' — ci.yml references /home/garci/.cache/ms-playwright
 RUN useradd -m -u 1000 -s /bin/bash garci
