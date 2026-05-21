@@ -36,14 +36,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && npm install -g pnpm@10
 
 # ── Runner user, binary, dirs, cron ──────────────────────────────────────────
-# User must be 'garci' — ci.yml references /home/garci/.cache/ms-playwright
-RUN useradd -m -u 1000 -s /bin/bash garci
+ARG RUNNER_USER=garci
+RUN useradd -m -u 1000 -s /bin/bash "$RUNNER_USER"
 
 COPY actions-runner.tar.gz /tmp/actions-runner.tar.gz
-RUN mkdir -p /home/garci/actions-runner \
-  && tar -xz -C /home/garci/actions-runner -f /tmp/actions-runner.tar.gz \
-  && /home/garci/actions-runner/bin/installdependencies.sh \
-  && chown -R garci:garci /home/garci \
+RUN mkdir -p /home/${RUNNER_USER}/actions-runner \
+  && tar -xz -C /home/${RUNNER_USER}/actions-runner -f /tmp/actions-runner.tar.gz \
+  && /home/${RUNNER_USER}/actions-runner/bin/installdependencies.sh \
+  && chown -R ${RUNNER_USER}:${RUNNER_USER} /home/${RUNNER_USER} \
   && rm /tmp/actions-runner.tar.gz \
   && mkdir -p /data/db
 
@@ -66,7 +66,8 @@ HEALTHCHECK --interval=60s \
             --retries=2 \
   CMD ["/deep-healthcheck.sh"]
 
-# HOME is explicit so pnpm/Playwright caches land at paths hardcoded in ci.yml
-ENV HOME=/home/garci
-WORKDIR /home/garci/actions-runner
+# HOME is explicit so pnpm/Playwright caches land at paths referenced in ci.yml
+ARG RUNNER_USER=garci
+ENV HOME=/home/${RUNNER_USER}
+WORKDIR /home/${RUNNER_USER}/actions-runner
 ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh"]
