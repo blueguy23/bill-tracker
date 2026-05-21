@@ -39,13 +39,14 @@ if [ "$(id -u)" = "0" ]; then
 fi
 
 # ── From here: running as garci ───────────────────────────────────────────────
-REPO_OWNER="${REPO_OWNER:-blueguy23}"
-REPO_NAME="${REPO_NAME:-bill-tracker}"
-REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
-RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
-SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"
-GITHUB_API="https://api.github.com"
-CURL_CMD="${CURL_CMD:-curl}"
+# Exported for sourced scripts (registration.sh, background-loops.sh)
+export REPO_OWNER="${REPO_OWNER:-blueguy23}"
+export REPO_NAME="${REPO_NAME:-bill-tracker}"
+export REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
+export RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
+export SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"
+export GITHUB_API="https://api.github.com"
+export CURL_CMD="${CURL_CMD:-curl}"
 
 log() { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"; }
 
