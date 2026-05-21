@@ -40,8 +40,11 @@ fi
 
 # ── From here: running as garci ───────────────────────────────────────────────
 # Exported for sourced scripts (registration.sh, background-loops.sh)
-export REPO_OWNER="${REPO_OWNER:-blueguy23}"
-export REPO_NAME="${REPO_NAME:-bill-tracker}"
+if [ -z "${REPO_OWNER:-}" ] || [ -z "${REPO_NAME:-}" ]; then
+  echo "FATAL: REPO_OWNER and REPO_NAME must be set" >&2; exit 1
+fi
+export REPO_OWNER
+export REPO_NAME
 export REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}"
 export RUNNER_NAME="${RUNNER_NAME:-ci-docker}"
 export SESSION_CONFLICT_WAIT="${SESSION_CONFLICT_WAIT:-30}"

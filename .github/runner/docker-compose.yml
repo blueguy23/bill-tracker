@@ -77,8 +77,8 @@ services:
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
       RUNNER_NAME: ci-runner-1
-      REPO_OWNER: ${REPO_OWNER:-blueguy23}
-      REPO_NAME: ${REPO_NAME:-bill-tracker}
+      REPO_OWNER: ${REPO_OWNER:?required}
+      REPO_NAME: ${REPO_NAME:?required}
       DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME:-}
       DOCKERHUB_TOKEN: ${DOCKERHUB_TOKEN:-}
       SESSION_CONFLICT_WAIT: ${SESSION_CONFLICT_WAIT:-30}
@@ -104,8 +104,8 @@ services:
     environment:
       GITHUB_PAT: ${GITHUB_PAT}
       RUNNER_NAME: ci-runner-2
-      REPO_OWNER: ${REPO_OWNER:-blueguy23}
-      REPO_NAME: ${REPO_NAME:-bill-tracker}
+      REPO_OWNER: ${REPO_OWNER:?required}
+      REPO_NAME: ${REPO_NAME:?required}
       DOCKERHUB_USERNAME: ${DOCKERHUB_USERNAME:-}
       DOCKERHUB_TOKEN: ${DOCKERHUB_TOKEN:-}
       SESSION_CONFLICT_WAIT: ${SESSION_CONFLICT_WAIT:-30}
