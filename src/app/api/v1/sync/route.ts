@@ -30,7 +30,9 @@ async function _POST(_req: NextRequest) : Promise<Response> {
     });
     void checkCreditAlerts(db);
     void enrichWithTrove(db, 'recent');
-    void detectAutoPayments(db);
+    detectAutoPayments(db).catch(err =>
+      logger.error('[autopay] detection failed:', { error: err instanceof Error ? err.message : String(err) })
+    );
     return NextResponse.json({ synced: true, ...result });
   } catch (err) {
     if (err instanceof QuotaExceededError) {

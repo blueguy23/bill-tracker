@@ -1,7 +1,7 @@
 import type { StrictDB } from 'strictdb';
 import { listBills, updateBill } from '@/adapters/bills';
 import { createPayment } from '@/adapters/payments';
-import { notifyPriceIncrease } from '@/handlers/notifications';
+import { notifyPriceIncrease, notifyPriceDecrease } from '@/handlers/notifications';
 import type { Transaction } from '@/lib/simplefin/types';
 import type { Bill } from '@/types/bill';
 import { logger } from '@/lib/logger';
@@ -32,7 +32,7 @@ function billMatchesTransaction(
     if (hintWords.length && hintWords.every((word) => desc.includes(word))) {
       return { matched: true, confidence: 'hint' };
     }
-    return { matched: false, confidence: 'hint' };
+    // Hint didn't match — fall through to name-based matching
   }
 
   const words = normalize(billName).split(' ').filter((w) => w.length >= 4);
@@ -101,7 +101,7 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
 
     const { transaction: match, confidence } = result;
     const chargedAmt  = Math.abs(match.amount);
-    const expectedAmt = bill.amount;
+    const expectedAmt = bill.lastChargedAmount ?? bill.amount;
     const absDiff     = chargedAmt - expectedAmt;
     const pctDiff     = absDiff / expectedAmt;
 
@@ -120,6 +120,24 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
         newAmount: chargedAmt,
         increase: absDiff,
         percentIncrease: pctDiff,
+      });
+    }
+
+    // Price decrease — charge is meaningfully lower than expected
+    if (pctDiff < -PRICE_INCREASE_PCT && Math.abs(absDiff) > PRICE_INCREASE_MIN) {
+      logger.info('autoPayDetect.priceDecrease', {
+        billName: bill.name,
+        expectedAmt,
+        chargedAmt,
+        pctDiff: `${(pctDiff * 100).toFixed(1)}%`,
+      });
+      void notifyPriceDecrease(db, {
+        billId: bill._id,
+        billName: bill.name,
+        previousAmount: expectedAmt,
+        newAmount: chargedAmt,
+        decrease: Math.abs(absDiff),
+        percentDecrease: Math.abs(pctDiff),
       });
     }
 

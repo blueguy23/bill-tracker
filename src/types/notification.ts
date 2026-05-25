@@ -9,6 +9,7 @@ export type NotificationEvent =
   | 'statement_close_alert'
   | 'credit_utilization_alert'
   | 'price_increase_alert'
+  | 'price_decrease_alert'
   | 'test';
 
 export interface NotificationLog {
@@ -77,6 +78,15 @@ export interface PriceIncreasePayload {
   newAmount: number;
   increase: number;
   percentIncrease: number;
+}
+
+export interface PriceDecreasePayload {
+  billId: string;
+  billName: string;
+  previousAmount: number;
+  newAmount: number;
+  decrease: number;
+  percentDecrease: number;
 }
 
 export interface DigestPayload {
