@@ -81,6 +81,7 @@ const queryRegistry: Record<string, () => Promise<{ default: QueryModule }>> = {
   'search-txn-desc':          () => import('./queries/search-txn-desc.js'),
   'set-hints':                () => import('./queries/set-hints.js'),
   'fix-stale-ispaid':         () => import('./queries/fix-stale-ispaid.js'),
+  'backfill-last-charged':    () => import('./queries/backfill-last-charged.js'),
 };
 
 // ---------------------------------------------------------------------------

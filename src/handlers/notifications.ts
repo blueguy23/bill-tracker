@@ -6,6 +6,7 @@ import type {
   SyncCompletedPayload,
   SyncFailedPayload,
   PriceIncreasePayload,
+  PriceDecreasePayload,
   DiscordEmbed,
   NotificationEvent,
 } from '@/types/notification';
@@ -22,6 +23,7 @@ import {
   buildStatementCloseEmbed,
   buildCreditUtilizationAlertEmbed,
   buildPriceIncreaseEmbed,
+  buildPriceDecreaseEmbed,
 } from '@/lib/discord/embeds';
 import { findRecentLog, insertNotificationLog } from '@/adapters/notificationLog';
 import { listCreditAccounts } from '@/adapters/credit';
@@ -43,6 +45,7 @@ const COOLDOWNS: Partial<Record<NotificationEvent, number>> = {
   statement_close_alert: 24 * HOUR,
   credit_utilization_alert: 24 * HOUR,
   price_increase_alert: 30 * 24 * HOUR,
+  price_decrease_alert: 30 * 24 * HOUR,
 };
 
 async function dispatchNotification(
@@ -198,6 +201,16 @@ export async function notifyPriceIncrease(db: StrictDB, p: PriceIncreasePayload)
     'price_increase_alert',
     `price_increase_alert:${p.billId}`,
     buildPriceIncreaseEmbed(p),
+  );
+}
+
+export async function notifyPriceDecrease(db: StrictDB, p: PriceDecreasePayload): Promise<void> {
+  if (!isWebhookConfigured()) return;
+  await dispatchNotification(
+    db,
+    'price_decrease_alert',
+    `price_decrease_alert:${p.billId}`,
+    buildPriceDecreaseEmbed(p),
   );
 }
 
