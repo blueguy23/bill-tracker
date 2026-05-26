@@ -11,4 +11,8 @@ Documented crontab entries for this project. Apply with `crontab -e`.
 
 # Notification digest — daily at 08:00
 0 8 * * * /home/garci/projects/bill-tracker/scripts/run-notification-digest.sh >> /home/garci/projects/bill-tracker/logs/digest.log 2>&1
+
+# Heartbeat check — every 4 hours at :30 (offset from sync)
+# Alerts via Discord if sync hasn't succeeded within 4 hours
+30 1,5,9,13,17,21 * * * /home/garci/projects/bill-tracker/scripts/cron-heartbeat-check.sh >> /home/garci/projects/bill-tracker/logs/heartbeat.log 2>&1
 ```

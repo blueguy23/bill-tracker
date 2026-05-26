@@ -10,6 +10,7 @@ export type NotificationEvent =
   | 'credit_utilization_alert'
   | 'price_increase_alert'
   | 'price_decrease_alert'
+  | 'heartbeat_stale'
   | 'test';
 
 export interface NotificationLog {
@@ -87,6 +88,13 @@ export interface PriceDecreasePayload {
   newAmount: number;
   decrease: number;
   percentDecrease: number;
+}
+
+export interface HeartbeatStalePayload {
+  script: string;
+  lastSuccessAt: Date | null;
+  hoursSinceSuccess: number | null;
+  reason: 'stale' | 'never_run' | 'db_unreachable';
 }
 
 export interface DigestPayload {
