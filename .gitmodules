@@ -1,0 +1,3 @@
+[submodule ".github/runner"]
+	path = .github/runner
+	url = git@github.com:blueguy23/ghostrunner.git
