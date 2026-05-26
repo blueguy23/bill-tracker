@@ -8,6 +8,7 @@ import type {
   DigestPayload,
   PriceIncreasePayload,
   PriceDecreasePayload,
+  HeartbeatStalePayload,
 } from '@/types/notification';
 import type { StatementAlertPayload, CreditUtilizationAlertPayload } from '@/types/creditAdvisor';
 
@@ -197,6 +198,28 @@ export function buildPriceDecreaseEmbed(p: PriceDecreasePayload): DiscordEmbed {
       { name: 'Change', value: `-${usd(p.decrease)} (-${(p.percentDecrease * 100).toFixed(1)}%)`, inline: true },
     ],
     footer: { text: 'Update the bill amount in Bill Tracker if this is permanent' },
+    timestamp: ts(),
+  };
+}
+
+export function buildHeartbeatStaleEmbed(p: HeartbeatStalePayload): DiscordEmbed {
+  const descriptions: Record<string, string> = {
+    stale: `Last successful run was ${p.hoursSinceSuccess?.toFixed(1)}h ago`,
+    never_run: 'No successful run has ever been recorded',
+    db_unreachable: 'Heartbeat checker could not connect to MongoDB',
+  };
+  const fields = [
+    { name: 'Script', value: p.script, inline: true },
+    { name: 'Status', value: p.reason.replace('_', ' '), inline: true },
+  ];
+  if (p.lastSuccessAt) {
+    fields.push({ name: 'Last Success', value: fmtDate(p.lastSuccessAt), inline: true });
+  }
+  return {
+    title: 'Cron Heartbeat Alert',
+    color: COLOR.red,
+    description: descriptions[p.reason],
+    fields,
     timestamp: ts(),
   };
 }

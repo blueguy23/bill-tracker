@@ -12,6 +12,7 @@
 
 import 'dotenv/config';
 import { getDb } from '../src/adapters/db.js';
+import { upsertHeartbeat } from '../src/adapters/cronHeartbeats.js';
 import { SimpleFINClient } from '../src/lib/simplefin/client.js';
 import { runDailySync, runHistoricalImport, QuotaExceededError } from '../src/handlers/sync.js';
 import { detectAutoPayments } from '../src/handlers/autoPayDetect.js';
@@ -29,6 +30,7 @@ async function main() {
 
   const db = await getDb();
   const client = new SimpleFINClient({ url: process.env.SIMPLEFIN_URL });
+  const startMs = Date.now();
 
   try {
     const result = isHistorical
@@ -53,12 +55,39 @@ async function main() {
       console.error(`[${timestamp}] Auto-pay detection failed:`, detectErr);
     }
 
+    await upsertHeartbeat(db, {
+      script: 'sync',
+      lastSuccessAt: new Date(),
+      lastRunAt: new Date(),
+      lastDurationMs: Date.now() - startMs,
+      lastError: null,
+      metadata: {
+        accountsUpdated: result.accountsUpdated,
+        transactionsUpserted: result.transactionsUpserted,
+        quotaUsed: result.quotaUsed,
+      },
+    });
+
     process.exit(0);
   } catch (err) {
     if (err instanceof QuotaExceededError) {
       console.warn(`[${timestamp}] QUOTA: Daily quota nearly reached (${err.used}/24) — sync skipped.`);
-      process.exit(0); // not a failure
+      process.exit(0);
     }
+
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    try {
+      await upsertHeartbeat(db, {
+        script: 'sync',
+        lastFailureAt: new Date(),
+        lastRunAt: new Date(),
+        lastDurationMs: Date.now() - startMs,
+        lastError: errorMsg,
+      });
+    } catch {
+      console.error(`[${timestamp}] Failed to write heartbeat on error`);
+    }
+
     console.error(`[${timestamp}] ERROR:`, err);
     process.exit(1);
   }
