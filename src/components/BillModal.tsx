@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { BillResponse, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import { BILL_CATEGORIES, RECURRENCE_INTERVALS } from '@/types/bill';
 
@@ -89,14 +92,6 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
     }, 300);
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
-    if (isOpen) document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -132,17 +127,14 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
   const input = 'w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" data-testid="bill-modal">
-      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
-          <h2 className="text-base font-semibold text-white">
-            {mode === 'create' ? 'Add Bill' : 'Edit Bill'}
-          </h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06]">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto gap-0 p-0" data-testid="bill-modal">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle>{mode === 'create' ? 'Add Bill' : 'Edit Bill'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {mode === 'create' ? 'Create a new bill' : 'Edit an existing bill'}
+          </DialogDescription>
+        </DialogHeader>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {error && (
@@ -163,9 +155,12 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
             </div>
             <div>
               <label className={label}>Category</label>
-              <select className={input} value={form.category} onChange={(e) => set('category', e.target.value)}>
-                {BILL_CATEGORIES.map((c) => <option key={c} value={c} className="bg-zinc-800 capitalize">{c}</option>)}
-              </select>
+              <Select value={form.category} onValueChange={(v) => set('category', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {BILL_CATEGORIES.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -198,9 +193,12 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
               )}
               <div>
                 <label className={label}>Recurrence</label>
-                <select className={input} value={form.recurrenceInterval} onChange={(e) => set('recurrenceInterval', e.target.value)}>
-                  {RECURRENCE_INTERVALS.map((r) => <option key={r} value={r} className="bg-zinc-800 capitalize">{r}</option>)}
-                </select>
+                <Select value={form.recurrenceInterval} onValueChange={(v) => set('recurrenceInterval', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RECURRENCE_INTERVALS.map((r) => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           ) : (
@@ -290,15 +288,15 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-400 bg-zinc-800 border border-white/[0.08] rounded-lg hover:text-zinc-200 hover:bg-zinc-700 transition-colors">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
-            </button>
-            <button type="submit" disabled={isSaving} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors" data-testid="save-bill-btn">
+            </Button>
+            <Button type="submit" disabled={isSaving} data-testid="save-bill-btn">
               {isSaving ? 'Saving…' : 'Save'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -19,7 +19,7 @@
   --border-l: #252535;
   --text:     #ededf5;
   --text2:    #8080a0;
-  --text3:    #44445a;
+  --text3:    #6b6b85;
   --accent:   oklch(0.68 0.22 265);
   --accent-a: oklch(0.68 0.22 265 / 0.15);
   --green:    #22c55e;
@@ -39,6 +39,26 @@
   --pace-warn-fill:  oklch(0.67 0.13 40 / 0.85);
   --pace-bad-fill:   rgba(239,68,68,0.85);
 
+  /* shadcn token aliases — maps our tokens to shadcn's expected names */
+  --background:             var(--bg);
+  --foreground:             var(--text);
+  --card:                   var(--surface);
+  --card-foreground:        var(--text);
+  --primary:                var(--accent);
+  --primary-foreground:     var(--on-fill-text);
+  --secondary:              var(--raised);
+  --secondary-foreground:   var(--text2);
+  --muted:                  var(--raised);
+  --muted-foreground:       var(--text3);
+  --accent-foreground:      var(--text);
+  --destructive:            var(--red);
+  --destructive-foreground: var(--on-fill-text);
+  --popover:                var(--surface);
+  --popover-foreground:     var(--text);
+  --input:                  var(--border);
+  --ring:                   var(--border);
+  --radius:                 0.75rem;
+
   /* legacy aliases kept for backward compat */
   --bg-old:   #0b0b0f;
   --s1:       #131318;
@@ -48,7 +68,6 @@
   --b2:       #252535;
   --text-old: #ededf5;
   --text2-old:#8080a0;
-  --muted:    #44445a;
   --inc:      #22c55e;
   --exp:      #ef4444;
 }
@@ -114,7 +133,6 @@
   --b2:        #CDD5DF;
   --text-old:  #0F1729;
   --text2-old: #5C6679;
-  --muted:     #8A93A6;
   --inc:       #187A5C;
   --exp:       #C0432A;
 }

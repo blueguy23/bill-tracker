@@ -2,6 +2,8 @@
 
 import { useState, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { BillResponse, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import { BillTable } from './BillTable';
 import { BillModal } from './BillModal';
@@ -97,13 +99,10 @@ export const BillsView = forwardRef<BillsViewHandle, BillsViewProps>(function Bi
           <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', letterSpacing: '.08em' }}>
             {initialBills.length === 0 ? 'NO BILLS' : `${initialBills.length} BILL${initialBills.length !== 1 ? 'S' : ''}`}
           </div>
-          <button
-            onClick={openCreate}
-            data-testid="add-bill-btn"
-            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}
-          >
-            + Add Bill
-          </button>
+          <Button onClick={openCreate} data-testid="add-bill-btn">
+            <Plus className="w-3.5 h-3.5" />
+            Add Bill
+          </Button>
         </div>
       )}
 
