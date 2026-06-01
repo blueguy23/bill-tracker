@@ -7,6 +7,7 @@ import {
   CategoryScale, LinearScale,
   Tooltip, Filler, Legend,
 } from 'chart.js';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { PanelType } from './PanelTrigger';
 import type { DetailPanelData } from './DetailPanel';
 
@@ -342,16 +343,12 @@ function TransactionView({ index, data }: { index: number; data: DetailPanelData
 
       <div>
         <SectionTitle>Recategorize</SectionTitle>
-        <select
-          defaultValue={tx.category ?? 'other'}
-          style={{
-            width: '100%', padding: '8px 12px', background: 'var(--surface)',
-            border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)',
-            fontFamily: 'var(--sans)', fontSize: 13, cursor: 'pointer', appearance: 'none',
-          }}
-        >
-          {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-        </select>
+        <Select defaultValue={tx.category ?? 'other'}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
     </>
   );

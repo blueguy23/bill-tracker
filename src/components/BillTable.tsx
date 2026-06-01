@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import type { BillResponse } from '@/types/bill';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -147,18 +148,12 @@ function BillRow({ bill, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: Bill
 
       {/* Edit / delete */}
       <div style={{ display: 'flex', gap: 6, opacity: hov ? 1 : 0, transition: 'opacity .1s', flexShrink: 0 }}>
-        <button
-          onClick={() => onEdit(bill)}
-          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'rgba(237,237,245,.04)', color: 'var(--text2)', cursor: 'pointer', fontSize: 12 }}
-        >
+        <Button variant="outline" size="sm" onClick={() => onEdit(bill)} className="px-2.5 h-7">
           ✎
-        </button>
-        <button
-          onClick={() => onDelete(bill._id)}
-          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'rgba(239,68,68,.08)', color: 'var(--red)', cursor: 'pointer', fontSize: 12 }}
-        >
+        </Button>
+        <Button variant="destructive" size="sm" onClick={() => onDelete(bill._id)} className="px-2.5 h-7">
           ✕
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { DetectedSubscriptionResponse } from '@/types/subscription';
 import type { RecurringType } from '@/types/bill';
 
@@ -88,44 +90,32 @@ function ReviewRow({ sub, onResolved }: { sub: DetectedSubscriptionResponse; onR
 
       {/* Action buttons */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => void confirm('bill')}
           disabled={isBusy}
-          style={{
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-            color: '#888', fontSize: 11, fontWeight: 400, fontFamily: 'Inter, sans-serif',
-            padding: '7px 14px', borderRadius: 8, cursor: isBusy ? 'not-allowed' : 'pointer',
-            whiteSpace: 'nowrap', opacity: isBusy && busy !== 'bill' ? 0.4 : 1,
-            transition: 'background 0.15s, color 0.15s',
-          }}
+          style={{ opacity: isBusy && busy !== 'bill' ? 0.4 : 1 }}
         >
           {busy === 'bill' ? 'Saving…' : '🧾 Track as Bill'}
-        </button>
-        <button
+        </Button>
+        <Button
+          size="sm"
           onClick={() => void confirm('subscription')}
           disabled={isBusy}
-          style={{
-            background: 'rgba(80,120,255,0.18)', border: '1px solid rgba(80,120,255,0.3)',
-            color: '#8ab0ff', fontSize: 11, fontWeight: 500, fontFamily: 'Inter, sans-serif',
-            padding: '7px 16px', borderRadius: 8, cursor: isBusy ? 'not-allowed' : 'pointer',
-            whiteSpace: 'nowrap', opacity: isBusy && busy !== 'subscription' ? 0.4 : 1,
-            transition: 'background 0.15s',
-          }}
+          style={{ opacity: isBusy && busy !== 'subscription' ? 0.4 : 1 }}
         >
           {busy === 'subscription' ? 'Saving…' : '⚡ Track as Subscription'}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => void dismiss()}
           disabled={isBusy}
-          style={{
-            background: 'none', border: 'none', color: '#3a3a3a',
-            fontSize: 11, fontFamily: 'Inter, sans-serif',
-            padding: '7px 10px', cursor: isBusy ? 'not-allowed' : 'pointer',
-            opacity: isBusy ? 0.4 : 1, transition: 'color 0.15s',
-          }}
+          className="text-muted-foreground"
         >
           {busy === 'dismiss' ? '…' : 'Ignore'}
-        </button>
+        </Button>
       </div>
 
       {/* Classifier hint — only shown on high-confidence suggestions */}
@@ -151,61 +141,32 @@ export function SubscriptionReviewModal({ subscriptions: initial, onClose, onRes
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 50, backdropFilter: 'blur(3px)' }}
-      />
+    <Dialog open={items.length > 0} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-[560px] max-h-[calc(100vh-48px)] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 py-5 border-b border-border shrink-0">
+          <DialogTitle>Recurring charges detected</DialogTitle>
+          <DialogDescription>
+            {items.length} pending — classify each to start tracking
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Panel */}
-      <div style={{
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        zIndex: 51, width: 'min(560px, calc(100vw - 32px))',
-        background: '#16161a', border: '1px solid #2a2a32',
-        borderRadius: 18, boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
-        overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        maxHeight: 'calc(100vh - 48px)',
-      }}>
-        {/* Header */}
-        <div style={{ padding: '22px 24px 18px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#e8e8f0', letterSpacing: '-0.01em' }}>
-                Recurring charges detected
-              </div>
-              <div style={{ fontSize: 12, color: '#555', marginTop: 3, fontWeight: 400 }}>
-                {items.length} pending — classify each to start tracking
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', color: '#444', fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 2, transition: 'color 0.15s' }}
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable item list */}
         <div style={{ padding: '0 24px', overflowY: 'auto', flex: 1 }}>
           {items.map(sub => (
             <ReviewRow key={sub.id} sub={sub} onResolved={handleResolved} />
           ))}
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #1c1c22', textAlign: 'right', flexShrink: 0 }}>
+        <div className="px-6 py-3.5 border-t border-border shrink-0 text-right">
           <Link
             href="/payments?tab=subscriptions"
             onClick={onClose}
-            style={{ fontSize: 12, color: '#8ab0ff', textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+            className="text-xs font-medium transition-colors"
+            style={{ color: 'var(--accent)' }}
           >
             See all in Payments →
           </Link>
         </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

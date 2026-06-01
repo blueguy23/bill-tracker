@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import type { BillResponse } from '@/types/bill';
 
 type StatusFilter = 'all' | 'overdue' | 'due-soon' | 'paid' | 'autopay';
@@ -120,8 +121,8 @@ function BillRowItem({ bill, today, mm, monthAbbr, onEdit, onDelete, onTogglePai
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
         {hov ? (
           <>
-            <button onClick={() => onEdit(bill)} style={{ padding: '3px 8px', borderRadius: 5, border: '1px solid var(--border-l)', background: 'transparent', color: 'var(--text3)', cursor: 'pointer', fontSize: 10 }}>Edit</button>
-            <button onClick={() => onDelete(bill._id)} style={{ padding: '3px 8px', borderRadius: 5, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: 'var(--red)', cursor: 'pointer', fontSize: 10 }}>Del</button>
+            <Button variant="outline" size="sm" onClick={() => onEdit(bill)} className="h-6 px-2 text-[10px]">Edit</Button>
+            <Button variant="destructive" size="sm" onClick={() => onDelete(bill._id)} className="h-6 px-2 text-[10px]">Del</Button>
           </>
         ) : (
           <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 500, color: st === 'overdue' ? 'var(--red)' : 'var(--text)' }}>

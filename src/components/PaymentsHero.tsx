@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui/button';
 import type { BillResponse } from '@/types/bill';
 
 interface Props {
@@ -83,9 +84,9 @@ export function PaymentsHero({ bills, today, onAddBill }: Props) {
             {USD.format(totalAmount)} committed · {autoPayPct}% on autopay
           </div>
         </div>
-        <button onClick={onAddBill} data-testid="add-bill-btn" style={{ background: 'var(--gold)', color: '#1a0a00', fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+        <Button onClick={onAddBill} data-testid="add-bill-btn" style={{ background: 'var(--gold)', color: '#1a0a00' }}>
           + Add bill
-        </button>
+        </Button>
       </div>
 
       {/* Progress bar */}

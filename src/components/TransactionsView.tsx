@@ -1,5 +1,6 @@
 'use client';
 import { useState, useCallback, useMemo } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 import type { TransactionCategory } from '@/lib/categorization/types';
 import { CATEGORY_LABELS, TRANSACTION_CATEGORIES } from '@/lib/categorization/types';
@@ -167,18 +168,22 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             data-testid="search-input"
             style={{ width: '100%', background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 8, padding: '8px 12px 8px 30px', fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--sans)', outline: 'none' }} />
         </div>
-        <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} data-testid="sort-select"
-          style={{ ...ctrlBtn, appearance: 'none', paddingRight: 24 }}>
-          <option value="date-desc">Newest first</option>
-          <option value="date-asc">Oldest first</option>
-          <option value="amount-desc">Largest first</option>
-          <option value="amount-asc">Smallest first</option>
-        </select>
-        <select value={accountFilter} onChange={e => void handleFilterChange(e.target.value, dateRange)} data-testid="account-select"
-          style={{ ...ctrlBtn, appearance: 'none', paddingRight: 24 }}>
-          <option value="all">All Accounts</option>
-          {accounts.map(a => <option key={a._id} value={a._id}>{a.orgName} — {a.name}</option>)}
-        </select>
+        <Select value={sort} onValueChange={v => setSort(v as typeof sort)} data-testid="sort-select">
+          <SelectTrigger className="w-auto h-8 text-xs gap-1.5"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date-desc">Newest first</SelectItem>
+            <SelectItem value="date-asc">Oldest first</SelectItem>
+            <SelectItem value="amount-desc">Largest first</SelectItem>
+            <SelectItem value="amount-asc">Smallest first</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={accountFilter} onValueChange={v => void handleFilterChange(v, dateRange)} data-testid="account-select">
+          <SelectTrigger className="w-auto h-8 text-xs gap-1.5"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Accounts</SelectItem>
+            {accounts.map(a => <SelectItem key={a._id} value={a._id}>{a.orgName} — {a.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <div style={{ position: 'relative' }}>
           <button onClick={() => setOverflowOpen(o => !o)} style={{ ...ctrlBtn }} data-testid="overflow-btn">⋯</button>
           {overflowOpen && (
