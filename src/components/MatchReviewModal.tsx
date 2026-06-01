@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { EnrichedMatch } from '@/types/subscription';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -57,15 +55,29 @@ export function MatchReviewModal({ matches: initial, onClose }: Props) {
   const isLoading = loading === current.billId;
 
   return (
-    <Dialog open={!!current} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-[480px] gap-0 p-0">
-        <DialogHeader className="px-5 py-4 border-b border-border">
-          <DialogTitle>Review Matches</DialogTitle>
-          <DialogDescription style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
-            {remaining} match{remaining !== 1 ? 'es' : ''} remaining
-          </DialogDescription>
-        </DialogHeader>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', padding: 16 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
 
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Review Matches</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
+              {remaining} match{remaining !== 1 ? 'es' : ''} remaining
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer', borderRadius: 6 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        {/* Match card */}
         <div style={{ padding: '20px' }}>
 
           {/* Confidence badge */}
@@ -112,17 +124,28 @@ export function MatchReviewModal({ matches: initial, onClose }: Props) {
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button
+            <button
               onClick={() => approve(current)}
               disabled={isLoading}
-              className="flex-1"
-              style={{ background: 'var(--green)', color: '#fff' }}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
+                background: 'var(--green)', color: '#fff', fontSize: 13, fontWeight: 600,
+                fontFamily: 'var(--sans)', opacity: isLoading ? 0.6 : 1, transition: 'opacity .1s',
+              }}
             >
               {isLoading ? 'Saving…' : '✓ Mark as Paid'}
-            </Button>
-            <Button variant="outline" onClick={skip} disabled={isLoading}>
+            </button>
+            <button
+              onClick={skip}
+              disabled={isLoading}
+              style={{
+                padding: '10px 20px', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer',
+                background: 'transparent', color: 'var(--text3)', fontSize: 13, fontWeight: 500,
+                fontFamily: 'var(--sans)', transition: 'color .1s',
+              }}
+            >
               Skip
-            </Button>
+            </button>
           </div>
 
           {/* Progress dots */}
@@ -142,7 +165,7 @@ export function MatchReviewModal({ matches: initial, onClose }: Props) {
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

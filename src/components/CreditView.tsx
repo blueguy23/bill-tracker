@@ -18,7 +18,7 @@ function scoreFactors(
   recentPayments: CreditPaymentRecord[],
 ): { label: string; status: string; value: number; color: string }[] {
   function statusColor(s: string) {
-    return s === 'excellent' ? 'var(--green)' : s === 'good' ? 'var(--text2)' : s === 'fair' ? 'var(--gold)' : 'var(--text3)';
+    return s === 'excellent' ? 'var(--green)' : s === 'good' ? 'oklch(0.68 0.22 265)' : s === 'fair' ? 'var(--gold)' : 'var(--text3)';
   }
 
   const utilPct = overall.utilization !== null ? overall.utilization * 100 : null;

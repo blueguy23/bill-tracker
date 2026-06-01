@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import type { Chart } from 'chart.js';
 import type { PanelType, PanelEvent } from './PanelTrigger';
 import { PanelBody, getTitle } from './DetailPanelViews';
 
@@ -48,6 +49,7 @@ export function DetailPanel({ data }: { data: DetailPanelData }) {
   const [panelType, setPanelType] = useState<PanelType | null>(null);
   const [panelArg, setPanelArg]   = useState<string | number | undefined>();
   const [width, setWidth]       = useState(DEFAULT_W);
+  const chartRef                = useRef<Chart | null>(null);
   const panelRef                = useRef<HTMLElement>(null);
   const dragRef                 = useRef({ active: false, startX: 0, startW: DEFAULT_W });
 
@@ -55,11 +57,13 @@ export function DetailPanel({ data }: { data: DetailPanelData }) {
     setOpen(false);
     setExpanded(false);
     setWidth(DEFAULT_W);
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
   }, []);
 
   useEffect(() => {
     function handler(e: Event) {
       const { type, arg } = (e as CustomEvent<PanelEvent>).detail;
+      if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
       setPanelType(type);
       setPanelArg(arg);
       setExpanded(false);
@@ -97,6 +101,7 @@ export function DetailPanel({ data }: { data: DetailPanelData }) {
         if (Math.abs(w - 600) < 30) return 600;
         return w;
       });
+      if (chartRef.current) chartRef.current.resize();
     }
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -119,6 +124,7 @@ export function DetailPanel({ data }: { data: DetailPanelData }) {
       const onEnd = (ev: TransitionEvent) => {
         if (ev.propertyName !== 'width') return;
         el.removeEventListener('transitionend', onEnd);
+        if (chartRef.current) chartRef.current.resize();
       };
       el.addEventListener('transitionend', onEnd);
     }
@@ -181,7 +187,7 @@ export function DetailPanel({ data }: { data: DetailPanelData }) {
         {/* Body */}
         <div style={{ flex: 1, padding: '20px 24px', overflowY: 'auto' }}>
           {open && panelType && (
-            <PanelBody type={panelType} arg={panelArg} data={data} expanded={expanded} />
+            <PanelBody type={panelType} arg={panelArg} data={data} chartRef={chartRef} expanded={expanded} />
           )}
         </div>
       </aside>

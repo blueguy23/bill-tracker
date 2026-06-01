@@ -1,6 +1,5 @@
 'use client';
 import { useState, useCallback, useMemo } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 import type { TransactionCategory } from '@/lib/categorization/types';
 import { CATEGORY_LABELS, TRANSACTION_CATEGORIES } from '@/lib/categorization/types';
@@ -168,22 +167,18 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             data-testid="search-input"
             style={{ width: '100%', background: 'var(--surface)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 8, padding: '8px 12px 8px 30px', fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--sans)', outline: 'none' }} />
         </div>
-        <Select value={sort} onValueChange={v => setSort(v as typeof sort)} data-testid="sort-select">
-          <SelectTrigger className="w-auto h-8 text-xs gap-1.5"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date-desc">Newest first</SelectItem>
-            <SelectItem value="date-asc">Oldest first</SelectItem>
-            <SelectItem value="amount-desc">Largest first</SelectItem>
-            <SelectItem value="amount-asc">Smallest first</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={accountFilter} onValueChange={v => void handleFilterChange(v, dateRange)} data-testid="account-select">
-          <SelectTrigger className="w-auto h-8 text-xs gap-1.5"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Accounts</SelectItem>
-            {accounts.map(a => <SelectItem key={a._id} value={a._id}>{a.orgName} — {a.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} data-testid="sort-select"
+          style={{ ...ctrlBtn, appearance: 'none', paddingRight: 24 }}>
+          <option value="date-desc">Newest first</option>
+          <option value="date-asc">Oldest first</option>
+          <option value="amount-desc">Largest first</option>
+          <option value="amount-asc">Smallest first</option>
+        </select>
+        <select value={accountFilter} onChange={e => void handleFilterChange(e.target.value, dateRange)} data-testid="account-select"
+          style={{ ...ctrlBtn, appearance: 'none', paddingRight: 24 }}>
+          <option value="all">All Accounts</option>
+          {accounts.map(a => <option key={a._id} value={a._id}>{a.orgName} — {a.name}</option>)}
+        </select>
         <div style={{ position: 'relative' }}>
           <button onClick={() => setOverflowOpen(o => !o)} style={{ ...ctrlBtn }} data-testid="overflow-btn">⋯</button>
           {overflowOpen && (
@@ -196,7 +191,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             </div>
           )}
         </div>
-        <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', color: 'var(--bg)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>+ Add Transaction</button>
+        <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>+ Add Transaction</button>
       </div>
 
       {/* Filter rows */}
@@ -245,8 +240,8 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             {/* Pending section */}
             {pendingTxns.length > 0 && (
               <>
-                <div data-testid="pending-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 16px 5px', background: 'rgba(96,165,250,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a1a1aa', fontFamily: 'var(--mono)' }}>⏱ Pending · not yet cleared</span>
+                <div data-testid="pending-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 16px 5px', background: 'rgba(96,165,250,0.04)', borderBottom: '1px solid rgba(96,165,250,0.1)' }}>
+                  <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#60a5fa', fontFamily: 'var(--mono)' }}>⏱ Pending · not yet cleared</span>
                   <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{pendingTxns.length} transactions · −{USD.format(pendingTxns.reduce((s, t) => s + Math.abs(t.amount), 0))} held</span>
                 </div>
                 {pendingTxns.map(t => <TxRow key={t._id} txn={t} acct={accountMap.get(t.accountId)} onCategoryChanged={onCategoryChanged} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} onAmortizeChanged={onAmortizeChanged} onCustomNameChanged={onCustomNameChanged} />)}

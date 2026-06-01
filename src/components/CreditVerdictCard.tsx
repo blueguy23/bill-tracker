@@ -16,8 +16,8 @@ const ARC_TOTAL = Math.PI * 110; // π * r, semicircle r=110 ≈ 345.6
 export function scoreColor(s: number): string {
   if (s < 580) return 'var(--red)';
   if (s < 670) return 'var(--gold)';
-  if (s < 740) return 'var(--text2)';
-  if (s < 800) return 'var(--text)';
+  if (s < 740) return 'var(--accent)';
+  if (s < 800) return '#60a5fa';
   return 'var(--green)';
 }
 
@@ -45,7 +45,7 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
             <stop offset="0%" stopColor="#f87171"/>
             <stop offset="25%" stopColor="#f59e0b"/>
             <stop offset="50%" stopColor="#e8c97e"/>
-            <stop offset="75%" stopColor="#a1a1aa"/>
+            <stop offset="75%" stopColor="#60a5fa"/>
             <stop offset="100%" stopColor="#4ade80"/>
           </linearGradient>
         </defs>
@@ -86,15 +86,15 @@ function Sparkline({ trend }: { trend: UtilizationDataPoint[] }) {
       <svg width="100%" height="60" viewBox="0 0 400 60" preserveAspectRatio="none">
         <defs>
           <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.15)"/>
-            <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+            <stop offset="0%" stopColor="rgba(96,165,250,0.3)"/>
+            <stop offset="100%" stopColor="rgba(96,165,250,0)"/>
           </linearGradient>
         </defs>
-        <path d={`M ${pts}`} fill="none" stroke="var(--text2)" strokeWidth="2" strokeLinejoin="round"
-          style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.2))' }}/>
+        <path d={`M ${pts}`} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round"
+          style={{ filter: 'drop-shadow(0 0 6px rgba(96,165,250,0.5))' }}/>
         <path d={area} fill="url(#sparkGrad)"/>
-        <circle cx="400" cy={55 - ((vals[n - 1]! - minV) / range) * 50} r="4" fill="var(--text2)"
-          style={{ filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.3))' }}/>
+        <circle cx="400" cy={55 - ((vals[n - 1]! - minV) / range) * 50} r="4" fill="var(--accent)"
+          style={{ filter: 'drop-shadow(0 0 5px rgba(96,165,250,0.7))' }}/>
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
         <span style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>
@@ -140,7 +140,7 @@ export function CreditVerdictCard({ displayScore, overall, accounts, recentPayme
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
         <ScoreGauge score={displayScore} color={color}/>
         <div style={{ display: 'flex', justifyContent: 'space-between', width: 280, padding: '0 4px' }}>
-          {[['Poor','#f87171','300'],['Fair','#f59e0b','580'],['Good','#e8c97e','670'],['Very Good','#a1a1aa','740'],['Exceptional','#4ade80','800']].map(([l,c,v]) => (
+          {[['Poor','#f87171','300'],['Fair','#f59e0b','580'],['Good','#e8c97e','670'],['Very Good','#60a5fa','740'],['Exceptional','#4ade80','800']].map(([l,c,v]) => (
             <div key={v} style={{ fontSize: 8, fontFamily: 'var(--mono)', color: c, textAlign: 'center' }}>{l}<br/>{v}</div>
           ))}
         </div>

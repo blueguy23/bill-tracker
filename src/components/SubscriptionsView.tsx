@@ -81,7 +81,7 @@ function PendingRow({ sub, isConfirming, isDismissing, onConfirm, onDismiss }: {
       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', opacity: hov ? 1 : 0, transition: 'opacity .1s' }}>
         <button
           onClick={() => onConfirm(sub)} disabled={isConfirming || isDismissing}
-          style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: 'var(--bg)', cursor: isConfirming || isDismissing ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, opacity: isConfirming || isDismissing ? 0.6 : 1 }}
+          style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: isConfirming || isDismissing ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, opacity: isConfirming || isDismissing ? 0.6 : 1 }}
         >
           {isConfirming ? '…' : sub.recurringType === 'bill' ? 'Add as bill' : 'Yes, track it'}
         </button>

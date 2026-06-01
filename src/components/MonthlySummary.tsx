@@ -6,14 +6,6 @@ import { BILL_CATEGORIES } from '@/types/bill';
 import { CategoryBadge } from './CategoryBadge';
 import { SpendingSection } from './SpendingSection';
 import type { SummaryResponse } from '@/types/summary';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -231,26 +223,26 @@ export function MonthlySummary({ bills }: MonthlySummaryProps) {
           <div className="px-5 py-3.5 border-b border-white/[0.06]">
             <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">By Category</h3>
           </div>
-          <Table className="min-w-full">
-            <TableHeader>
-              <TableRow className="border-b border-white/[0.04] hover:bg-transparent">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-white/[0.04]">
                 {['Category', 'Bills', 'Total', 'Paid', 'Unpaid'].map((h) => (
-                  <TableHead key={h} className={`px-5 py-3 h-auto text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</TableHead>
+                  <th key={h} className={`px-5 py-3 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider ${h === 'Category' ? 'text-left' : 'text-right'}`}>{h}</th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
               {stats.categoryBreakdown.map((row) => (
-                <TableRow key={row.category} className="border-white/[0.04] hover:bg-white/[0.02]">
-                  <TableCell className="px-5 py-3.5"><CategoryBadge category={row.category} /></TableCell>
-                  <TableCell className="px-5 py-3.5 text-right text-sm text-zinc-400 tabular-nums">{row.count}</TableCell>
-                  <TableCell className="px-5 py-3.5 text-right text-sm font-medium text-white tabular-nums">{USD.format(row.total)}</TableCell>
-                  <TableCell className="px-5 py-3.5 text-right text-sm text-emerald-400 tabular-nums">{USD.format(row.paid)}</TableCell>
-                  <TableCell className="px-5 py-3.5 text-right text-sm text-red-400 tabular-nums">{USD.format(row.unpaid)}</TableCell>
-                </TableRow>
+                <tr key={row.category} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-5 py-3.5"><CategoryBadge category={row.category} /></td>
+                  <td className="px-5 py-3.5 text-right text-sm text-zinc-400 tabular-nums">{row.count}</td>
+                  <td className="px-5 py-3.5 text-right text-sm font-medium text-white tabular-nums">{USD.format(row.total)}</td>
+                  <td className="px-5 py-3.5 text-right text-sm text-emerald-400 tabular-nums">{USD.format(row.paid)}</td>
+                  <td className="px-5 py-3.5 text-right text-sm text-red-400 tabular-nums">{USD.format(row.unpaid)}</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="rounded-xl border border-white/[0.06] bg-zinc-900 p-16 text-center">

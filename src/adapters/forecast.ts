@@ -1,5 +1,5 @@
 import type { StrictDB } from 'strictdb';
-import { listAccounts, listTransactionsForDetection, listIncomeTransactions } from '@/adapters/accounts';
+import { listAccounts, listTransactionsForDetection } from '@/adapters/accounts';
 import { listBills } from '@/adapters/bills';
 import { detectSubscriptions } from '@/lib/subscriptions/detect';
 import {
@@ -17,11 +17,10 @@ export interface ForecastResult {
 }
 
 export async function getForecast(db: StrictDB): Promise<ForecastResult> {
-  const [accounts, allBills, transactions, incomeTxns] = await Promise.all([
+  const [accounts, allBills, transactions] = await Promise.all([
     listAccounts(db),
     listBills(db),
     listTransactionsForDetection(db),
-    listIncomeTransactions(db),
   ]);
 
   const currentBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
@@ -43,7 +42,7 @@ export async function getForecast(db: StrictDB): Promise<ForecastResult> {
     interval: d.interval,
   }));
 
-  const incomePatterns = detectIncomePatterns(incomeTxns);
+  const incomePatterns = detectIncomePatterns(transactions);
 
   const days = buildForecast({
     currentBalance,

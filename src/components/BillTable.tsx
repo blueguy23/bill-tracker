@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import type { BillResponse } from '@/types/bill';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -42,6 +40,25 @@ function getDueDayLabel(
     label: overdue ? '⚠ OVERDUE' : `DUE ${due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}`,
     overdue,
   };
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      onClick={onChange}
+      style={{
+        width: 36, height: 20, borderRadius: 10, border: 'none',
+        background: checked ? 'var(--green)' : 'var(--text3)',
+        cursor: 'pointer', position: 'relative', transition: 'background .2s', flexShrink: 0,
+      }}
+    >
+      <div style={{
+        position: 'absolute', top: 3, left: checked ? 19 : 3,
+        width: 14, height: 14, borderRadius: '50%', background: '#fff',
+        transition: 'left .2s', boxShadow: '0 1px 4px rgba(0,0,0,.3)',
+      }} />
+    </button>
+  );
 }
 
 interface BillRowProps {
@@ -116,7 +133,7 @@ function BillRow({ bill, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: Bill
       {/* AutoPay toggle */}
       {onToggleAutoPay && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <Switch checked={bill.isAutoPay} onCheckedChange={() => onToggleAutoPay(bill._id, bill.isAutoPay)} />
+          <Toggle checked={bill.isAutoPay} onChange={() => onToggleAutoPay(bill._id, bill.isAutoPay)} />
           <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)', width: 44 }}>
             {bill.isAutoPay ? 'AUTO' : 'MANUAL'}
           </span>
@@ -130,12 +147,18 @@ function BillRow({ bill, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: Bill
 
       {/* Edit / delete */}
       <div style={{ display: 'flex', gap: 6, opacity: hov ? 1 : 0, transition: 'opacity .1s', flexShrink: 0 }}>
-        <Button variant="outline" size="sm" onClick={() => onEdit(bill)} className="px-2.5 h-7">
+        <button
+          onClick={() => onEdit(bill)}
+          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'rgba(237,237,245,.04)', color: 'var(--text2)', cursor: 'pointer', fontSize: 12 }}
+        >
           ✎
-        </Button>
-        <Button variant="destructive" size="sm" onClick={() => onDelete(bill._id)} className="px-2.5 h-7">
+        </button>
+        <button
+          onClick={() => onDelete(bill._id)}
+          style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,.2)', background: 'rgba(239,68,68,.08)', color: 'var(--red)', cursor: 'pointer', fontSize: 12 }}
+        >
           ✕
-        </Button>
+        </button>
       </div>
     </div>
   );

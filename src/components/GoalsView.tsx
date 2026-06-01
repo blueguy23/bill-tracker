@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import type { GoalResponse } from '@/types/goal';
 
 export interface GoalData {
@@ -100,7 +98,7 @@ function GoalCard({ goal, onBoost, onDelete }: { goal: GoalData; onBoost: (g: Go
       <div style={{ position: 'absolute', top: 14, right: 14, display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 4, fontSize: 9, fontFamily: 'var(--mono)', ...BADGE_STYLE[state] }}>
         {BADGE_LABEL}
       </div>
-      <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); onDelete(goal.id); }} className="absolute top-2.5 left-2.5 w-6 h-6 opacity-40 hover:opacity-100" style={{ color: 'var(--text3)' }} title="Delete goal">×</Button>
+      <button onClick={e => { e.stopPropagation(); onDelete(goal.id); }} style={{ position: 'absolute', top: 14, left: 14, background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: 2, opacity: 0.4 }} title="Delete goal">×</button>
 
       <div style={{ position: 'relative', width: 140, height: 140, margin: '16px auto 8px', flexShrink: 0 }}>
         <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
@@ -151,6 +149,7 @@ function GoalCard({ goal, onBoost, onDelete }: { goal: GoalData; onBoost: (g: Go
 function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (g: GoalData) => void }) {
   const [form, setForm] = useState({ name: '', target: '', saved: '', dueDate: '', contribution: '' });
   const set = (k: keyof typeof form, v: string) => setForm(p => ({ ...p, [k]: v }));
+  if (!open) return null;
 
   function handleSubmit() {
     if (!form.name || !form.target || !form.dueDate) return;
@@ -168,12 +167,13 @@ function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () =>
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-[480px] gap-0 p-0">
-        <DialogHeader className="px-6 py-5 border-b border-border">
-          <DialogTitle>New Goal</DialogTitle>
-          <DialogDescription className="sr-only">Create a new savings goal</DialogDescription>
-        </DialogHeader>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border-l)', borderRadius: 16, width: '100%', maxWidth: 480, margin: '0 16px', boxShadow: '0 32px 80px rgba(0,0,0,.6)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--sans)' }}>New Goal</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 20 }}>×</button>
+        </div>
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {([['Goal Name', 'name', 'e.g. Emergency Fund', ''], ['Target Amount ($)', 'target', '10000', '$'], ['Already Saved ($)', 'saved', '0', '$'], ['Monthly Contribution ($)', 'contribution', '200', '$']] as [string, keyof typeof form, string, string][]).map(([lbl, key, ph, pfx]) => (
@@ -189,13 +189,13 @@ function AddGoalModal({ open, onClose, onSave }: { open: boolean; onClose: () =>
             <input value={form.dueDate} onChange={e => set('dueDate', e.target.value)} type="date"
               style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--sans)', outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          <DialogFooter className="pt-2 border-t border-border">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={handleSubmit} style={{ background: 'var(--green)', color: '#fff' }}>Create Goal</Button>
-          </DialogFooter>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)' }}>Cancel</button>
+            <button onClick={handleSubmit} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--green)', color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600 }}>Create Goal</button>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 

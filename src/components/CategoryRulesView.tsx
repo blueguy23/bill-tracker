@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TRANSACTION_CATEGORIES, CATEGORY_LABELS } from '@/lib/categorization/types';
 import type { TransactionCategory, CategoryRule } from '@/lib/categorization/types';
 
 const CAT_COLORS: Record<TransactionCategory, string> = {
   food:          '#f97316',
-  transport:     '#a1a1aa',
+  transport:     '#3b82f6',
   shopping:      '#8b5cf6',
   entertainment: '#ec4899',
   health:        '#10b981',
@@ -84,21 +82,29 @@ export function CategoryRulesView({ initialRules }: Props) {
               placeholder={isRegex ? 'e.g. ^AMZN.*PRIME' : 'e.g. amazon prime'}
               style={{ ...inputStyle, flex: 1 }}
             />
-            <Select value={category} onValueChange={(v) => setCategory(v as TransactionCategory)} data-testid="rule-category-select">
-              <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {TRANSACTION_CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as TransactionCategory)}
+              data-testid="rule-category-select"
+              style={{ ...inputStyle, cursor: 'pointer' }}
+            >
+              {TRANSACTION_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+              ))}
+            </select>
+            <button
               onClick={() => void handleAdd()}
               disabled={saving || !pattern.trim()}
               data-testid="add-rule-btn"
+              style={{
+                padding: '7px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)',
+                color: '#fff', cursor: saving || !pattern.trim() ? 'not-allowed' : 'pointer',
+                fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600,
+                opacity: saving || !pattern.trim() ? 0.4 : 1,
+              }}
             >
               {saving ? '…' : 'Add'}
-            </Button>
+            </button>
           </div>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>

@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 interface Props {
   category: string | null;
@@ -22,6 +20,8 @@ export function SetBudgetModal({ category, currentAmount, onClose, onSave }: Pro
       setError('');
     }
   }, [category, currentAmount]);
+
+  if (!category) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,18 +43,18 @@ export function SetBudgetModal({ category, currentAmount, onClose, onSave }: Pro
   }
 
   return (
-    <Dialog open={!!category} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="capitalize">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-sm p-6 space-y-5 shadow-2xl">
+        <div>
+          <h2 className="text-base font-semibold text-white capitalize">
             {currentAmount !== null ? 'Edit' : 'Set'} budget — {category}
-          </DialogTitle>
-          <DialogDescription>Monthly spending limit for this category</DialogDescription>
-        </DialogHeader>
+          </h2>
+          <p className="text-sm text-zinc-500 mt-0.5">Monthly spending limit for this category</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="budget-amount" className="block text-xs font-medium text-muted-foreground mb-1.5">
+            <label htmlFor="budget-amount" className="block text-xs font-medium text-zinc-400 mb-1.5">
               Monthly Amount ($)
             </label>
             <input
@@ -64,23 +64,31 @@ export function SetBudgetModal({ category, currentAmount, onClose, onSave }: Pro
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-zinc-800 border border-input rounded-lg px-3 py-2.5 text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="e.g. 200"
               autoFocus
             />
             {error && <p className="mt-1.5 text-xs text-red-400">{error}</p>}
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-400 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors"
+            >
               Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg transition-colors"
+            >
               {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
+            </button>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

@@ -2,16 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import type { UserProfile } from '@/types/userProfile';
-import type { PayFrequency } from '@/types/payPeriod';
 import { sectionCard, sectionHeader, sectionHeaderIcon, formRow, formSelect, btnPrimary } from './settingsStyles';
-import { Switch } from '@/components/ui/switch';
 
 const NORM_GATE_KEY = 'normalized_mode_enabled';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface Props {
-  initial: Pick<UserProfile, 'defaultDateRange' | 'hideTransfers' | 'compactRows' | 'numberFormat' | 'payFrequency'>;
+  initial: Pick<UserProfile, 'defaultDateRange' | 'hideTransfers' | 'compactRows' | 'numberFormat'>;
+}
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div
+      onClick={() => onChange(!on)}
+      style={{ width: 36, height: 20, borderRadius: 10, background: on ? 'var(--accent)' : 'rgba(255,255,255,0.12)', cursor: 'pointer', position: 'relative', transition: 'background 0.15s', flexShrink: 0 }}
+    >
+      <div style={{ position: 'absolute', top: 3, left: on ? 19 : 3, width: 14, height: 14, borderRadius: '50%', background: 'white', transition: 'left 0.15s' }} />
+    </div>
+  );
 }
 
 export function SectionPreferences({ initial }: Props) {
@@ -19,7 +28,6 @@ export function SectionPreferences({ initial }: Props) {
   const [hideTransfers, setHideTransfers]   = useState(initial.hideTransfers);
   const [compactRows, setCompactRows]       = useState(initial.compactRows);
   const [numberFormat, setNumberFormat]     = useState(initial.numberFormat);
-  const [payFrequency, setPayFrequency]     = useState<PayFrequency | ''>(initial.payFrequency ?? '');
   const [normalizedMode, setNormalizedMode] = useState(false);
   const [status, setStatus]                 = useState<SaveStatus>('idle');
 
@@ -42,7 +50,7 @@ export function SectionPreferences({ initial }: Props) {
       const res = await fetch('/api/v1/user-profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ defaultDateRange: dateRange, hideTransfers, compactRows, numberFormat, payFrequency: payFrequency || null }),
+        body: JSON.stringify({ defaultDateRange: dateRange, hideTransfers, compactRows, numberFormat }),
       });
       setStatus(res.ok ? 'saved' : 'error');
     } catch {
@@ -77,24 +85,10 @@ export function SectionPreferences({ initial }: Props) {
 
       <div style={formRow}>
         <div>
-          <div style={{ fontSize: 13, color: 'var(--text)' }}>Pay frequency</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>How often you get paid — used for the pay period dashboard</div>
-        </div>
-        <select data-testid="pay-frequency-select" value={payFrequency} onChange={(e) => setPayFrequency(e.target.value as PayFrequency | '')} style={formSelect}>
-          <option value="">Auto-detect</option>
-          <option value="weekly">Weekly</option>
-          <option value="biweekly">Biweekly</option>
-          <option value="semimonthly">Semi-monthly</option>
-          <option value="monthly">Monthly</option>
-        </select>
-      </div>
-
-      <div style={formRow}>
-        <div>
           <div style={{ fontSize: 13, color: 'var(--text)' }}>Hide transfers</div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Exclude account transfers from spending totals</div>
         </div>
-        <Switch checked={hideTransfers} onCheckedChange={setHideTransfers} />
+        <Toggle on={hideTransfers} onChange={setHideTransfers} />
       </div>
 
       <div style={formRow}>
@@ -102,7 +96,7 @@ export function SectionPreferences({ initial }: Props) {
           <div style={{ fontSize: 13, color: 'var(--text)' }}>Compact rows</div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Reduce row height in transaction lists</div>
         </div>
-        <Switch checked={compactRows} onCheckedChange={setCompactRows} />
+        <Toggle on={compactRows} onChange={setCompactRows} />
       </div>
 
       <div style={formRow}>
@@ -122,7 +116,7 @@ export function SectionPreferences({ initial }: Props) {
           <div style={{ fontSize: 13, color: 'var(--text)' }}>Enable Normalized Mode</div>
           <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Unlocks an Actualized / Normalized toggle on the dashboard. Normalized spreads annual charges evenly across 12 months so your cash flow reflects a true monthly cost. When off, the dashboard shows real cash outflows only with no toggle or labels.</div>
         </div>
-        <Switch checked={normalizedMode} onCheckedChange={handleNormalizedMode} />
+        <Toggle on={normalizedMode} onChange={handleNormalizedMode} />
       </div>
 
       <div style={{ padding: '13px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>

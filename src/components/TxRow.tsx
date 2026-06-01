@@ -219,7 +219,7 @@ export function TxRow({ txn, acct, onCategoryChanged, onTagsChanged, onNotesChan
               {txn.customName ?? txn.payee ?? txn.description}
             </span>
           )}
-          {txn.pending && <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, background: 'rgba(255,255,255,0.06)', color: '#a1a1aa', border: '1px solid rgba(255,255,255,0.09)', fontFamily: 'var(--mono)', flexShrink: 0 }}>PENDING</span>}
+          {txn.pending && <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 3, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.2)', fontFamily: 'var(--mono)', flexShrink: 0 }}>PENDING</span>}
           {txn.customName && !editingName && <span style={{ fontSize: 9, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{txn.payee ?? txn.description}</span>}
         </div>
         <div style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{dateStr}</div>

@@ -3,8 +3,6 @@ import type { NextRequest } from 'next/server';
 import type { StrictDB } from 'strictdb';
 import { listBills, getBillById, createBill, updateBill, deleteBill } from '@/adapters/bills';
 import { createPayment } from '@/adapters/payments';
-import { learnPaymentHint } from '@/handlers/learnPaymentHint';
-import { logger } from '@/lib/logger';
 import { BILL_CATEGORIES, RECURRENCE_INTERVALS } from '@/types/bill';
 import type { Bill, BillCategory, BillResponse, CreateBillDto, RecurrenceInterval, UpdateBillDto } from '@/types/bill';
 
@@ -164,9 +162,6 @@ export async function handleUpdateBill(db: StrictDB, req: NextRequest, id: strin
 
   if ((cleaned as UpdateBillDto).isPaid === true && !existing.isPaid) {
     await createPayment(db, { billId: existing._id, billName: existing.name, amount: existing.amount });
-    learnPaymentHint(db, existing).catch(err =>
-      logger.error('learnPaymentHint.failed', { billId: existing._id, error: err instanceof Error ? err.message : String(err) })
-    );
   }
 
   return NextResponse.json({ bill: serializeBill(bill) });

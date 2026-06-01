@@ -286,9 +286,15 @@ jobs:
     name: test
     runs-on: self-hosted
     timeout-minutes: 5
+    if: always()
     needs: [semgrep, typecheck, lint, audit, unit, integration, e2e]
     steps:
-      - run: echo "All checks passed"
+      - run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "::error::One or more required jobs failed or were cancelled"
+            exit 1
+          fi
+          echo "All checks passed"
 
   # ── 6. Docker build (verify image builds on pushes to master) ─────────────────
   docker:

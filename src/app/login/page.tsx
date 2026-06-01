@@ -62,7 +62,7 @@ export default function LoginPage({
               required
               autoFocus
               data-testid="password-input"
-              className="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-white/[0.08] text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500"
+              className="w-full px-3 py-2.5 rounded-lg bg-zinc-900 border border-white/[0.08] text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               placeholder="••••••••"
             />
           </div>
@@ -72,7 +72,7 @@ export default function LoginPage({
           <button
             type="submit"
             data-testid="login-btn"
-            className="w-full py-2.5 px-4 rounded-lg bg-zinc-200 hover:bg-white text-zinc-900 text-sm font-medium transition-colors"
+            className="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
           >
             Sign in
           </button>
