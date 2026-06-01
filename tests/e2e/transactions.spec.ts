@@ -135,10 +135,9 @@ test.describe('Transactions Page (/transactions)', () => {
     test('renders account filter dropdown', async ({ page }) => {
       await page.goto('/transactions');
       await expect(page).toHaveURL('/transactions');
-      // TransactionsView has TWO selects (sort + account); account filter is the second one
-      const select = page.locator('select').last();
-      await expect(select).toBeVisible();
-      await expect(select.locator('option', { hasText: 'All Accounts' })).toBeAttached();
+      const trigger = page.getByRole('combobox').last();
+      await expect(trigger).toBeVisible();
+      await expect(trigger).toContainText('All Accounts');
     });
 
     test('renders date range filter buttons', async ({ page }) => {
@@ -302,14 +301,15 @@ test.describe('Transactions Page (/transactions)', () => {
       await page.goto('/transactions');
       await expect(page).toHaveURL('/transactions');
 
-      // TransactionsView has TWO selects (sort + account); account dropdown is the second one
-      const select = page.locator('select').last();
-      await expect(select).toBeVisible();
+      const trigger = page.getByRole('combobox').last();
+      await expect(trigger).toBeVisible();
 
-      // Every account from the API must be an option in the dropdown
+      // Open the dropdown and verify all accounts appear as options
+      await trigger.click();
       for (const acct of apiBody.accounts) {
-        await expect(select.locator(`option[value="${acct._id}"]`)).toBeAttached();
+        await expect(page.getByRole('option', { name: acct.name })).toBeAttached();
       }
+      await page.keyboard.press('Escape');
     });
   });
 
@@ -329,10 +329,11 @@ test.describe('Transactions Page (/transactions)', () => {
       await allTimeRes;
 
       const targetAccount = apiBody.accounts[0]!;
-      // TransactionsView has TWO selects (sort + account); account dropdown is the second one
-      const select = page.locator('select').last();
+      const trigger = page.getByRole('combobox').last();
+      await trigger.click();
       const accountRes = page.waitForResponse((r) => r.url().includes('/api/v1/transactions') && r.status() === 200);
-      await select.selectOption(targetAccount._id);
+      const optionLabel = `${targetAccount.orgName} — ${targetAccount.name}`;
+      await page.getByRole('option', { name: optionLabel }).click();
       await accountRes;
 
       // Verify the filtered API call returns only this account's transactions

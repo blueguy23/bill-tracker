@@ -22,12 +22,11 @@ test.describe('Payments Page (/payments)', () => {
       await expect(page.locator('h1')).toContainText('Payments');
     });
 
-    test('should render Payments and Calendar tabs', async ({ page }) => {
+    test('should render list and calendar view toggles', async ({ page }) => {
       await page.goto('/payments');
 
-      await expect(page.locator('[data-testid="payments-tabs"]')).toBeVisible();
-      await expect(page.locator('button', { hasText: 'Payments' }).first()).toBeVisible();
-      await expect(page.locator('button', { hasText: 'Calendar' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'List view' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Calendar view' })).toBeVisible();
     });
 
     test('should render the sidebar with navigation links', async ({ page }) => {
