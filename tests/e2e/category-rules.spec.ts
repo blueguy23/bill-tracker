@@ -30,7 +30,8 @@ test.describe('Category Rules — Settings page', () => {
   test('can add a keyword rule and see it in the list', async ({ page }) => {
     const pattern = `e2e-test-${Date.now()}`;
     await page.locator('[data-testid="rule-pattern-input"]').fill(pattern);
-    await page.locator('[data-testid="rule-category-select"]').selectOption('food');
+    await page.locator('[data-testid="rule-category-select"]').click();
+    await page.getByRole('option', { name: /food & dining/i }).click();
     await page.locator('[data-testid="add-rule-btn"]').click();
 
     await expect(page.locator('[data-testid="rules-list"]')).toBeVisible();

@@ -30,9 +30,9 @@ test.describe('Dashboard Page (/)', () => {
     test('should render the three KPI tiles', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.getByText('Money left after bills').first()).toBeVisible();
-      await expect(page.getByText('Bills covered this month').first()).toBeVisible();
-      await expect(page.getByText('Savings rate').first()).toBeVisible();
+      await expect(page.getByText('Net Cash Flow').first()).toBeVisible();
+      await expect(page.getByText('Bills Covered').first()).toBeVisible();
+      await expect(page.getByText('Savings Rate').first()).toBeVisible();
     });
 
     test('should render KPI tile values as USD currency strings or percentages', async ({ page }) => {
@@ -62,8 +62,8 @@ test.describe('Sidebar Navigation', () => {
     const nav = page.locator('aside nav');
     await expect(nav.locator('a', { hasText: 'Dashboard' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Transactions' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: 'Payments' })).toBeVisible();
-    await expect(nav.locator('a', { hasText: /Budget.*Goals/ })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Bills & Payments' })).toBeVisible();
+    await expect(nav.locator('a', { hasText: 'Budget' })).toBeVisible();
     await expect(nav.locator('a', { hasText: 'Settings' })).toBeVisible();
   });
 
@@ -87,7 +87,7 @@ test.describe('Sidebar Navigation', () => {
     await page.goto('/');
     await openSidebarIfMobile(page);
 
-    await page.locator('aside nav a', { hasText: 'Payments' }).click();
+    await page.locator('aside nav a', { hasText: 'Bills & Payments' }).click();
 
     await expect(page).toHaveURL('/payments');
     await expect(page.locator('h1')).toContainText('Payments');
@@ -97,7 +97,7 @@ test.describe('Sidebar Navigation', () => {
     await page.goto('/');
     await openSidebarIfMobile(page);
 
-    await page.locator('aside nav a', { hasText: /Budget.*Goals/ }).click();
+    await page.locator('aside nav a', { hasText: 'Budget' }).click();
 
     await expect(page).toHaveURL('/budget');
     await expect(page.locator('h1').first()).toContainText('Budget');
@@ -150,7 +150,7 @@ test.describe('Bottom row panels', () => {
   test('should render a Recent Transactions panel with All link', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByText('Recent Transactions')).toBeVisible();
+    await expect(page.getByText('Recent Activity')).toBeVisible();
     await expect(page.getByRole('link', { name: 'All →' })).toBeVisible();
   });
 });

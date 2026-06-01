@@ -84,8 +84,8 @@ export function CategoryRulesView({ initialRules }: Props) {
               placeholder={isRegex ? 'e.g. ^AMZN.*PRIME' : 'e.g. amazon prime'}
               style={{ ...inputStyle, flex: 1 }}
             />
-            <Select value={category} onValueChange={(v) => setCategory(v as TransactionCategory)} data-testid="rule-category-select">
-              <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
+            <Select value={category} onValueChange={(v) => setCategory(v as TransactionCategory)}>
+              <SelectTrigger className="w-[180px] h-9" data-testid="rule-category-select"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TRANSACTION_CATEGORIES.map((c) => (
                   <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>

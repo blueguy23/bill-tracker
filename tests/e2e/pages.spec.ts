@@ -35,13 +35,13 @@ test.describe('Payments Page (/payments)', () => {
 
       await expect(page.locator('aside')).toBeVisible();
       await expect(page.locator('aside nav a', { hasText: 'Dashboard' })).toBeVisible();
-      await expect(page.locator('aside nav a', { hasText: 'Payments' })).toBeVisible();
+      await expect(page.locator('aside nav a', { hasText: 'Bills & Payments' })).toBeVisible();
     });
 
     test('should mark Payments link as active in sidebar', async ({ page }) => {
       await page.goto('/payments');
 
-      const paymentsLink = page.locator('aside nav a', { hasText: 'Payments' });
+      const paymentsLink = page.locator('aside nav a', { hasText: 'Bills & Payments' });
       await expect(paymentsLink).toBeVisible();
       await expect(paymentsLink).toHaveAttribute('aria-current', 'page');
     });
@@ -416,8 +416,8 @@ test.describe.skip('Credit Health Page (/credit-health)', () => {
 test.describe('Active Navigation State', () => {
   const routes = [
     { path: '/', label: 'Dashboard' },
-    { path: '/payments', label: 'Payments' },
-    { path: '/budget', label: 'Budget & Goals' },
+    { path: '/payments', label: 'Bills & Payments' },
+    { path: '/budget', label: 'Budget' },
   ];
 
   for (const { path, label } of routes) {
