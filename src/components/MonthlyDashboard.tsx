@@ -16,7 +16,7 @@ import { PanelTrigger } from '@/components/PanelTrigger';
 import { MatchBanner } from '@/components/MatchBanner';
 import { OnboardingBanner } from '@/components/OnboardingBanner';
 import { NewSubscriptionsBanner } from '@/components/NewSubscriptionsBanner';
-import type { BillResponse, BillSummary, BillCategory } from '@/types/bill';
+import type { BillResponse, BillSummary } from '@/types/bill';
 import type { EnrichedMatch } from '@/types/subscription';
 import type { Account, Transaction } from '@/lib/simplefin/types';
 import type { CashFlow } from '@/adapters/accounts';
@@ -158,7 +158,7 @@ export function MonthlyDashboardSkeleton() {
 }
 
 export function MonthlyDashboard({
-  bills, accounts, recentTransactions, cashFlow, enrichedMatches,
+  bills, accounts: _accounts, recentTransactions, cashFlow, enrichedMatches,
   summary, savingsRate, categorySpendData, budgetAlerts, billAlerts, priceAlerts,
   rawBillCount, accountCount, hasBudget, simplefinConfigured,
 }: Props) {

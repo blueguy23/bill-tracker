@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import * as React from "react"
@@ -104,7 +105,6 @@ const ChartTooltip = RechartsPrimitive.Tooltip
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Record<string, any> & {
       hideLabel?: boolean
       hideIndicator?: boolean
@@ -185,7 +185,6 @@ const ChartTooltipContent = React.forwardRef<
       >
         {!nestLabel ? tooltipLabel : null}
         <div className="grid gap-1.5">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {(payload as any[])
             .filter((item: any) => item.type !== "none")
             .map((item: any, index: number) => {
@@ -263,7 +262,6 @@ const ChartLegend = RechartsPrimitive.Legend
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   React.ComponentProps<"div"> & Record<string, any> & {
       hideIcon?: boolean
       nameKey?: string
@@ -288,7 +286,6 @@ const ChartLegendContent = React.forwardRef<
           className
         )}
       >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {(payload as any[])
           .filter((item: any) => item.type !== "none")
           .map((item: any) => {

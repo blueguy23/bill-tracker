@@ -37,7 +37,7 @@ async function buildPriceWatchItems(db: import('strictdb').StrictDB, rawBills: B
     .filter(b => b.paymentDescriptionHint)
     .map(b => b.paymentDescriptionHint!);
 
-  let txByHint = new Map<string, Transaction[]>();
+  const txByHint = new Map<string, Transaction[]>();
   if (hintsToQuery.length > 0) {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);

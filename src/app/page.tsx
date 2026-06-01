@@ -13,11 +13,9 @@ import { listAccountMeta } from '@/adapters/accountMeta';
 import { listBudgets } from '@/adapters/budgets';
 import { getCashFlowHistory } from '@/adapters/cashFlowHistory';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
-import type { Holding } from '@/lib/simplefin/types';
 import { getForecast } from '@/adapters/forecast';
 import { getPayPeriodData } from '@/adapters/payPeriod';
 import { getUserProfile } from '@/adapters/userProfile';
-import { PanelTrigger } from '@/components/PanelTrigger';
 import { DetailPanel } from '@/components/DetailPanel';
 import type { DetailPanelData, PanelBill, PanelTransaction, PanelAccount } from '@/components/DetailPanel';
 import { MonthlyDashboard } from '@/components/MonthlyDashboard';
@@ -40,8 +38,6 @@ function periodToRange(p: Period): { start: Date; end: Date; historyMonths: numb
   }
 }
 
-const USD  = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
 function currentYYYYMM(): string {
   const now = new Date();
