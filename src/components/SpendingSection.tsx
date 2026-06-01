@@ -1,4 +1,10 @@
 import type { SummaryResponse } from '@/types/summary';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from '@/components/ui/table';
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
@@ -60,9 +66,9 @@ export function SpendingSection({ data }: SpendingSectionProps) {
           label="Net"
           value={`${netPositive ? '+' : ''}${USD.format(net)}`}
           sub={netPositive ? 'saved this month' : 'spent more than earned'}
-          fromColor={netPositive ? 'from-blue-500/[0.12]' : 'from-orange-500/[0.12]'}
-          dotColor={netPositive ? 'bg-blue-500' : 'bg-orange-500'}
-          valueColor={netPositive ? 'text-blue-400' : 'text-orange-400'}
+          fromColor={netPositive ? 'from-zinc-400/[0.12]' : 'from-orange-500/[0.12]'}
+          dotColor={netPositive ? 'bg-zinc-400' : 'bg-orange-500'}
+          valueColor={netPositive ? 'text-zinc-400' : 'text-orange-400'}
         />
       </div>
 
@@ -73,22 +79,22 @@ export function SpendingSection({ data }: SpendingSectionProps) {
             <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Top Spending</h4>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <tbody className="divide-y divide-white/[0.03]">
+            <Table className="min-w-full text-sm">
+              <TableBody>
                 {topMerchants.map((m, i) => (
-                  <tr key={m.merchant} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-5 py-3 text-zinc-600 text-xs tabular-nums w-8">{i + 1}</td>
-                    <td className="px-5 py-3 text-zinc-200">{m.merchant}</td>
-                    <td className="px-5 py-3 text-right font-medium text-white tabular-nums">
+                  <TableRow key={m.merchant} className="border-white/[0.03] hover:bg-white/[0.02]">
+                    <TableCell className="px-5 py-3 text-zinc-600 text-xs tabular-nums w-8">{i + 1}</TableCell>
+                    <TableCell className="px-5 py-3 text-zinc-200">{m.merchant}</TableCell>
+                    <TableCell className="px-5 py-3 text-right font-medium text-white tabular-nums">
                       {USD.format(m.total)}
-                    </td>
-                    <td className="px-5 py-3 text-right text-zinc-500 text-xs whitespace-nowrap tabular-nums">
+                    </TableCell>
+                    <TableCell className="px-5 py-3 text-right text-zinc-500 text-xs whitespace-nowrap tabular-nums">
                       {m.count} charge{m.count !== 1 ? 's' : ''}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

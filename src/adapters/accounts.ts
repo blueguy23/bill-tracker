@@ -120,3 +120,15 @@ export async function listTransactionsForDetection(
     { sort: { posted: -1 }, limit: 5000 },
   );
 }
+
+export async function listIncomeTransactions(
+  db: StrictDB,
+  days = 120,
+): Promise<Transaction[]> {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return db.queryMany<Transaction>(
+    TRANSACTIONS,
+    { posted: { $gte: cutoff }, amount: { $gt: 0 }, pending: false },
+    { sort: { posted: -1 }, limit: 2000 },
+  );
+}

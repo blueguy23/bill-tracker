@@ -1,34 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
-import {
-  Chart, LineController, LineElement, PointElement,
-  BarController, BarElement,
-  CategoryScale, LinearScale,
-  Tooltip, Filler, Legend,
-} from 'chart.js';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { PanelType } from './PanelTrigger';
 import type { DetailPanelData } from './DetailPanel';
-
-Chart.register(
-  LineController, LineElement, PointElement,
-  BarController, BarElement,
-  CategoryScale, LinearScale,
-  Tooltip, Filler, Legend,
-);
 
 const USD  = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
-const CHART_OPTS = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    x: { grid: { color: '#1e1e2a' }, ticks: { color: '#44445a', font: { family: "'IBM Plex Mono',monospace", size: 10 } } },
-    y: { grid: { color: '#1e1e2a' }, ticks: { color: '#44445a', font: { family: "'IBM Plex Mono',monospace", size: 10 } } },
-  },
-} as const;
+const AXIS_STYLE = {
+  tickLine: false as const,
+  axisLine: false as const,
+  tick: { fill: '#44445a', fontFamily: "'IBM Plex Mono',monospace", fontSize: 10 },
+};
+
+const TOOLTIP_STYLE = {
+  contentStyle: { backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 12 },
+  labelStyle: { color: 'var(--text)', fontWeight: 600, marginBottom: 4 },
+  itemStyle: { color: 'var(--text2)', padding: 0 },
+};
 
 const CATEGORIES = ['food','transport','shopping','entertainment','health','utilities','subscriptions','income','transfer','rent','insurance','other'];
 
@@ -52,17 +42,16 @@ export function getTitle(type: PanelType | null, arg: string | number | undefine
 
 // ── Body router ─────────────────────────────────────────────────────────────
 
-export function PanelBody({ type, arg, data, chartRef, expanded }: {
-  type: PanelType; arg?: string | number; data: DetailPanelData;
-  chartRef: React.MutableRefObject<Chart | null>; expanded: boolean;
+export function PanelBody({ type, arg, data, expanded }: {
+  type: PanelType; arg?: string | number; data: DetailPanelData; expanded: boolean;
 }) {
   switch (type) {
-    case 'savings':    return <SavingsView data={data} chartRef={chartRef} expanded={expanded} />;
+    case 'savings':    return <SavingsView data={data} expanded={expanded} />;
     case 'bills':      return <BillsView data={data} />;
-    case 'money-left': return <MoneyLeftView data={data} chartRef={chartRef} expanded={expanded} />;
-    case 'category':   return <CategoryView category={String(arg)} data={data} chartRef={chartRef} expanded={expanded} />;
+    case 'money-left': return <MoneyLeftView data={data} expanded={expanded} />;
+    case 'category':   return <CategoryView category={String(arg)} data={data} expanded={expanded} />;
     case 'transaction': return <TransactionView index={Number(arg)} data={data} />;
-    case 'networth':   return <NetWorthView data={data} chartRef={chartRef} expanded={expanded} />;
+    case 'networth':   return <NetWorthView data={data} expanded={expanded} />;
     case 'bill-detail': return <BillDetailView name={String(arg)} data={data} />;
     default: return null;
   }
@@ -118,57 +107,45 @@ function Recommendation({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ChartBox({ canvasId, expanded }: { canvasId: string; expanded: boolean }) {
+function ChartBox({ children, expanded }: { children: React.ReactNode; expanded: boolean }) {
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: 16, marginBottom: 16 }}>
-      <canvas id={canvasId} style={{ width: '100%', height: expanded ? 500 : 180 }} />
+      <div style={{ width: '100%', height: expanded ? 500 : 180, transition: 'height 0.2s ease' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {children as React.ReactElement}
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
 
-// ── Hook: build chart after mount ───────────────────────────────────────────
-
-function useChart(
-  chartRef: React.MutableRefObject<Chart | null>,
-  builder: (ctx: HTMLCanvasElement) => Chart | null,
-  deps: unknown[],
-) {
-  useEffect(() => {
-    const el = document.getElementById('panelChart') as HTMLCanvasElement | null;
-    if (!el) return;
-    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
-    chartRef.current = builder(el);
-    return () => { if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; } };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-}
-
 // ── Views ───────────────────────────────────────────────────────────────────
 
-function SavingsView({ data, chartRef, expanded }: { data: DetailPanelData; chartRef: React.MutableRefObject<Chart | null>; expanded: boolean }) {
+function SavingsView({ data, expanded }: { data: DetailPanelData; expanded: boolean }) {
   const months = data.history.slice(-6);
-  const rates = months.map(m => m.income > 0 ? ((m.income - m.expenses) / m.income) * 100 : 0);
-  const labels = months.map(m => m.month);
-  const bestIdx = rates.indexOf(Math.max(...rates));
-  const bestMonth = labels[bestIdx] ?? '';
-  const bestRate = rates[bestIdx] ?? 0;
+  const chartData = months.map(m => ({
+    month: m.month,
+    rate: m.income > 0 ? ((m.income - m.expenses) / m.income) * 100 : 0,
+  }));
+  const bestIdx = chartData.reduce((bi, d, i, arr) => d.rate > arr[bi]!.rate ? i : bi, 0);
+  const bestMonth = chartData[bestIdx]?.month ?? '';
+  const bestRate = chartData[bestIdx]?.rate ?? 0;
   const current = data.savingsRate;
   const gap = Math.max(0, 20 - current);
   const gapDollars = data.cashFlow.income > 0 ? Math.round(gap / 100 * data.cashFlow.income) : 0;
 
-  useChart(chartRef, (ctx) => new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{ data: rates, borderColor: '#7c6cf0', backgroundColor: 'rgba(124,108,240,0.08)', fill: true, tension: 0.35, pointBackgroundColor: '#7c6cf0', pointRadius: 4, borderWidth: 2 }],
-    },
-    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, ticks: { ...CHART_OPTS.scales.y.ticks, callback: (v: string | number) => v + '%' }, min: 0, max: Math.max(45, bestRate + 10) } } },
-  }), [labels.join(), expanded]);
-
   return (
     <>
       <div style={{ marginBottom: 24 }}>
-        <ChartBox canvasId="panelChart" expanded={expanded} />
+        <ChartBox expanded={expanded}>
+          <LineChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+            <CartesianGrid stroke="#1e1e2a" vertical={false} />
+            <XAxis dataKey="month" {...AXIS_STYLE} />
+            <YAxis {...AXIS_STYLE} tickFormatter={(v: number) => `${v}%`} domain={[0, Math.max(45, bestRate + 10)]} width={40} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [`${Number(v).toFixed(1)}%`, 'Savings Rate']} />
+            <Line type="monotone" dataKey="rate" stroke="#7c6cf0" fill="rgba(124,108,240,0.08)" strokeWidth={2} dot={{ r: 4, fill: '#7c6cf0', strokeWidth: 0 }} isAnimationActive={false} />
+          </LineChart>
+        </ChartBox>
         <Callout value={`${bestRate.toFixed(1)}%`} label={<><span style={{ color: 'var(--green)', fontWeight: 600 }}>Your best month in 6 months</span> was {bestMonth}</>} />
       </div>
       <div style={{ marginBottom: 24 }}>
@@ -221,27 +198,28 @@ function BillsView({ data }: { data: DetailPanelData }) {
   );
 }
 
-function MoneyLeftView({ data, chartRef, expanded }: { data: DetailPanelData; chartRef: React.MutableRefObject<Chart | null>; expanded: boolean }) {
+function MoneyLeftView({ data, expanded }: { data: DetailPanelData; expanded: boolean }) {
   const months = data.history.slice(-6);
-  const labels = months.map(m => m.month);
-  const leftovers = months.map(m => Math.max(0, m.income - m.expenses));
+  const chartData = months.map(m => ({
+    month: m.month,
+    leftover: Math.max(0, m.income - m.expenses),
+  }));
   const net = data.cashFlow.net;
-  const prevNet = leftovers.length >= 2 ? leftovers[leftovers.length - 2]! : 0;
+  const prevNet = chartData.length >= 2 ? chartData[chartData.length - 2]!.leftover : 0;
   const delta = net - prevNet;
-
-  useChart(chartRef, (ctx) => new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [{ data: leftovers, backgroundColor: leftovers.map(v => v > 0 ? '#22c55e' : '#d4943a'), borderRadius: 4, barThickness: 28 }],
-    },
-    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, ticks: { ...CHART_OPTS.scales.y.ticks, callback: (v: string | number) => '$' + v }, min: 0 } } },
-  }), [labels.join(), expanded]);
 
   return (
     <>
       <div style={{ marginBottom: 24 }}>
-        <ChartBox canvasId="panelChart" expanded={expanded} />
+        <ChartBox expanded={expanded}>
+          <BarChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+            <CartesianGrid stroke="#1e1e2a" vertical={false} />
+            <XAxis dataKey="month" {...AXIS_STYLE} />
+            <YAxis {...AXIS_STYLE} tickFormatter={(v: number) => `$${v}`} width={50} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [USD0.format(Number(v)), 'Leftover']} />
+            <Bar dataKey="leftover" radius={[4, 4, 0, 0]} maxBarSize={28} fill="#22c55e" isAnimationActive={false} />
+          </BarChart>
+        </ChartBox>
         <Callout
           value={USD0.format(Math.max(0, net))}
           label={<>Discretionary budget remaining · <span style={{ color: delta >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{delta >= 0 ? '↑' : '↓'} {USD0.format(Math.abs(delta))} vs last month</span></>}
@@ -257,7 +235,7 @@ function MoneyLeftView({ data, chartRef, expanded }: { data: DetailPanelData; ch
   );
 }
 
-function CategoryView({ category, data, chartRef, expanded }: { category: string; data: DetailPanelData; chartRef: React.MutableRefObject<Chart | null>; expanded: boolean }) {
+function CategoryView({ category, data, expanded }: { category: string; data: DetailPanelData; expanded: boolean }) {
   const cat = data.categorySpend.find(c => c.label === category);
   const budget = data.budgetAlerts.find(b => b.category === category);
   const spent = cat?.amount ?? 0;
@@ -274,19 +252,23 @@ function CategoryView({ category, data, chartRef, expanded }: { category: string
     }, new Map());
   const sorted = Array.from(topMerchants.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-  useChart(chartRef, (ctx) => new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Budget', 'Actual'],
-      datasets: [{ data: [limit, spent], backgroundColor: ['rgba(128,128,160,0.15)', diff > 0 && limit > 0 ? '#ef4444' : '#7c6cf0'], borderRadius: 4, barThickness: 40 }],
-    },
-    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, ticks: { ...CHART_OPTS.scales.y.ticks, callback: (v: string | number) => '$' + v }, min: 0 } } },
-  }), [category, expanded]);
+  const chartData = [
+    { name: 'Budget', value: limit, fill: 'rgba(128,128,160,0.15)' },
+    { name: 'Actual', value: spent, fill: diff > 0 && limit > 0 ? '#ef4444' : '#7c6cf0' },
+  ];
 
   return (
     <>
       <div style={{ marginBottom: 24 }}>
-        <ChartBox canvasId="panelChart" expanded={expanded} />
+        <ChartBox expanded={expanded}>
+          <BarChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+            <CartesianGrid stroke="#1e1e2a" vertical={false} />
+            <XAxis dataKey="name" {...AXIS_STYLE} />
+            <YAxis {...AXIS_STYLE} tickFormatter={(v: number) => `$${v}`} width={50} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [USD0.format(Number(v)), '']} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+          </BarChart>
+        </ChartBox>
         <Callout value={statusText} valueColor={statusColor} label={limit > 0 ? `${USD0.format(spent)} spent of ${USD0.format(limit)} budget this month` : `${USD0.format(spent)} spent this month`} />
       </div>
       {sorted.length > 0 && (
@@ -342,40 +324,41 @@ function TransactionView({ index, data }: { index: number; data: DetailPanelData
 
       <div>
         <SectionTitle>Recategorize</SectionTitle>
-        <select
-          defaultValue={tx.category ?? 'other'}
-          style={{
-            width: '100%', padding: '8px 12px', background: 'var(--surface)',
-            border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)',
-            fontFamily: 'var(--sans)', fontSize: 13, cursor: 'pointer', appearance: 'none',
-          }}
-        >
-          {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-        </select>
+        <Select defaultValue={tx.category ?? 'other'}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
     </>
   );
 }
 
-function NetWorthView({ data, chartRef, expanded }: { data: DetailPanelData; chartRef: React.MutableRefObject<Chart | null>; expanded: boolean }) {
+function NetWorthView({ data, expanded }: { data: DetailPanelData; expanded: boolean }) {
   const total = data.accounts.reduce((s, a) => s + (Number(a.balance) || 0), 0);
   const assets = data.accounts.filter(a => (Number(a.balance) || 0) >= 0).reduce((s, a) => s + (Number(a.balance) || 0), 0);
   const liabilities = Math.abs(data.accounts.filter(a => (Number(a.balance) || 0) < 0).reduce((s, a) => s + (Number(a.balance) || 0), 0));
 
-  useChart(chartRef, (ctx) => new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Assets', 'Liabilities', 'Net'],
-      datasets: [{ data: [assets, liabilities, total], backgroundColor: ['#22c55e', '#ef4444', '#7c6cf0'], borderRadius: 4, barThickness: 40 }],
-    },
-    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, ticks: { ...CHART_OPTS.scales.y.ticks, callback: (v: string | number) => '$' + Number(v).toLocaleString() }, min: 0 } } },
-  }), [total, expanded]);
+  const chartData = [
+    { name: 'Assets', value: assets, fill: '#22c55e' },
+    { name: 'Liabilities', value: liabilities, fill: '#ef4444' },
+    { name: 'Net', value: total, fill: '#7c6cf0' },
+  ];
 
   return (
     <>
       <div style={{ marginBottom: 24 }}>
         <Callout value={USD0.format(total)} label={<><span style={{ color: 'var(--green)', fontWeight: 600 }}>{USD0.format(assets)} assets</span> · <span style={{ color: 'var(--red)', fontWeight: 600 }}>{USD0.format(liabilities)} liabilities</span></>} />
-        <ChartBox canvasId="panelChart" expanded={expanded} />
+        <ChartBox expanded={expanded}>
+          <BarChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+            <CartesianGrid stroke="#1e1e2a" vertical={false} />
+            <XAxis dataKey="name" {...AXIS_STYLE} />
+            <YAxis {...AXIS_STYLE} tickFormatter={(v: number) => `$${Number(v).toLocaleString()}`} width={60} />
+            <Tooltip {...TOOLTIP_STYLE} formatter={(v) => [USD0.format(Number(v)), '']} />
+            <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40} isAnimationActive={false} />
+          </BarChart>
+        </ChartBox>
       </div>
       <div style={{ marginBottom: 24 }}>
         <SectionTitle>Accounts</SectionTitle>

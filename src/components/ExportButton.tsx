@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface ExportButtonProps {
   startDate?: string;
@@ -39,13 +40,14 @@ export function ExportButton({ startDate, endDate, accountId }: ExportButtonProp
   }
 
   return (
-    <button
+    <Button
+      variant="outline"
+      size="sm"
       onClick={() => void handleExport()}
       disabled={loading}
       data-testid="export-btn"
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 border border-white/[0.08] hover:bg-white/[0.04] transition-colors disabled:opacity-50"
     >
       {loading ? 'Exporting…' : 'Export CSV'}
-    </button>
+    </Button>
   );
 }

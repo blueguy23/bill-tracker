@@ -1,22 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { useTheme } from './ThemeProvider';
-import {
-  Chart,
-  LineController, LineElement, PointElement,
-  BarController, BarElement,
-  CategoryScale, LinearScale,
-  Tooltip, Legend,
-} from 'chart.js';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import type { MonthlyFlow } from '@/adapters/cashFlowHistory';
-
-Chart.register(
-  LineController, LineElement, PointElement,
-  BarController, BarElement,
-  CategoryScale, LinearScale,
-  Tooltip, Legend,
-);
 
 interface ChartTokens {
   GRID: string;
@@ -24,38 +11,29 @@ interface ChartTokens {
   TEXT2: string;
   INC: string;
   EXP: string;
-  TOOLTIP: { backgroundColor: string; borderColor: string; borderWidth: number; titleColor: string; bodyColor: string; padding: number };
   TICK_FONT: string;
   CAT: string[];
 }
 
 const DARK: ChartTokens = {
-  GRID:     'rgba(255,255,255,0.04)',
-  TEXT3:    '#44445a',
-  TEXT2:    '#8080a0',
-  INC:      '#22c55e',
-  EXP:      '#ef4444',
-  TOOLTIP:  { backgroundColor: '#17171e', borderColor: '#1e1e2a', borderWidth: 1, titleColor: '#ededf5', bodyColor: '#8080a0', padding: 10 },
+  GRID:      'rgba(255,255,255,0.04)',
+  TEXT3:     '#44445a',
+  TEXT2:     '#8080a0',
+  INC:       '#4ade80',
+  EXP:       '#f87171',
   TICK_FONT: "'IBM Plex Mono', monospace",
-  CAT: ['oklch(0.68 0.22 265)', '#22c55e', '#ef4444', 'oklch(0.67 0.13 40)', '#c084fc', '#3b82f6', '#34d399', '#fb923c'],
+  CAT: ['#fafafa', '#4ade80', '#f87171', '#fbbf24', '#c084fc', '#a1a1aa', '#34d399', '#fb923c'],
 };
 
 const LIGHT: ChartTokens = {
-  GRID:     'rgba(15,23,41,0.07)',
-  TEXT3:    '#8A93A6',
-  TEXT2:    '#5C6679',
-  INC:      '#187A5C',
-  EXP:      '#C9624A',
-  TOOLTIP:  { backgroundColor: '#FFFFFF', borderColor: '#E2E7EE', borderWidth: 1, titleColor: '#0F1729', bodyColor: '#5C6679', padding: 10 },
+  GRID:      'rgba(15,23,41,0.07)',
+  TEXT3:     '#8A93A6',
+  TEXT2:     '#5C6679',
+  INC:       '#187A5C',
+  EXP:       '#C9624A',
   TICK_FONT: "'JetBrains Mono', monospace",
-  CAT: ['#C9624A', '#187A5C', '#2A5BD7', '#C47A2A', '#c084fc', '#3b82f6', '#34d399', '#fb923c'],
+  CAT: ['#C9624A', '#187A5C', '#2A5BD7', '#C47A2A', '#c084fc', '#a1a1aa', '#34d399', '#fb923c'],
 };
-
-function useCancelRef() {
-  const ref = useRef<Chart | null>(null);
-  useEffect(() => () => { ref.current?.destroy(); }, []);
-  return ref;
-}
 
 function Card({ children, title, subtitle, action, testId }: { children: React.ReactNode; title: string; subtitle?: string; action?: React.ReactNode; testId?: string }) {
   return (
@@ -72,48 +50,53 @@ function Card({ children, title, subtitle, action, testId }: { children: React.R
   );
 }
 
+const trendConfig = {
+  income:   { label: 'Income',   color: 'var(--chart-income)' },
+  expenses: { label: 'Expenses', color: 'var(--chart-expenses)' },
+  net:      { label: 'Net',      color: 'var(--chart-net)' },
+} satisfies ChartConfig;
+
 function TrendChart({ history, tokens }: { history: MonthlyFlow[]; tokens: ChartTokens }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef  = useCancelRef();
-  const { INC, EXP, TEXT3, GRID, TOOLTIP, TICK_FONT } = tokens;
+  const config = {
+    income:   { ...trendConfig.income,   color: tokens.INC },
+    expenses: { ...trendConfig.expenses, color: tokens.EXP },
+    net:      { ...trendConfig.net,      color: tokens.TEXT3 },
+  } satisfies ChartConfig;
 
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    chartRef.current?.destroy();
-    const TICK = { color: TEXT3, font: { family: TICK_FONT, size: 10 } };
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'line',
-      data: {
-        labels: history.map(h => h.label),
-        datasets: [
-          { label: 'Income',   data: history.map(h => h.income),   borderColor: INC,   backgroundColor: 'transparent', fill: false, tension: 0.3, borderWidth: 1.5, pointRadius: 3, pointBackgroundColor: INC,   pointBorderColor: 'transparent' },
-          { label: 'Expenses', data: history.map(h => h.expenses), borderColor: EXP,   backgroundColor: 'transparent', fill: false, tension: 0.3, borderWidth: 1.5, pointRadius: 3, pointBackgroundColor: EXP,   pointBorderColor: 'transparent' },
-          { label: 'Net',      data: history.map(h => h.net),      borderColor: TEXT3, backgroundColor: 'transparent', fill: false, tension: 0.3, borderWidth: 1, borderDash: [4, 3], pointRadius: 2, pointBackgroundColor: TEXT3, pointBorderColor: 'transparent' },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: { duration: 800, easing: 'easeInOutQuart' },
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: { ...TOOLTIP, callbacks: { label: c => ` ${c.dataset.label}: $${(c.parsed.y ?? 0).toLocaleString()}` } },
-        },
-        scales: {
-          x: { border: { display: false }, grid: { color: GRID }, ticks: { ...TICK } },
-          y: { border: { display: false }, grid: { color: GRID }, ticks: { ...TICK, callback: v => '$' + (Number(v) / 1000).toFixed(0) + 'k' } },
-        },
-      },
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history, tokens]);
-
-  return <canvas ref={canvasRef} />;
+  return (
+    <ChartContainer config={config} className="aspect-auto h-[200px] w-full">
+      <LineChart data={history} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+        <CartesianGrid stroke={tokens.GRID} vertical={false} />
+        <XAxis
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          tick={{ fill: tokens.TEXT3, fontFamily: tokens.TICK_FONT, fontSize: 10 }}
+        />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          tick={{ fill: tokens.TEXT3, fontFamily: tokens.TICK_FONT, fontSize: 10 }}
+          tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+          width={45}
+        />
+        <Tooltip
+          contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 12 }}
+          labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
+          itemStyle={{ color: 'var(--text2)', padding: 0 }}
+          formatter={(value, name) => [`$${Number(value).toLocaleString()}`, String(name).charAt(0).toUpperCase() + String(name).slice(1)]}
+        />
+        <Line type="monotone" dataKey="income" stroke={tokens.INC} strokeWidth={1.5} dot={{ r: 3, fill: tokens.INC, strokeWidth: 0 }} />
+        <Line type="monotone" dataKey="expenses" stroke={tokens.EXP} strokeWidth={1.5} dot={{ r: 3, fill: tokens.EXP, strokeWidth: 0 }} />
+        <Line type="monotone" dataKey="net" stroke={tokens.TEXT3} strokeWidth={1} strokeDasharray="4 3" dot={{ r: 2, fill: tokens.TEXT3, strokeWidth: 0 }} />
+      </LineChart>
+    </ChartContainer>
+  );
 }
 
 function EmptyChart({ tokens }: { tokens: ChartTokens }) {
   return (
-    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: tokens.TEXT3, fontSize: 11, fontFamily: tokens.TICK_FONT }}>
+    <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: tokens.TEXT3, fontSize: 11, fontFamily: tokens.TICK_FONT }}>
       No data yet — sync to populate
     </div>
   );
