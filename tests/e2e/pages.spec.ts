@@ -22,12 +22,11 @@ test.describe('Payments Page (/payments)', () => {
       await expect(page.locator('h1')).toContainText('Payments');
     });
 
-    test('should render Payments and Calendar tabs', async ({ page }) => {
+    test('should render list and calendar view toggles', async ({ page }) => {
       await page.goto('/payments');
 
-      await expect(page.locator('[data-testid="payments-tabs"]')).toBeVisible();
-      await expect(page.locator('button', { hasText: 'Payments' }).first()).toBeVisible();
-      await expect(page.locator('button', { hasText: 'Calendar' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'List view' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Calendar view' })).toBeVisible();
     });
 
     test('should render the sidebar with navigation links', async ({ page }) => {
@@ -35,13 +34,13 @@ test.describe('Payments Page (/payments)', () => {
 
       await expect(page.locator('aside')).toBeVisible();
       await expect(page.locator('aside nav a', { hasText: 'Dashboard' })).toBeVisible();
-      await expect(page.locator('aside nav a', { hasText: 'Payments' })).toBeVisible();
+      await expect(page.locator('aside nav a', { hasText: 'Bills & Payments' })).toBeVisible();
     });
 
     test('should mark Payments link as active in sidebar', async ({ page }) => {
       await page.goto('/payments');
 
-      const paymentsLink = page.locator('aside nav a', { hasText: 'Payments' });
+      const paymentsLink = page.locator('aside nav a', { hasText: 'Bills & Payments' });
       await expect(paymentsLink).toBeVisible();
       await expect(paymentsLink).toHaveAttribute('aria-current', 'page');
     });
@@ -416,8 +415,8 @@ test.describe.skip('Credit Health Page (/credit-health)', () => {
 test.describe('Active Navigation State', () => {
   const routes = [
     { path: '/', label: 'Dashboard' },
-    { path: '/payments', label: 'Payments' },
-    { path: '/budget', label: 'Budget & Goals' },
+    { path: '/payments', label: 'Bills & Payments' },
+    { path: '/budget', label: 'Budget' },
   ];
 
   for (const { path, label } of routes) {

@@ -38,7 +38,7 @@ export function RecurringStats({ bills }: RecurringStatsProps) {
 
   const metrics = [
     { label: 'MONTHLY COMMITTED', value: USD.format(monthlyTotal), sub: '/mo equiv', color: 'var(--accent)' },
-    { label: 'ANNUAL PROJECTION', value: USD.format(annualTotal), sub: '/year', color: 'oklch(0.68 0.22 285)' },
+    { label: 'ANNUAL PROJECTION', value: USD.format(annualTotal), sub: '/year', color: '#a1a1aa' },
     { label: 'AUTO-PAY TOTAL', value: USD.format(autoPayMonthly), sub: '/mo', color: 'var(--green)' },
     { label: 'MANUAL TOTAL', value: USD.format(manualMonthly), sub: '/mo', color: 'var(--gold)' },
   ];

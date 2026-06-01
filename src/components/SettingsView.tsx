@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import type { CreditSettingsEntry } from '@/types/creditAdvisor';
 import type { Account } from '@/lib/simplefin/types';
 
@@ -42,10 +43,6 @@ const inputStyle: React.CSSProperties = {
   outline: 'none', width: '100%',
 };
 
-const btnPrimary: React.CSSProperties = {
-  padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)',
-  color: '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--sans)', fontWeight: 600,
-};
 
 export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 }: SettingsViewProps) {
   const [testStatus, setTestStatus]       = useState<TestStatus>('idle');
@@ -149,13 +146,15 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
               Try syncing again, or rename them below.
             </div>
           </div>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleBannerSync}
             disabled={syncingFromBanner}
-            style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: 'none', background: 'oklch(0.67 0.13 40 / .2)', color: 'var(--gold)', cursor: 'pointer', opacity: syncingFromBanner ? 0.5 : 1 }}
+            style={{ flexShrink: 0, background: 'oklch(0.67 0.13 40 / .2)', color: 'var(--gold)', borderColor: 'oklch(0.67 0.13 40 / .3)' }}
           >
             {syncingFromBanner ? 'Syncing…' : 'Sync Now'}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -206,13 +205,12 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
             Set <code style={{ fontFamily: 'var(--mono)', color: 'var(--text2)' }}>DISCORD_WEBHOOK_URL</code> in your .env file to enable notifications.
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button
+            <Button
               onClick={handleSendTest}
               disabled={!initialConfigured || testStatus === 'loading'}
-              style={{ ...btnPrimary, opacity: !initialConfigured || testStatus === 'loading' ? 0.4 : 1, cursor: !initialConfigured || testStatus === 'loading' ? 'not-allowed' : 'pointer' }}
             >
               {testStatus === 'loading' ? 'Sending…' : 'Send Test Notification'}
-            </button>
+            </Button>
             {testStatus === 'success' && <span style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>{testMessage}</span>}
             {testStatus === 'error' && <span style={{ fontSize: 12, color: 'var(--red)', fontFamily: 'var(--sans)' }}>{testMessage}</span>}
           </div>
@@ -276,9 +274,9 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
             ))}
           </div>
           <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={handleSaveCreditSettings} disabled={saveStatus === 'saving'} style={{ ...btnPrimary, opacity: saveStatus === 'saving' ? 0.4 : 1, cursor: saveStatus === 'saving' ? 'not-allowed' : 'pointer' }}>
+            <Button onClick={handleSaveCreditSettings} disabled={saveStatus === 'saving'}>
               {saveStatus === 'saving' ? 'Saving…' : 'Save'}
-            </button>
+            </Button>
             {saveStatus === 'saved' && <span style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>Saved</span>}
             {saveStatus === 'error'  && <span style={{ fontSize: 12, color: 'var(--red)', fontFamily: 'var(--sans)' }}>Failed to save</span>}
           </div>
@@ -305,9 +303,9 @@ export function SettingsView({ initialConfigured, dueSoonDays, unknownCount = 0 
             ))}
           </div>
           <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={handleSaveAccountNames} disabled={nameSaveStatus === 'saving'} style={{ ...btnPrimary, opacity: nameSaveStatus === 'saving' ? 0.4 : 1, cursor: nameSaveStatus === 'saving' ? 'not-allowed' : 'pointer' }}>
+            <Button onClick={handleSaveAccountNames} disabled={nameSaveStatus === 'saving'}>
               {nameSaveStatus === 'saving' ? 'Saving…' : 'Save Names'}
-            </button>
+            </Button>
             {nameSaveStatus === 'saved' && <span style={{ fontSize: 12, color: 'var(--green)', fontFamily: 'var(--sans)' }}>Saved — reload to see changes</span>}
             {nameSaveStatus === 'error'  && <span style={{ fontSize: 12, color: 'var(--red)', fontFamily: 'var(--sans)' }}>Failed to save</span>}
           </div>

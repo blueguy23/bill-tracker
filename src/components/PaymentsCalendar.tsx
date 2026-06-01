@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import type { BillResponse } from '@/types/bill';
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 
 type BillStatus = 'paid' | 'autopay' | 'upcoming' | 'overdue';
 type CalView   = 'month' | 'week';
@@ -15,20 +20,33 @@ interface CalDay {
   isAutoPay: boolean;
 }
 
-// Higher opacity bg/border so chips are legible in dark mode (#131318 surface)
-const STATUS_COLOR: Record<BillStatus, { text: string; bg: string; border: string }> = {
-  paid:     { text: '#22c55e', bg: 'rgba(34,197,94,0.18)',   border: 'rgba(34,197,94,0.35)' },
-  autopay:  { text: '#a78bfa', bg: 'rgba(167,139,250,0.18)', border: 'rgba(167,139,250,0.35)' },
-  upcoming: { text: '#60a5fa', bg: 'rgba(96,165,250,0.18)',  border: 'rgba(96,165,250,0.35)' },
-  overdue:  { text: '#f87171', bg: 'rgba(248,113,113,0.18)', border: 'rgba(248,113,113,0.35)' },
+const STATUS_VARIANT: Record<BillStatus, string> = {
+  paid:     'bg-green-500/15 text-green-400 border-green-500/25',
+  autopay:  'bg-purple-500/15 text-purple-400 border-purple-500/25',
+  upcoming: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
+  overdue:  'bg-red-500/15 text-red-400 border-red-500/25',
+};
+
+const STATUS_DOT: Record<BillStatus, string> = {
+  paid: 'bg-green-400', autopay: 'bg-purple-400', upcoming: 'bg-zinc-400', overdue: 'bg-red-400',
 };
 
 const STATUS_LABEL: Record<BillStatus, string> = {
   paid: 'Paid', autopay: 'Autopay', upcoming: 'Upcoming', overdue: 'Overdue',
 };
 
+const AVATAR_COLORS: Record<BillStatus, string> = {
+  paid: 'bg-green-500/15 text-green-400',
+  autopay: 'bg-purple-500/15 text-purple-400',
+  upcoming: 'bg-zinc-500/15 text-zinc-300',
+  overdue: 'bg-red-500/15 text-red-400',
+};
+
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -102,72 +120,71 @@ function getBillsForDate(
   return result;
 }
 
-// ─── DayDetail (shared by both views) ───────────────────────────────────────
+// ─── Day Detail Dialog ───────────────────────────────────────────────────────
 
-interface DayDetailProps {
+interface DayDialogProps {
+  open: boolean;
+  onClose: () => void;
   day: number; month: number; year: number;
   bills: CalDay[];
   isToday: boolean;
 }
 
-function DayDetail({ day, month, year, bills, isToday }: DayDetailProps) {
-  const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+function DayDialog({ open, onClose, day, month, year, bills, isToday }: DayDialogProps) {
   const dateStr = `${MONTHS[month]} ${day}, ${year}`;
   const total = bills.reduce((s, b) => s + b.amount, 0);
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-l)', borderRadius: 12, padding: '16px 20px', marginTop: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div>
-          <span style={{ fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '.07em' }}>
-            {isToday ? 'Today · ' : ''}{dateStr}
-          </span>
-          {bills.length > 0 && (
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)', marginTop: 3 }}>
-              {bills.length} bill{bills.length !== 1 ? 's' : ''} due
-            </div>
-          )}
-        </div>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-md bg-background border shadow-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            {isToday && <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/25 text-[9px]">Today</Badge>}
+            {dateStr}
+          </DialogTitle>
+          <DialogDescription className="font-mono text-xs">
+            {bills.length === 0
+              ? 'No bills due — clear day'
+              : `${bills.length} bill${bills.length !== 1 ? 's' : ''} · ${USD.format(total)} total`}
+          </DialogDescription>
+        </DialogHeader>
+
         {bills.length > 0 && (
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 17, fontWeight: 300, color: 'var(--text)' }}>
-            {usd.format(total)}
-          </div>
-        )}
-      </div>
-      {bills.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text2)', fontFamily: 'var(--sans)', padding: '8px 0' }}>No bills due — clear day</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {bills.map(bill => {
-            const s = STATUS_COLOR[bill.status];
-            return (
-              <div key={bill.id} className="cal-detail-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 0', borderBottom: '1px solid var(--border-l)' }}>
-                <div style={{ width: 34, height: 34, borderRadius: '50%', background: s.bg, border: `1px solid ${s.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, color: s.text, flexShrink: 0, fontFamily: 'var(--mono)' }}>
-                  {bill.name[0]?.toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bill.name}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.05em', padding: '2px 7px', borderRadius: 4, fontFamily: 'var(--mono)', background: s.bg, color: s.text, border: `1px solid ${s.border}`, flexShrink: 0 }}>
+          <div className="mt-2 space-y-0">
+            {bills.map((bill, i) => (
+              <div key={bill.id} className={`flex items-center gap-3 py-3 ${i > 0 ? 'border-t border-border' : ''}`}>
+                <Avatar className="w-9 h-9 shrink-0">
+                  <AvatarFallback className={`text-xs font-bold ${AVATAR_COLORS[bill.status]}`}>
+                    {bill.name[0]?.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-medium text-foreground truncate">{bill.name}</span>
+                    <Badge variant="outline" className={`text-[9px] font-mono shrink-0 ${STATUS_VARIANT[bill.status]}`}>
                       {STATUS_LABEL[bill.status]}
-                    </span>
+                    </Badge>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)', fontFamily: 'var(--sans)' }}>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
                     {bill.category} · {bill.isAutoPay ? 'Autopay' : 'Manual'}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 400, color: 'var(--text)' }}>{usd.format(bill.amount)}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--sans)', marginTop: 2 }}>
-                    {bill.status === 'paid' ? 'Paid' : isToday ? 'Due today' : 'Scheduled'}
-                  </div>
+                <div className="font-mono text-[13px] font-semibold text-foreground shrink-0">
+                  {USD.format(bill.amount)}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+
+        {bills.length > 0 && (
+          <div className="flex items-center justify-between pt-3 border-t border-border">
+            <span className="text-xs text-muted-foreground font-mono">Total due</span>
+            <span className="text-sm font-semibold font-mono text-foreground">{USD.format(total)}</span>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -187,37 +204,29 @@ function toSunday(y: number, m: number, d: number): { d: number; m: number; y: n
   return { d: date.getDate(), m: date.getMonth(), y: date.getFullYear() };
 }
 
-const USD_CAL = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-
 export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
   const [calView, setCalView]       = useState<CalView>('month');
   const [curMonth, setCurMonth]     = useState(today.m);
   const [curYear, setCurYear]       = useState(today.y);
   const [weekStart, setWeekStart]   = useState(() => toSunday(today.y, today.m, today.d));
-  const [selDate, setSelDate]       = useState<SelDate>({ d: today.d, m: today.m, y: today.y });
+  const [selDate, setSelDate]       = useState<SelDate>(null);
 
-  // ── Month nav ──
   function prevMonth() {
     if (curMonth === 0) { setCurMonth(11); setCurYear(y => y - 1); }
     else setCurMonth(m => m - 1);
-    setSelDate(null);
   }
   function nextMonth() {
     if (curMonth === 11) { setCurMonth(0); setCurYear(y => y + 1); }
     else setCurMonth(m => m + 1);
-    setSelDate(null);
   }
 
-  // ── Week nav ──
   function shiftWeek(delta: number) {
     setWeekStart(ws => {
       const d = new Date(ws.y, ws.m, ws.d + delta);
       return { d: d.getDate(), m: d.getMonth(), y: d.getFullYear() };
     });
-    setSelDate(null);
   }
 
-  // ── View switching: jump to relevant period ──
   function switchView(v: CalView) {
     if (v === 'week') {
       const ref = selDate ?? { d: 1, m: curMonth, y: curYear };
@@ -229,7 +238,7 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
     setCalView(v);
   }
 
-  // ── Nav label ──
+  // Nav label
   const weekEndDate = new Date(weekStart.y, weekStart.m, weekStart.d + 6);
   const wed = { d: weekEndDate.getDate(), m: weekEndDate.getMonth(), y: weekEndDate.getFullYear() };
   const weekLabel = weekStart.m === wed.m
@@ -237,11 +246,11 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
     : `${MONTHS[weekStart.m]!.slice(0, 3)} ${weekStart.d} – ${MONTHS[wed.m]!.slice(0, 3)} ${wed.d}, ${wed.y}`;
   const navLabel = calView === 'month' ? `${MONTHS[curMonth]} ${curYear}` : weekLabel;
 
-  // ── Detail panel data ──
-  const detailBills   = selDate ? getBillsForDate(bills, selDate.y, selDate.m, selDate.d, today) : [];
-  const isSelToday    = selDate !== null && selDate.d === today.d && selDate.m === today.m && selDate.y === today.y;
+  // Detail dialog data
+  const detailBills = selDate ? getBillsForDate(bills, selDate.y, selDate.m, selDate.d, today) : [];
+  const isSelToday  = selDate !== null && selDate.d === today.d && selDate.m === today.m && selDate.y === today.y;
 
-  // ── Month grid data ──
+  // Month grid data
   const billsByDay  = getBillsForMonth(bills, curMonth, curYear, today);
   const firstDow    = new Date(curYear, curMonth, 1).getDay();
   const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
@@ -263,35 +272,13 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
     return 'paid';
   }
 
-  // ── Week grid data ──
+  // Week grid data
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart.y, weekStart.m, weekStart.d + i);
     return { d: d.getDate(), m: d.getMonth(), y: d.getFullYear() };
   });
 
-  // ── Shared styles ──
-  const navBtnStyle: React.CSSProperties = {
-    background: 'var(--raised)', border: '1px solid var(--border-l)', borderRadius: 7,
-    color: 'var(--text2)', cursor: 'pointer', fontSize: 17, lineHeight: 1,
-    padding: '8px 14px', transition: 'background .15s',
-  };
-  const toggleBtnStyle = (active: boolean): React.CSSProperties => ({
-    fontSize: 12, fontWeight: active ? 600 : 400, fontFamily: 'var(--sans)',
-    padding: '5px 13px', borderRadius: 5, border: 'none', cursor: 'pointer',
-    transition: 'background .15s, color .15s',
-    background: active ? 'var(--accent)' : 'transparent',
-    color: active ? '#fff' : 'var(--text2)',
-  });
-  const chipStyle = (s: typeof STATUS_COLOR[BillStatus]): React.CSSProperties => ({
-    background: s.bg, border: `1px solid ${s.border}`, borderRadius: 4,
-    padding: '3px 7px', fontSize: 11, fontWeight: 500, color: s.text,
-    fontFamily: 'var(--mono)', marginBottom: 3,
-    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-  });
-
-  const usd = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
-
-  // ── Calendar stats (for current month context) ──
+  // Calendar stats
   const allMonthBills: CalDay[] = [];
   billsByDay.forEach(dayBills => allMonthBills.push(...dayBills));
   const calTotalAmount = allMonthBills.reduce((s, b) => s + b.amount, 0);
@@ -303,74 +290,89 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
   const calManualCount = allMonthBills.length - calAutoCount;
 
   return (
-    <div style={{ width: '100%' }}>
+    <div className="w-full space-y-4">
 
-      {/* ── Month overview hero ── */}
-      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 12, padding: '20px 24px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.06em', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 4, fontFamily: 'var(--sans)' }}>
-              {MONTHS[curMonth]} {curYear}
+      {/* Month overview hero */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardDescription className="text-[10px] font-mono uppercase tracking-wider">
+                {MONTHS[curMonth]} {curYear}
+              </CardDescription>
+              <CardTitle className="text-xl mt-1">
+                {allMonthBills.length} bill{allMonthBills.length !== 1 ? 's' : ''} this month
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                {USD0.format(calTotalAmount)} total · {calAutoCount} autopaid · {calManualCount} manual
+              </p>
             </div>
-            <div style={{ fontSize: 26, fontWeight: 600, lineHeight: 1, color: 'var(--text)', fontFamily: 'var(--sans)' }}>
-              {allMonthBills.length} bill{allMonthBills.length !== 1 ? 's' : ''} this month
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 5, fontFamily: 'var(--sans)' }}>
-              {USD_CAL.format(calTotalAmount)} total · {calAutoCount} autopaid · {calManualCount} manual
-            </div>
+            <Button onClick={onAddBill} size="sm" className="shrink-0">
+              + Add bill
+            </Button>
           </div>
-          <button onClick={onAddBill} style={{ background: 'var(--gold)', color: '#1a0a00', fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            + Add bill
-          </button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 14 }}>
-          {[
-            { label: 'Paid',       value: USD_CAL.format(calPaidAmount), accent: 'var(--green)' },
-            { label: 'Remaining',  value: USD_CAL.format(calRemaining),  accent: 'var(--gold)' },
-            { label: 'Autopay',    value: `${calAutoPct}%`,              accent: 'var(--text)' },
-            { label: 'Clear days', value: String(calClearDays),          accent: 'var(--text)' },
-          ].map(({ label, value, accent }) => (
-            <div key={label} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text3)', marginBottom: 3, fontFamily: 'var(--sans)' }}>{label}</div>
-              <div style={{ fontSize: 16, fontWeight: 500, color: accent, fontFamily: 'var(--mono)' }}>{value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+          <div className="grid grid-cols-4 mt-4 rounded-lg border border-border overflow-hidden" style={{ gap: 1, background: 'hsl(var(--border))' }}>
+            {[
+              { label: 'Paid',       value: USD0.format(calPaidAmount), cls: 'text-green-400' },
+              { label: 'Remaining',  value: USD0.format(calRemaining),  cls: 'text-amber-400' },
+              { label: 'Autopay',    value: `${calAutoPct}%`,           cls: 'text-foreground' },
+              { label: 'Clear days', value: String(calClearDays),       cls: 'text-foreground' },
+            ].map(({ label, value, cls }) => (
+              <div key={label} className="bg-background px-3 py-3">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">{label}</div>
+                <div className={`text-base font-medium font-mono ${cls}`}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* ── Nav bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-
-        {/* Left: prev / label / next */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => calView === 'month' ? prevMonth() : shiftWeek(-7)} aria-label="Previous" style={navBtnStyle}>‹</button>
-          <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)', minWidth: 160, textAlign: 'center' }}>{navLabel}</span>
-          <button onClick={() => calView === 'month' ? nextMonth() : shiftWeek(7)} aria-label="Next" style={navBtnStyle}>›</button>
+      {/* Nav bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => calView === 'month' ? prevMonth() : shiftWeek(-7)}>
+            <span className="text-sm">‹</span>
+          </Button>
+          <span className="text-sm font-semibold text-foreground min-w-[160px] text-center">{navLabel}</span>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => calView === 'month' ? nextMonth() : shiftWeek(7)}>
+            <span className="text-sm">›</span>
+          </Button>
         </div>
 
-        {/* Right: legend + Month/Week toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <div style={{ display: 'flex', gap: 16 }}>
+        <div className="flex items-center gap-5">
+          {/* Legend */}
+          <div className="hidden md:flex items-center gap-4">
             {(['paid', 'autopay', 'upcoming', 'overdue'] as BillStatus[]).map(s => (
-              <span key={s} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text2)', fontFamily: 'var(--sans)' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLOR[s].text, display: 'inline-block', flexShrink: 0 }} />
+              <span key={s} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className={`w-2 h-2 rounded-full ${STATUS_DOT[s]}`} />
                 {STATUS_LABEL[s]}
               </span>
             ))}
           </div>
-          <div style={{ display: 'flex', background: 'var(--raised)', border: '1px solid var(--border-l)', borderRadius: 7, padding: 2, gap: 2 }}>
-            <button onClick={() => switchView('month')} style={toggleBtnStyle(calView === 'month')}>Month</button>
-            <button onClick={() => switchView('week')}  style={toggleBtnStyle(calView === 'week')}>Week</button>
+          {/* View toggle */}
+          <div className="flex bg-muted/50 rounded-md p-0.5 gap-0.5">
+            <button
+              onClick={() => switchView('month')}
+              className={`text-xs font-medium px-3 py-1.5 rounded transition-colors ${calView === 'month' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => switchView('week')}
+              className={`text-xs font-medium px-3 py-1.5 rounded transition-colors ${calView === 'week' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Week
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ── Month grid ── */}
+      {/* Month grid */}
       {calView === 'month' && (
-        <div style={{ border: '1px solid var(--border-l)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
+        <Card className="overflow-hidden">
+          <div className="grid grid-cols-7">
             {DOW.map((d, idx) => (
-              <div key={d} style={{ background: 'var(--raised)', textAlign: 'center', padding: '10px 6px', fontSize: 11, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.07em', fontFamily: 'var(--mono)', borderRight: idx < 6 ? '1px solid var(--border-l)' : 'none', borderBottom: '1px solid var(--border-l)' }}>
+              <div key={d} className={`bg-muted/50 text-center py-2.5 px-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-mono ${idx < 6 ? 'border-r border-border' : ''} border-b border-border`}>
                 {d}
               </div>
             ))}
@@ -379,33 +381,35 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
               const row         = Math.floor(i / 7);
               const isOther     = cell.type !== 'cur';
               const isTodayCell = !isOther && cell.day === today.d && curMonth === today.m && curYear === today.y;
-              const isSel       = !isOther && selDate?.d === cell.day && selDate?.m === curMonth && selDate?.y === curYear;
               const dayBills    = !isOther ? (billsByDay.get(cell.day) ?? []) : [];
               const hasBill     = dayBills.length > 0;
               const dom         = hasBill ? dominantStatus(dayBills) : null;
-              const bg = isSel ? 'rgba(59,130,246,0.13)' : isTodayCell ? 'rgba(59,130,246,0.07)' : 'var(--surface)';
 
               return (
                 <div
                   key={i}
-                  onClick={() => !isOther && setSelDate(isSel ? null : { d: cell.day, m: curMonth, y: curYear })}
-                  style={{ background: bg, minHeight: 96, padding: '10px 8px', cursor: isOther ? 'default' : 'pointer', opacity: isOther ? 0.28 : 1, transition: 'background .15s', position: 'relative', borderRight: col < 6 ? '1px solid var(--border-l)' : 'none', borderBottom: row < totalRows - 1 ? '1px solid var(--border-l)' : 'none', boxShadow: isSel ? 'inset 0 0 0 1.5px rgba(59,130,246,0.55)' : isTodayCell ? 'inset 0 0 0 1px rgba(59,130,246,0.3)' : 'none' }}
+                  onClick={() => !isOther && setSelDate({ d: cell.day, m: curMonth, y: curYear })}
+                  className={`min-h-[96px] p-2 cursor-pointer transition-colors hover:bg-muted/30 ${isOther ? 'opacity-25 cursor-default' : ''} ${col < 6 ? 'border-r border-border' : ''} ${row < totalRows - 1 ? 'border-b border-border' : ''} ${isTodayCell ? 'bg-blue-500/[0.04] ring-1 ring-inset ring-blue-500/20' : ''}`}
                 >
-                  <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div className="flex items-center gap-1.5 mb-1.5">
                     {isTodayCell ? (
-                      <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: '50%', width: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, fontFamily: 'var(--mono)', flexShrink: 0 }}>{cell.day}</span>
+                      <span className="w-[22px] h-[22px] rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold font-mono">
+                        {cell.day}
+                      </span>
                     ) : (
-                      <span style={{ fontSize: 13, fontWeight: hasBill ? 600 : 400, color: hasBill ? 'var(--text)' : 'var(--text2)', fontFamily: 'var(--mono)' }}>{cell.day}</span>
+                      <span className={`text-[13px] font-mono ${hasBill ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                        {cell.day}
+                      </span>
                     )}
-                    {dom && <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[dom].text, display: 'inline-block', flexShrink: 0, marginTop: 1 }} />}
+                    {dom && <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[dom]}`} />}
                   </div>
                   {dayBills.slice(0, 2).map(b => (
-                    <div key={b.id} style={chipStyle(STATUS_COLOR[b.status])}>
+                    <div key={b.id} className={`rounded px-1.5 py-0.5 text-[10px] font-mono mb-0.5 truncate border ${STATUS_VARIANT[b.status]}`}>
                       {b.name.split(' ')[0]} · ${b.amount % 1 === 0 ? b.amount : b.amount.toFixed(2)}
                     </div>
                   ))}
                   {dayBills.length > 2 && (
-                    <div style={{ background: 'var(--raised)', border: '1px solid var(--border-l)', borderRadius: 4, padding: '3px 7px', fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--mono)' }}>
+                    <div className="rounded px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground bg-muted/50 border border-border">
                       +{dayBills.length - 2} more
                     </div>
                   )}
@@ -413,52 +417,52 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* ── Week grid ── */}
+      {/* Week grid */}
       {calView === 'week' && (
-        <div style={{ border: '1px solid var(--border-l)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
+        <Card className="overflow-hidden">
+          <div className="grid grid-cols-7">
             {weekDays.map(({ d, m, y }, idx) => {
               const isTodayCol = d === today.d && m === today.m && y === today.y;
-              const isSel      = selDate?.d === d && selDate?.m === m && selDate?.y === y;
               const dayBills   = getBillsForDate(bills, y, m, d, today);
               const hasBill    = dayBills.length > 0;
-              const colBg      = isSel ? 'rgba(59,130,246,0.13)' : isTodayCol ? 'rgba(59,130,246,0.07)' : 'var(--surface)';
               const crossMonth = m !== weekStart.m;
 
               return (
                 <div
                   key={idx}
-                  onClick={() => setSelDate(isSel ? null : { d, m, y })}
-                  style={{ display: 'flex', flexDirection: 'column', background: colBg, cursor: 'pointer', transition: 'background .15s', borderRight: idx < 6 ? '1px solid var(--border-l)' : 'none', boxShadow: isSel ? 'inset 0 0 0 1.5px rgba(59,130,246,0.55)' : isTodayCol ? 'inset 0 0 0 1px rgba(59,130,246,0.3)' : 'none' }}
+                  onClick={() => setSelDate({ d, m, y })}
+                  className={`flex flex-col cursor-pointer transition-colors hover:bg-muted/30 ${idx < 6 ? 'border-r border-border' : ''} ${isTodayCol ? 'bg-blue-500/[0.04]' : ''}`}
                 >
-                  {/* Column header */}
-                  <div style={{ background: 'var(--raised)', borderBottom: '1px solid var(--border-l)', padding: '10px 8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.07em', fontFamily: 'var(--mono)', marginBottom: 5 }}>
+                  <div className="bg-muted/50 border-b border-border px-2 py-2.5 text-center">
+                    <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-mono mb-1">
                       {DOW[idx]}
                     </div>
                     {isTodayCol ? (
-                      <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: '50%', width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, fontFamily: 'var(--mono)' }}>{d}</span>
+                      <span className="w-[26px] h-[26px] rounded-full bg-primary text-primary-foreground inline-flex items-center justify-center text-[13px] font-bold font-mono">
+                        {d}
+                      </span>
                     ) : (
-                      <span style={{ fontSize: 14, fontWeight: hasBill ? 600 : 400, color: hasBill ? 'var(--text)' : 'var(--text2)', fontFamily: 'var(--mono)' }}>{d}</span>
+                      <span className={`text-sm font-mono ${hasBill ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+                        {d}
+                      </span>
                     )}
                     {crossMonth && (
-                      <div style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'var(--mono)', marginTop: 3, opacity: 0.7 }}>
+                      <div className="text-[10px] text-muted-foreground font-mono mt-0.5 opacity-70">
                         {MONTHS[m]!.slice(0, 3)}
                       </div>
                     )}
                   </div>
 
-                  {/* Bill chips — show all, no truncation */}
-                  <div style={{ padding: '8px 6px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 120 }}>
+                  <div className="p-1.5 flex flex-col flex-1 min-h-[120px]">
                     {dayBills.length === 0 ? (
-                      <div style={{ fontSize: 11, color: 'var(--text2)', fontFamily: 'var(--sans)', opacity: 0.5, paddingTop: 4 }}>—</div>
+                      <div className="text-[11px] text-muted-foreground/50 pt-1">—</div>
                     ) : (
                       dayBills.map(b => (
-                        <div key={b.id} style={chipStyle(STATUS_COLOR[b.status])}>
-                          {b.name.split(' ')[0]} · {usd(b.amount)}
+                        <div key={b.id} className={`rounded px-1.5 py-0.5 text-[10px] font-mono mb-0.5 truncate border ${STATUS_VARIANT[b.status]}`}>
+                          {b.name.split(' ')[0]} · {USD.format(b.amount)}
                         </div>
                       ))
                     )}
@@ -467,20 +471,19 @@ export function PaymentsCalendar({ bills, today, onAddBill }: Props) {
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* ── Day detail panel (shared) ── */}
-      {selDate !== null && (
-        <DayDetail
-          day={selDate.d}
-          month={selDate.m}
-          year={selDate.y}
-          bills={detailBills}
-          isToday={isSelToday}
-        />
-      )}
-
+      {/* Day detail dialog */}
+      <DayDialog
+        open={selDate !== null}
+        onClose={() => setSelDate(null)}
+        day={selDate?.d ?? 1}
+        month={selDate?.m ?? 0}
+        year={selDate?.y ?? 2026}
+        bills={detailBills}
+        isToday={isSelToday}
+      />
     </div>
   );
 }

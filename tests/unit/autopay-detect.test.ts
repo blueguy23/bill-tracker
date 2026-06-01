@@ -117,6 +117,7 @@ describe('detectAutoPayments — price alerts', () => {
     mockDb = {
       queryMany: vi.fn(),
       updateOne: vi.fn(),
+      deleteOne: vi.fn(),
     };
   });
 

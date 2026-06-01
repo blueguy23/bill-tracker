@@ -24,7 +24,7 @@ test.describe('Subscriptions tab (/payments?tab=subscriptions)', () => {
     await page.goto('/payments?tab=subscriptions');
 
     const nav = page.locator('aside nav');
-    const link = nav.locator('a', { hasText: 'Payments' });
+    const link = nav.locator('a', { hasText: 'Bills & Payments' });
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('aria-current', 'page');
   });

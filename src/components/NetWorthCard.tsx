@@ -14,7 +14,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  checking: 'bg-blue-500/10 text-blue-400',
+  checking: 'bg-zinc-400/10 text-zinc-400',
   savings: 'bg-emerald-500/10 text-emerald-400',
   credit: 'bg-red-500/10 text-red-400',
   investment: 'bg-violet-500/10 text-violet-400',

@@ -161,6 +161,7 @@ export function SettingsShell({ profile, lastSyncAt, discordConfigured, dueSoonD
                 hideTransfers: profile.hideTransfers,
                 compactRows: profile.compactRows,
                 numberFormat: profile.numberFormat,
+                payFrequency: profile.payFrequency,
               }}
             />
           )}

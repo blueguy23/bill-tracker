@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui/button';
 import type { BillResponse } from '@/types/bill';
 
 interface Props {
@@ -8,13 +9,6 @@ interface Props {
 }
 
 const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-type DotStatus = 'paid' | 'overdue' | 'due-soon' | 'upcoming';
-const DOT_COLOR: Record<DotStatus, string> = {
-  paid: 'var(--green)', overdue: 'var(--red)', 'due-soon': 'var(--gold)', upcoming: 'rgba(255,255,255,0.2)',
-};
 
 function yyyymm(today: { y: number; m: number }): string {
   return `${today.y}-${String(today.m + 1).padStart(2, '0')}`;
@@ -26,18 +20,8 @@ function dayOfMonth(bill: BillResponse): number | null {
   return isNaN(d.getTime()) ? null : d.getDate();
 }
 
-function dotStatus(bill: BillResponse, day: number, todayDay: number, mm: string): DotStatus {
-  if (bill.isPaid && bill.paidMonth === mm) return 'paid';
-  if (day < todayDay) return 'overdue';
-  if (day - todayDay <= 3) return 'due-soon';
-  return 'upcoming';
-}
-
 export function PaymentsHero({ bills, today, onAddBill }: Props) {
-  const mm          = yyyymm(today);
-  const daysInMonth = new Date(today.y, today.m + 1, 0).getDate();
-  const todayPct    = ((today.d - 0.5) / daysInMonth) * 100;
-  const monthName   = MONTHS[today.m] ?? '';
+  const mm = yyyymm(today);
 
   const paidBills      = bills.filter(b => b.isPaid && b.paidMonth === mm);
   const unpaidBills    = bills.filter(b => !(b.isPaid && b.paidMonth === mm));
@@ -59,11 +43,6 @@ export function PaymentsHero({ bills, today, onAddBill }: Props) {
     return day !== null && day < today.d;
   });
 
-  const dots = bills
-    .map(b => ({ b, day: dayOfMonth(b) }))
-    .filter((x): x is { b: BillResponse; day: number } => x.day !== null && x.day >= 1 && x.day <= daysInMonth)
-    .map(({ b, day }) => ({ b, day, pct: ((day - 0.5) / daysInMonth) * 100, st: dotStatus(b, day, today.d, mm) }));
-
   const alertBill = nextDue ?? (overdueBills.length > 0 ? { bill: overdueBills[0]!, day: dayOfMonth(overdueBills[0]!) ?? 0 } : null);
   const isOverdueAlert = !nextDue && overdueBills.length > 0;
 
@@ -83,9 +62,9 @@ export function PaymentsHero({ bills, today, onAddBill }: Props) {
             {USD.format(totalAmount)} committed · {autoPayPct}% on autopay
           </div>
         </div>
-        <button onClick={onAddBill} data-testid="add-bill-btn" style={{ background: 'var(--gold)', color: '#1a0a00', fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+        <Button onClick={onAddBill} data-testid="add-bill-btn" style={{ background: 'var(--gold)', color: '#1a0a00' }}>
           + Add bill
-        </button>
+        </Button>
       </div>
 
       {/* Progress bar */}
@@ -114,30 +93,6 @@ export function PaymentsHero({ bills, today, onAddBill }: Props) {
         </div>
       )}
 
-      {/* Timeline */}
-      <div style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
-          <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>{monthName} · when bills hit</span>
-          <div style={{ display: 'flex', gap: 12 }} aria-hidden="true">
-            {(['paid','overdue','due-soon','upcoming'] as DotStatus[]).map(s => (
-              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--sans)' }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: DOT_COLOR[s] }} />
-                {s === 'due-soon' ? 'due soon' : s}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div aria-label={`Bill timeline for ${monthName}`} style={{ display: 'flex', alignItems: 'center', height: 28, background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '0 12px', position: 'relative', overflow: 'hidden' }}>
-          <div aria-hidden="true" style={{ position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0, width: 1.5, background: 'rgba(255,255,255,0.25)' }} />
-          <div style={{ flex: 1, position: 'relative', height: '100%' }}>
-            {dots.map(({ b, pct, st }) => (
-              <div key={b._id} aria-hidden="true" style={{ position: 'absolute', left: `${pct}%`, top: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div title={`${b.name} — ${MONTHS_SHORT[today.m]} ${b.dueDate}`} style={{ width: 8, height: 8, borderRadius: '50%', background: DOT_COLOR[st] }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -1,20 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { useTheme } from './ThemeProvider';
-import {
-  Chart,
-  LineController, LineElement, PointElement,
-  CategoryScale, LinearScale,
-  Tooltip, Filler,
-} from 'chart.js';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import type { ForecastDay } from '@/lib/forecast';
-
-Chart.register(
-  LineController, LineElement, PointElement,
-  CategoryScale, LinearScale,
-  Tooltip, Filler,
-);
 
 interface Tokens {
   GRID: string;
@@ -23,18 +12,16 @@ interface Tokens {
   FILL: string;
   INC: string;
   EXP: string;
-  TOOLTIP: { backgroundColor: string; borderColor: string; borderWidth: number; titleColor: string; bodyColor: string; padding: number };
   FONT: string;
 }
 
 const DARK: Tokens = {
   GRID: 'rgba(255,255,255,0.04)',
   TEXT3: '#44445a',
-  LINE: 'oklch(0.68 0.22 265)',
+  LINE: '#a1a1aa',
   FILL: 'rgba(99,91,255,0.08)',
   INC: '#22c55e',
   EXP: '#ef4444',
-  TOOLTIP: { backgroundColor: '#17171e', borderColor: '#1e1e2a', borderWidth: 1, titleColor: '#ededf5', bodyColor: '#8080a0', padding: 10 },
   FONT: "'IBM Plex Mono', monospace",
 };
 
@@ -45,7 +32,6 @@ const LIGHT: Tokens = {
   FILL: 'rgba(42,91,215,0.08)',
   INC: '#187A5C',
   EXP: '#C9624A',
-  TOOLTIP: { backgroundColor: '#FFFFFF', borderColor: '#E2E7EE', borderWidth: 1, titleColor: '#0F1729', bodyColor: '#5C6679', padding: 10 },
   FONT: "'JetBrains Mono', monospace",
 };
 
@@ -56,101 +42,8 @@ interface ForecastChartProps {
 }
 
 export function ForecastChart({ forecast }: ForecastChartProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef = useRef<Chart | null>(null);
   const { theme } = useTheme();
   const tokens = theme === 'light' ? LIGHT : DARK;
-
-  useEffect(() => () => { chartRef.current?.destroy(); }, []);
-
-  useEffect(() => {
-    if (!canvasRef.current || forecast.length === 0) return;
-    chartRef.current?.destroy();
-
-    const labels = forecast.map((d) => {
-      const dt = new Date(d.date + 'T00:00:00');
-      return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-
-    const pointColors = forecast.map((d) => {
-      if (d.events.some((e) => e.type === 'income')) return tokens.INC;
-      if (d.events.some((e) => e.type === 'bill' || e.type === 'subscription')) return tokens.EXP;
-      return 'transparent';
-    });
-
-    const pointRadii = forecast.map((d) =>
-      d.events.length > 0 ? 4 : 0,
-    );
-
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Projected Balance',
-          data: forecast.map((d) => d.balance),
-          borderColor: tokens.LINE,
-          backgroundColor: tokens.FILL,
-          fill: 'origin',
-          tension: 0.2,
-          borderWidth: 1.5,
-          pointRadius: pointRadii,
-          pointBackgroundColor: pointColors,
-          pointBorderColor: 'transparent',
-          pointHoverRadius: 6,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 800, easing: 'easeInOutQuart' },
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            ...tokens.TOOLTIP,
-            callbacks: {
-              title: (items) => items[0]?.label ?? '',
-              afterTitle: (items) => {
-                const idx = items[0]?.dataIndex;
-                if (idx == null) return '';
-                const day = forecast[idx];
-                if (!day?.events.length) return '';
-                return day.events
-                  .map((e) => {
-                    const sign = e.amount >= 0 ? '+' : '';
-                    return `${e.type === 'income' ? '↑' : '↓'} ${e.name} ${sign}${USD.format(e.amount)}`;
-                  })
-                  .join('\n');
-              },
-              label: (c) => ` Balance: ${USD.format(c.parsed.y ?? 0)}`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            border: { display: false },
-            grid: { color: tokens.GRID },
-            ticks: {
-              color: tokens.TEXT3,
-              font: { family: tokens.FONT, size: 10 },
-              maxTicksLimit: 13,
-              maxRotation: 0,
-            },
-          },
-          y: {
-            border: { display: false },
-            grid: { color: tokens.GRID },
-            ticks: {
-              color: tokens.TEXT3,
-              font: { family: tokens.FONT, size: 10 },
-              callback: (v) => '$' + (Number(v) / 1000).toFixed(0) + 'k',
-            },
-          },
-        },
-      },
-    });
-  }, [forecast, tokens]);
 
   if (forecast.length === 0) {
     return (
@@ -159,6 +52,19 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
       </div>
     );
   }
+
+  const chartData = forecast.map((d) => {
+    const dt = new Date(d.date + 'T00:00:00');
+    return {
+      label: dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      balance: d.balance,
+      events: d.events,
+    };
+  });
+
+  const chartConfig = {
+    balance: { label: 'Balance', color: tokens.LINE },
+  } satisfies ChartConfig;
 
   const legendItems: [string, string][] = [
     [tokens.LINE, 'BALANCE'],
@@ -183,7 +89,64 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
         </div>
       </div>
       <div style={{ position: 'relative', height: 200 }}>
-        <canvas ref={canvasRef} />
+        <ChartContainer config={chartConfig} className="aspect-auto h-[200px] w-full">
+          <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
+            <CartesianGrid stroke={tokens.GRID} vertical={false} />
+            <XAxis
+              dataKey="label"
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: tokens.TEXT3, fontFamily: tokens.FONT, fontSize: 10 }}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tick={{ fill: tokens.TEXT3, fontFamily: tokens.FONT, fontSize: 10 }}
+              tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+              width={45}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 12 }}
+              labelStyle={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}
+              formatter={(value) => [USD.format(Number(value)), 'Balance']}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const point = payload[0];
+                const events = (point?.payload as typeof chartData[number])?.events ?? [];
+                return (
+                  <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 6, padding: 10, fontFamily: 'var(--mono)', fontSize: 12 }}>
+                    <div style={{ color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                    {events.length > 0 && (
+                      <div style={{ color: 'var(--text2)', marginBottom: 4 }}>
+                        {events.map((e, i) => {
+                          const sign = e.amount >= 0 ? '+' : '';
+                          return <div key={i}>{e.type === 'income' ? '↑' : '↓'} {e.name} {sign}{USD.format(e.amount)}</div>;
+                        })}
+                      </div>
+                    )}
+                    <div style={{ color: 'var(--text2)' }}>Balance: {USD.format(point?.value as number ?? 0)}</div>
+                  </div>
+                );
+              }}
+            />
+            <defs>
+              <linearGradient id="forecastFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={tokens.LINE} stopOpacity={0.12} />
+                <stop offset="100%" stopColor={tokens.LINE} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="balance"
+              stroke={tokens.LINE}
+              strokeWidth={1.5}
+              fill="url(#forecastFill)"
+              dot={false}
+              activeDot={{ r: 5, fill: tokens.LINE, strokeWidth: 0 }}
+            />
+          </AreaChart>
+        </ChartContainer>
       </div>
     </div>
   );

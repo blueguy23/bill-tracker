@@ -6,7 +6,7 @@ interface CreditHealthScoreProps {
 
 function getLabel(score: number): { label: string; color: string; from: string; to: string } {
   if (score >= 72) return { label: 'Excellent', color: 'text-emerald-400', from: 'from-emerald-500/[0.12]', to: 'to-zinc-900' };
-  if (score >= 54) return { label: 'Good', color: 'text-blue-400', from: 'from-blue-500/[0.12]', to: 'to-zinc-900' };
+  if (score >= 54) return { label: 'Good', color: 'text-zinc-300', from: 'from-zinc-400/[0.12]', to: 'to-zinc-900' };
   if (score >= 36) return { label: 'Fair', color: 'text-amber-400', from: 'from-amber-500/[0.12]', to: 'to-zinc-900' };
   return { label: 'Poor', color: 'text-red-400', from: 'from-red-500/[0.12]', to: 'to-zinc-900' };
 }
