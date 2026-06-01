@@ -12,40 +12,40 @@
 }
 
 :root {
-  --bg:       #0b0b0f;
-  --surface:  #131318;
-  --raised:   #17171e;
-  --border:   #1e1e2a;
-  --border-l: #252535;
-  --text:     #ededf5;
-  --text2:    #8080a0;
-  --text3:    #6b6b85;
-  --accent:   oklch(0.68 0.22 265);
-  --accent-a: oklch(0.68 0.22 265 / 0.15);
-  --green:    #22c55e;
-  --red:      #ef4444;
-  --gold:     oklch(0.67 0.13 40);
+  --bg:       #09090b;
+  --surface:  #0f0f11;
+  --raised:   #18181b;
+  --border:   rgba(255,255,255,0.06);
+  --border-l: rgba(255,255,255,0.09);
+  --text:     #fafafa;
+  --text2:    #a1a1aa;
+  --text3:    #52525b;
+  --accent:   #fafafa;
+  --accent-a: rgba(255,255,255,0.06);
+  --green:    #4ade80;
+  --red:      #f87171;
+  --gold:     #fbbf24;
   --mono:     'IBM Plex Mono', monospace;
-  --sans:     'Plus Jakarta Sans', sans-serif;
+  --sans:     'Inter', system-ui, sans-serif;
 
   /* sidebar */
-  --sidebar-bg: linear-gradient(180deg, #0f0f14 0%, #0b0b0f 100%);
+  --sidebar-bg: linear-gradient(180deg, #0f0f11 0%, #09090b 100%);
 
   /* progress bars */
   --progress-track:  rgba(255,255,255,0.05);
   --progress-marker: rgba(255,255,255,0.45);
-  --on-fill-text:    #0b0b0f;
-  --pace-good-fill:  rgba(34,197,94,0.85);
-  --pace-warn-fill:  oklch(0.67 0.13 40 / 0.85);
-  --pace-bad-fill:   rgba(239,68,68,0.85);
+  --on-fill-text:    #09090b;
+  --pace-good-fill:  rgba(74,222,128,0.85);
+  --pace-warn-fill:  rgba(251,191,36,0.85);
+  --pace-bad-fill:   rgba(248,113,113,0.85);
 
   /* shadcn token aliases — maps our tokens to shadcn's expected names */
   --background:             var(--bg);
   --foreground:             var(--text);
   --card:                   var(--surface);
   --card-foreground:        var(--text);
-  --primary:                var(--accent);
-  --primary-foreground:     var(--on-fill-text);
+  --primary:                var(--text);
+  --primary-foreground:     var(--bg);
   --secondary:              var(--raised);
   --secondary-foreground:   var(--text2);
   --muted:                  var(--raised);
@@ -56,85 +56,92 @@
   --popover:                var(--surface);
   --popover-foreground:     var(--text);
   --input:                  var(--border);
-  --ring:                   var(--border);
+  --ring:                   rgba(255,255,255,0.12);
   --radius:                 0.75rem;
 
+  /* shadcn chart palette */
+  --chart-1: #4ade80;
+  --chart-2: #fbbf24;
+  --chart-3: #a1a1aa;
+  --chart-4: #f87171;
+  --chart-5: #c084fc;
+
   /* legacy aliases kept for backward compat */
-  --bg-old:   #0b0b0f;
-  --s1:       #131318;
-  --s2:       #17171e;
-  --s3:       #1e1e2a;
-  --b1:       #1e1e2a;
-  --b2:       #252535;
-  --text-old: #ededf5;
-  --text2-old:#8080a0;
-  --inc:      #22c55e;
-  --exp:      #ef4444;
+  --bg-old:   #09090b;
+  --s1:       #0f0f11;
+  --s2:       #18181b;
+  --s3:       rgba(255,255,255,0.06);
+  --b1:       rgba(255,255,255,0.06);
+  --b2:       rgba(255,255,255,0.09);
+  --text-old: #fafafa;
+  --text2-old:#a1a1aa;
+  --inc:      #4ade80;
+  --exp:      #f87171;
 }
 
 [data-theme="light"] {
-  /* surfaces */
-  --bg:      #F1F4F8;
-  --surface: #FFFFFF;
-  --raised:  #F7F9FC;
-  --border:  #E2E7EE;
-  --border-l:#CDD5DF;
+  /* surfaces — neutral zinc */
+  --bg:      #fafafa;
+  --surface: #ffffff;
+  --raised:  #f4f4f5;
+  --border:  rgba(0,0,0,0.08);
+  --border-l:rgba(0,0,0,0.12);
 
   /* text */
-  --text:  #0F1729;
-  --text2: #5C6679;
-  --text3: #8A93A6;
+  --text:  #09090b;
+  --text2: #52525b;
+  --text3: #a1a1aa;
 
-  /* brand accent (ember — interactive only) */
-  --accent:   #C9624A;
-  --accent-a: rgba(201,98,74,0.12);
+  /* accent — brightness-based (dark text) */
+  --accent:   #18181b;
+  --accent-a: rgba(0,0,0,0.06);
 
   /* semantic */
-  --green: #187A5C;
-  --red:   #C0432A;
-  --gold:  #C47A2A;
+  --green: #16a34a;
+  --red:   #dc2626;
+  --gold:  #ca8a04;
 
   /* extended semantic tokens */
-  --accent-soft: #FCE6DD;
-  --good:        #187A5C;
-  --good-soft:   #D5EDE3;
-  --bad:         #C0432A;
-  --bad-soft:    #F8DDD3;
-  --info:        #2A5BD7;
-  --info-soft:   #DEE7FA;
+  --accent-soft: #f4f4f5;
+  --good:        #16a34a;
+  --good-soft:   #dcfce7;
+  --bad:         #dc2626;
+  --bad-soft:    #fee2e2;
+  --info:        #52525b;
+  --info-soft:   #f4f4f5;
 
   /* chart tokens */
-  --chart-grid:   rgba(15,23,41,0.07);
-  --chart-income: #187A5C;
-  --chart-spend:  #C9624A;
-  --chart-net:    #8A93A6;
+  --chart-grid:   rgba(0,0,0,0.06);
+  --chart-income: #16a34a;
+  --chart-spend:  #dc2626;
+  --chart-net:    #a1a1aa;
 
   /* sidebar */
-  --sidebar-bg: #FFFFFF;
+  --sidebar-bg: #ffffff;
 
   /* progress bars */
-  --progress-track:  rgba(15,23,41,0.07);
-  --progress-marker: rgba(15,23,41,0.2);
-  --on-fill-text:    #FFFFFF;
-  --pace-good-fill:  rgba(24,122,92,0.9);
-  --pace-warn-fill:  rgba(196,122,42,0.85);
-  --pace-bad-fill:   rgba(192,67,42,0.85);
+  --progress-track:  rgba(0,0,0,0.06);
+  --progress-marker: rgba(0,0,0,0.25);
+  --on-fill-text:    #ffffff;
+  --pace-good-fill:  rgba(22,163,74,0.9);
+  --pace-warn-fill:  rgba(202,138,4,0.85);
+  --pace-bad-fill:   rgba(220,38,38,0.85);
 
   /* typography */
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --sans: 'Inter', -apple-system, system-ui, sans-serif;
 
   /* legacy aliases */
-  --bg-old:    #F1F4F8;
-  --s1:        #FFFFFF;
-  --s2:        #F7F9FC;
-  --s3:        #E2E7EE;
-  --b1:        #E2E7EE;
-  --b2:        #CDD5DF;
-  --text-old:  #0F1729;
-  --text2-old: #5C6679;
-  --inc:       #187A5C;
-  --exp:       #C0432A;
+  --bg-old:    #fafafa;
+  --s1:        #ffffff;
+  --s2:        #f4f4f5;
+  --s3:        rgba(0,0,0,0.08);
+  --b1:        rgba(0,0,0,0.08);
+  --b2:        rgba(0,0,0,0.12);
+  --text-old:  #09090b;
+  --text2-old: #52525b;
+  --inc:       #16a34a;
+  --exp:       #dc2626;
 }
 
 body {

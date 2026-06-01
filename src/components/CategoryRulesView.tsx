@@ -8,7 +8,7 @@ import type { TransactionCategory, CategoryRule } from '@/lib/categorization/typ
 
 const CAT_COLORS: Record<TransactionCategory, string> = {
   food:          '#f97316',
-  transport:     '#3b82f6',
+  transport:     '#a1a1aa',
   shopping:      '#8b5cf6',
   entertainment: '#ec4899',
   health:        '#10b981',

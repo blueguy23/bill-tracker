@@ -32,7 +32,7 @@ export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
   useEffect(() => {
     fetch('/api/v1/goals')
       .then(r => r.json())
-      .then((data: GoalResponse[]) => setGoals(data.map(toGoalData)))
+      .then((data: { goals: GoalResponse[] }) => setGoals(data.goals.map(toGoalData)))
       .catch(err => console.error('[Goals] fetch failed', err))
       .finally(() => setGoalsLoading(false));
   }, []);

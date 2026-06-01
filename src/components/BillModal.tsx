@@ -124,7 +124,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
   }
 
   const label = 'block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5';
-  const input = 'w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors';
+  const input = 'w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 transition-colors';
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -171,7 +171,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
                   type="checkbox"
                   checked={form[key] as boolean}
                   onChange={(e) => set(key, e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
+                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-zinc-300 focus:ring-zinc-500 focus:ring-offset-0"
                 />
                 {lbl}
               </label>
@@ -243,7 +243,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
               For loans or ambiguous bills, link a real transaction so Folio knows what to look for.
             </p>
             {form.paymentDescriptionHint ? (
-              <div className="flex items-center gap-2 bg-zinc-800 border border-blue-500/30 rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-600/40 rounded-lg px-3 py-2.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>
                 <span className="text-sm text-zinc-200 font-mono flex-1 truncate">{form.paymentDescriptionHint}</span>
                 <button

@@ -3,17 +3,8 @@ export const dynamic = 'force-dynamic';
 import type { BillResponse, BillSummary, Bill, BillCategory } from '@/types/bill';
 import type { EnrichedMatch } from '@/types/subscription';
 import type { Account } from '@/lib/simplefin/types';
-// import { Suspense } from 'react';
-import { MatchBanner } from '@/components/MatchBanner';
-import { OnboardingBanner } from '@/components/OnboardingBanner';
-import { NewSubscriptionsBanner } from '@/components/NewSubscriptionsBanner';
-// TODO: relocate or remove
-// import { DashboardCharts, SpendByCategoryCard } from '@/components/DashboardCharts';
-// import { PeriodSelector } from '@/components/PeriodSelector';
-// import { CashFlowToggle } from '@/components/CashFlowToggle';
 import type { CashFlowViewMode } from '@/components/CashFlowToggle';
 import { NotificationBell } from '@/components/NotificationBell';
-import { MonthInReview, AnomalyCard, KpiTile, SectionTitle, CategoryRow, getCategoryIcon } from '@/components/DashboardCards';
 import type { Period } from '@/components/PeriodSelector';
 import { getDb } from '@/adapters/db';
 import { listBills } from '@/adapters/bills';
@@ -22,15 +13,17 @@ import { listAccountMeta } from '@/adapters/accountMeta';
 import { listBudgets } from '@/adapters/budgets';
 import { getCashFlowHistory } from '@/adapters/cashFlowHistory';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
-import type { Budget as _Budget } from '@/types/budget';
 import type { Holding } from '@/lib/simplefin/types';
-// TODO: relocate or remove
-// import { PortfolioWidget } from '@/components/PortfolioWidget';
-// import { ForecastChart } from '@/components/ForecastChart';
 import { getForecast } from '@/adapters/forecast';
+import { getPayPeriodData } from '@/adapters/payPeriod';
+import { getUserProfile } from '@/adapters/userProfile';
 import { PanelTrigger } from '@/components/PanelTrigger';
 import { DetailPanel } from '@/components/DetailPanel';
 import type { DetailPanelData, PanelBill, PanelTransaction, PanelAccount } from '@/components/DetailPanel';
+import { MonthlyDashboard } from '@/components/MonthlyDashboard';
+import { PayPeriodDashboard } from '@/components/PayPeriodDashboard';
+import { PayPeriodHeader } from '@/components/PayPeriodHeader';
+import { DashboardViewToggle } from '@/components/DashboardViewToggle';
 
 function periodToRange(p: Period): { start: Date; end: Date; historyMonths: number; label: string } {
   const now = new Date();
@@ -100,15 +93,17 @@ function computeSummary(bills: BillResponse[]): BillSummary {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string; view?: string }> }) {
-  const { p, view } = await searchParams;
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string; view?: string; offset?: string }> }) {
+  const { p, view, offset: offsetStr } = await searchParams;
   const period   = (['1W', '1M', '3M', 'YTD', '1Y'].includes(p ?? '') ? p : '1M') as Period;
   const viewMode: CashFlowViewMode = view === 'normalized' ? 'normalized' : 'actual';
+  const activeView = view === 'monthly' ? 'monthly' : 'payperiod';
+  const periodOffset = parseInt(offsetStr ?? '0', 10) || 0;
   const { start, end, historyMonths } = periodToRange(period);
 
   const db = await getDb();
 
-  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, _forecastResult] = await Promise.all([
+  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, _forecastResult, payPeriodData, userProfile] = await Promise.all([
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
@@ -116,6 +111,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     listBudgets(db),
     getCashFlowHistory(db, historyMonths, viewMode === 'normalized'),
     getForecast(db),
+    activeView === 'payperiod' ? getPayPeriodData(db, periodOffset) : Promise.resolve(null),
+    getUserProfile(db),
   ]);
 
   const metaList = allAccounts.length > 0 ? await listAccountMeta(db, allAccounts.map(a => a._id)) : [];
@@ -133,10 +130,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const posted = txn.posted instanceof Date ? txn.posted : new Date(Number(txn.posted) * 1000);
     return [{ ...m, txnDescription: txn.description, txnAmount: Number(txn.amount), txnDate: posted.toISOString() }];
   });
-
-  const _portfolioHoldings: Holding[] = accounts
-    .filter(a => a.accountType === 'investment' && a.holdings?.length)
-    .flatMap(a => a.holdings ?? []);
 
   const summary     = computeSummary(bills);
   const savingsRate = cashFlow.income > 0 ? ((cashFlow.income - cashFlow.expenses) / cashFlow.income) * 100 : 0;
@@ -191,18 +184,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   // ── Derived display values ────────────────────────────────────────────────
   const h        = new Date().getHours();
-  const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const firstName = userProfile.displayName?.split(/\s+/)[0] || '';
+  const greeting = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + (firstName ? `, ${firstName}` : '');
   const dateStr  = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-
-  const monthlyBills = bills.filter(b => b.recurrenceInterval !== 'yearly');
-  const paidCount    = bills.filter(b => b.isPaid).length;
-  const billsPct     = monthlyBills.length > 0 ? Math.round((paidCount / monthlyBills.length) * 100) : 0;
-
-  const savingsBarW = Math.min(Math.max(savingsRate, 0) / 20 * 100, 100);
-
-  const overBudget = budgetAlerts
-    .filter(b => b.spent > b.limit)
-    .sort((a, b) => (b.spent / b.limit) - (a.spent / a.limit));
 
   const panelData: DetailPanelData = {
     bills: bills.map<PanelBill>(b => ({
@@ -227,6 +211,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     budgetAlerts,
   };
 
+  const showPayPeriod = activeView === 'payperiod' && payPeriodData !== null;
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
@@ -243,193 +229,58 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <div style={{ padding: '0 24px 24px' }}>
 
-        <OnboardingBanner simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)} accountCount={accounts.length} billCount={rawBills.length} hasBudget={budgets.length > 0} />
-        <NewSubscriptionsBanner />
-        <MatchBanner matches={enrichedMatches} />
-
-        {/* TODO: replace with real review data — show only on 1st-5th of month */}
-        <MonthInReview
-          month={new Date(new Date().getFullYear(), new Date().getMonth() - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-          stats={[
-            { label: 'Top Category', value: 'Food', detail: '$412 spent' },
-            { label: 'Savings Rate', value: '22%', detail: 'Above target', color: 'var(--green)' },
-            { label: 'Biggest Anomaly', value: 'Amazon', detail: '+$85 vs usual', color: 'var(--gold)' },
-            { label: 'Net Change', value: '+$680', detail: 'Across all accounts', color: 'var(--green)' },
-          ]}
-        />
-
-        {/* TODO: replace with real anomaly detection data */}
-        {priceAlerts.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-            {priceAlerts.slice(0, 2).map(a => (
-              <AnomalyCard key={a.name} merchant={a.name} amount={USD.format(Math.abs(a.newAmount - a.oldAmount))} usual={`${USD.format(a.oldAmount)}/mo`} />
-            ))}
-          </div>
-        )}
-
-        {/* Budget Alerts */}
-        {overBudget.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-            {overBudget.slice(0, 2).map(b => (
-              <div key={b.category} style={{ flex: 1, minWidth: 260, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0, background: 'rgba(239,68,68,0.12)', color: 'var(--red)' }}>!</div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{b.category} spending over budget</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.4 }}>{USD0.format(b.spent)} of {USD0.format(b.limit)} budget · {USD0.format(b.spent - b.limit)} over</div>
-                  </div>
-                </div>
-                <a href="/budget" style={{ alignSelf: 'flex-start', padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', background: 'rgba(239,68,68,0.12)', color: 'var(--red)', textDecoration: 'none' }}>Review</a>
+        {showPayPeriod ? (
+          <>
+            <PayPeriodHeader period={payPeriodData.period} activeView="payperiod" offset={periodOffset} />
+            <PayPeriodDashboard data={payPeriodData} />
+          </>
+        ) : activeView === 'payperiod' && payPeriodData === null ? (
+          <>
+            <PayPeriodHeader
+              period={{ start: new Date(), end: new Date(), isActive: true, dayNumber: 1, totalDays: 1, daysLeft: 0 }}
+              activeView="payperiod"
+              offset={0}
+            />
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+              padding: '40px 32px', textAlign: 'center', marginBottom: 20,
+            }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+                Set up your pay period
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16, maxWidth: 420, margin: '0 auto 16px' }}>
+                Configure your pay frequency in Settings to see your Safe to Spend dashboard. We couldn&apos;t auto-detect a clear income pattern.
+              </div>
+              <a href="/settings" style={{
+                display: 'inline-block', padding: '8px 20px', borderRadius: 8,
+                background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600,
+                textDecoration: 'none',
+              }}>
+                Go to Settings
+              </a>
+            </div>
+            <MonthlyDashboard
+              bills={bills} accounts={accounts} recentTransactions={recentTransactions}
+              cashFlow={cashFlow} enrichedMatches={enrichedMatches} summary={summary}
+              savingsRate={savingsRate} categorySpendData={categorySpendData}
+              budgetAlerts={budgetAlerts} billAlerts={billAlerts} priceAlerts={priceAlerts}
+              rawBillCount={rawBills.length} accountCount={accounts.length}
+              hasBudget={budgets.length > 0} simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)}
+            />
+          </>
+        ) : (
+          <>
+          <DashboardViewToggle activeView="monthly" />
+          <MonthlyDashboard
+            bills={bills} accounts={accounts} recentTransactions={recentTransactions}
+            cashFlow={cashFlow} enrichedMatches={enrichedMatches} summary={summary}
+            savingsRate={savingsRate} categorySpendData={categorySpendData}
+            budgetAlerts={budgetAlerts} billAlerts={billAlerts} priceAlerts={priceAlerts}
+            rawBillCount={rawBills.length} accountCount={accounts.length}
+            hasBudget={budgets.length > 0} simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)}
+          />
+          </>
         )}
-
-        {/* KPI Tiles */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-          <PanelTrigger type="money-left" style={{ flex: '1 1 0', minWidth: 0 }}>
-            <KpiTile
-              label="Money left after bills"
-              value={USD0.format(Math.max(0, cashFlow.net))}
-              trend={undefined}
-              context={`Net balance after upcoming bills · ${USD0.format(cashFlow.income)} in · ${USD0.format(cashFlow.expenses)} out`}
-              barPct={cashFlow.income > 0 ? ((cashFlow.income - cashFlow.expenses) / cashFlow.income) * 100 : 0}
-              barVariant={cashFlow.net >= 0 ? 'good' : 'warn'}
-            />
-          </PanelTrigger>
-          <PanelTrigger type="bills" style={{ flex: '1 1 0', minWidth: 0 }}>
-            <KpiTile
-              label="Bills covered this month"
-              value={`${paidCount} of ${monthlyBills.length}`}
-              trend={monthlyBills.length - paidCount > 0 ? { direction: 'neutral', text: `${monthlyBills.length - paidCount} left` } : undefined}
-              context={`${USD0.format(summary.totalPaid)} paid · ${USD0.format(summary.totalOwedThisMonth)} remaining`}
-              barPct={billsPct}
-              barVariant={billsPct >= 80 ? 'good' : 'warn'}
-            />
-          </PanelTrigger>
-          <PanelTrigger type="savings" style={{ flex: '1 1 0', minWidth: 0 }}>
-            <KpiTile
-              label="Savings rate"
-              value={`${Math.max(0, savingsRate).toFixed(0)}%`}
-              trend={savingsRate >= 20 ? { direction: 'up', text: 'On target' } : { direction: 'down', text: 'Below 20% target' }}
-              context={`${USD0.format(Math.max(0, cashFlow.net))} saved · target 20%`}
-              barPct={savingsBarW}
-              barVariant={savingsRate >= 20 ? 'good' : 'warn'}
-            />
-          </PanelTrigger>
-        </div>
-
-        {/* Spending by Category */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-          <SectionTitle title="Spending by Category" subtitle={new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })} />
-          {categorySpendData.length === 0 ? (
-            <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', padding: '24px 0' }}>No spending data yet</p>
-          ) : (
-            categorySpendData
-              .sort((a, b) => b.amount - a.amount)
-              .slice(0, 6)
-              .map(cat => {
-                const budget = budgetAlerts.find(b => b.category === cat.label);
-                return (
-                  <PanelTrigger key={cat.label} type="category" arg={cat.label}>
-                    <CategoryRow label={cat.label} icon={getCategoryIcon(cat.label)} spent={cat.amount} limit={budget?.limit ?? 0} barColor="var(--accent)" />
-                  </PanelTrigger>
-                );
-              })
-          )}
-        </div>
-
-        {/* Two-column: Upcoming Bills + Recent Transactions */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-
-          {/* Upcoming Bills */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Upcoming Bills</span>
-              {billAlerts.some(a => a.isOverdue || (a.daysUntilDue >= 0 && a.daysUntilDue <= 3)) && (
-                <span style={{ fontSize: 13, color: 'var(--gold)' }} title="Bills need attention">⚠</span>
-              )}
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>Next 14 days</span>
-            </div>
-            {billAlerts.length === 0 ? (
-              <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', padding: '24px 0' }}>No upcoming bills</p>
-            ) : (
-              billAlerts.filter(a => a.daysUntilDue >= 0).sort((a, b) => a.daysUntilDue - b.daysUntilDue).slice(0, 5).map(bill => {
-                const dueDate = new Date();
-                dueDate.setDate(dueDate.getDate() + bill.daysUntilDue);
-                const urgent = bill.isOverdue || bill.daysUntilDue <= 3;
-                return (
-                  <PanelTrigger key={bill.name} type="bill-detail" arg={bill.name}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      borderBottom: '1px solid var(--border)',
-                      background: urgent ? (bill.isOverdue ? 'rgba(239,68,68,0.04)' : 'rgba(212,148,58,0.04)') : 'transparent',
-                      margin: urgent ? '0 -8px' : 0, padding: urgent ? '10px 8px' : '10px 0',
-                      borderRadius: urgent ? 6 : 0,
-                    }}>
-                      <div style={{ textAlign: 'center', width: 36, flexShrink: 0 }}>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{dueDate.getDate()}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase' }}>{dueDate.toLocaleString('en-US', { weekday: 'short' })}</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{bill.name}</div>
-                      </div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>{USD.format(bill.amount)}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
-                        {urgent && <span style={{ fontSize: 11, color: bill.isOverdue ? 'var(--red)' : 'var(--gold)' }}>⚠</span>}
-                        <span>{bill.daysUntilDue}d</span>
-                      </div>
-                      <div style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, flexShrink: 0, background: bill.isOverdue ? 'rgba(239,68,68,0.12)' : urgent ? 'rgba(212,148,58,0.12)' : 'rgba(212,148,58,0.08)', color: bill.isOverdue ? 'var(--red)' : 'var(--gold)' }}>
-                        {bill.isOverdue ? 'Late' : 'Due'}
-                      </div>
-                    </div>
-                  </PanelTrigger>
-                );
-              })
-            )}
-          </div>
-
-          {/* Recent Transactions */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-              <SectionTitle title="Recent Transactions" subtitle="Last 7 days" />
-              <a href="/transactions" style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', fontFamily: 'var(--mono)', textDecoration: 'none', letterSpacing: '.04em' }}>All →</a>
-            </div>
-            {recentTransactions.length === 0 ? (
-              <p style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', textAlign: 'center', padding: '24px 0' }}>No transactions — sync to load</p>
-            ) : (
-              recentTransactions.slice(0, 5).map((t, i) => {
-                const amt = Number(t.amount);
-                const pos = amt >= 0;
-                const date = t.posted
-                  ? (t.posted instanceof Date ? t.posted : new Date(Number(t.posted) * 1000))
-                      .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                  : '';
-                return (
-                  <PanelTrigger key={t._id} type="transaction" arg={i}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: pos ? 'var(--green)' : 'var(--accent)' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.description}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 1, fontFamily: 'var(--mono)' }}>{t.category ?? 'Uncategorized'}</div>
-                      </div>
-                      <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: pos ? 'var(--green)' : 'var(--text)', flexShrink: 0 }}>
-                        {pos ? '+' : '−'}{USD.format(Math.abs(amt))}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--mono)', flexShrink: 0 }}>{date}</div>
-                    </div>
-                  </PanelTrigger>
-                );
-              })
-            )}
-          </div>
-
-        </div>
-
-        {/* TODO: relocate or remove */}
-        {/* <DashboardCharts history={history} /> */}
-        {/* <ForecastChart forecast={_forecastResult.days} /> */}
-        {/* <PortfolioWidget holdings={_portfolioHoldings} /> */}
       </div>
 
       <DetailPanel data={panelData} />
