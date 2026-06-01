@@ -1,6 +1,7 @@
 import type { StrictDB } from 'strictdb';
 import { listBills, updateBill } from '@/adapters/bills';
 import { createPayment } from '@/adapters/payments';
+import { createPendingConfirmation, pruneStaleConfirmations } from '@/adapters/pendingConfirmations';
 import { notifyPriceIncrease, notifyPriceDecrease } from '@/handlers/notifications';
 import type { Transaction } from '@/lib/simplefin/types';
 import type { Bill } from '@/types/bill';
@@ -93,6 +94,10 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
 
   const txnsThisMonth = txns.filter((t) => t.posted >= monthStart);
 
+  // Prune stale pending confirmations (>45 days old)
+  const pruned = await pruneStaleConfirmations(db);
+  if (pruned > 0) logger.info('autoPayDetect.pruned', { count: pruned });
+
   for (const bill of candidates) {
     const dueDay = typeof bill.dueDate === 'number' ? bill.dueDate : null;
     const eligibleTxns = (dueDay !== null && dueDay <= 7) ? txns : txnsThisMonth;
@@ -100,6 +105,22 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
     if (!result) continue;
 
     const { transaction: match, confidence } = result;
+
+    // Fuzzy matches are not reliable enough to auto-mark — queue for user confirmation
+    if (confidence === 'fuzzy') {
+      await createPendingConfirmation(db, {
+        billId: bill._id,
+        billName: bill.name,
+        billAmount: bill.amount,
+        transactionId: match._id,
+        transactionDescription: match.description,
+        transactionAmount: Math.abs(match.amount),
+        confidence,
+      });
+      logger.info('autoPayDetect.queued', { billName: bill.name, txnDesc: match.description, confidence });
+      continue;
+    }
+
     const chargedAmt  = Math.abs(match.amount);
     const expectedAmt = bill.lastChargedAmount ?? bill.amount;
     const absDiff     = chargedAmt - expectedAmt;
@@ -146,7 +167,6 @@ export async function detectAutoPayments(db: StrictDB): Promise<void> {
     if (!bill.isPaid) {
       await createPayment(db, { billId: bill._id, billName: bill.name, amount: bill.amount });
     }
-    // StrictDB's updateOne filter type doesn't expose MongoDB's _id query shape
     await db.updateOne<Bill>(
       'bills',
       { _id: bill._id } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
