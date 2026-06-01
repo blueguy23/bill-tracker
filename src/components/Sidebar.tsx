@@ -5,26 +5,18 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { FolioLogo } from './FolioLogo';
 
-interface NavItem {
-  href: string;
-  icon: string;
-  label: string;
-  hidden?: boolean;
-  badgeKey?: 'unpaidBills' | 'pendingSubs' | 'priceChanges';
-}
-
-const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
+const NAV_SECTIONS: { label: string; items: { href: string; icon: string; label: string; hidden?: boolean }[] }[] = [
   { label: 'Overview', items: [
     { href: '/',              icon: '▦', label: 'Dashboard' },
     { href: '/transactions',  icon: '↕', label: 'Transactions' },
-  ]},
-  { label: 'Money', items: [
-    { href: '/payments',                    icon: '↺', label: 'Bills & Payments', badgeKey: 'unpaidBills' },
-    { href: '/price-watch',                  icon: '◆', label: 'Price Watch', badgeKey: 'priceChanges' },
+    { href: '/payments',      icon: '↺', label: 'Payments' },
   ]},
   { label: 'Planning', items: [
-    { href: '/budget',    icon: '◎', label: 'Budget' },
-    { href: '/settings',  icon: '⚙', label: 'Settings' },
+    { href: '/budget',        icon: '◎', label: 'Budget & Goals' },
+    { href: '/settings',      icon: '⚙', label: 'Settings' },
+  ]},
+  { label: 'Insights', items: [
+    { href: '/credit-health', icon: '◇', label: 'Credit Health', hidden: true },
   ]},
 ];
 
@@ -40,23 +32,16 @@ function formatLastSync(iso: string | null): string {
 
 type SyncState = 'idle' | 'syncing' | 'done' | 'error' | 'quota';
 
-interface Badges {
-  unpaidBills: number;
-  pendingSubs: number;
-  priceChanges: number;
-}
-
 interface NavItemProps {
   href: string;
   icon: string;
   label: string;
   active: boolean;
-  badge?: number;
   hasAlert?: boolean;
   collapsed: boolean;
 }
 
-function NavItemEl({ href, icon, label, active, badge, hasAlert, collapsed }: NavItemProps) {
+function NavItem({ href, icon, label, active, hasAlert, collapsed }: NavItemProps) {
   const [hov, setHov] = useState(false);
   return (
     <Link
@@ -71,39 +56,21 @@ function NavItemEl({ href, icon, label, active, badge, hasAlert, collapsed }: Na
         width: '100%', borderRadius: 6,
         fontSize: 13, fontWeight: 500,
         fontFamily: 'var(--sans)',
-        color: active ? 'var(--text)' : hov ? 'var(--text)' : 'var(--text2)',
-        background: active ? 'rgba(255,255,255,0.06)' : hov ? 'var(--raised)' : 'transparent',
+        color: active ? 'var(--accent)' : hov ? 'var(--text)' : 'var(--text2)',
+        background: active ? 'var(--accent-a)' : hov ? 'var(--raised)' : 'transparent',
         textDecoration: 'none', transition: 'all .15s',
         marginBottom: 2,
         justifyContent: collapsed ? 'center' : 'flex-start',
         boxSizing: 'border-box',
-        position: 'relative',
       }}
     >
-      {/* Active indicator bar */}
-      {active && (
-        <span style={{
-          position: 'absolute', left: 0, top: 6, bottom: 6,
-          width: 2, borderRadius: 1, background: 'var(--accent)',
-        }} />
-      )}
       <span style={{ fontSize: 14, opacity: active ? 1 : 0.65, lineHeight: 1, flexShrink: 0 }}>{icon}</span>
       {!collapsed && <span style={{ flex: 1 }}>{label}</span>}
-      {!collapsed && badge !== undefined && badge > 0 && (
-        <span style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: 'var(--accent)', flexShrink: 0,
-        }} />
-      )}
-      {collapsed && badge !== undefined && badge > 0 && (
-        <span style={{
-          position: 'absolute', top: 4, right: 6,
-          width: 6, height: 6, borderRadius: '50%',
-          background: 'var(--accent)',
-        }} />
-      )}
-      {!collapsed && hasAlert && !badge && (
+      {!collapsed && hasAlert && (
         <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />
+      )}
+      {!collapsed && active && !hasAlert && (
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
       )}
     </Link>
   );
@@ -112,11 +79,6 @@ function NavItemEl({ href, icon, label, active, badge, hasAlert, collapsed }: Na
 interface SidebarProps { isOpen?: boolean; onClose?: () => void; collapsed?: boolean; onCollapseChange?: (v: boolean) => void; }
 
 const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-
-function isNavActive(pathname: string, href: string): boolean {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(href + '/');
-}
 
 export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseChange }: SidebarProps) {
   const pathname = usePathname();
@@ -128,7 +90,6 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
   const [netWorth, setNetWorth]     = useState<number>(0);
   const [accountCount, setAccountCount] = useState<number>(0);
   const [mtdChange, setMtdChange]   = useState<number | null>(null);
-  const [badges, setBadges] = useState<Badges>({ unpaidBills: 0, pendingSubs: 0, priceChanges: 0 });
 
   const fetchStatus = useCallback(() => {
     fetch('/api/v1/sync/status').then(r => r.json()).then(d => setLastSyncAt(d.lastSyncAt ?? null)).catch(() => {});
@@ -149,13 +110,9 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       .then(r => r.json())
       .then(d => setMtdChange(typeof d.net === 'number' ? d.net : null))
       .catch(() => {});
-    fetch('/api/v1/sidebar/badges')
-      .then(r => r.json())
-      .then(d => setBadges({ unpaidBills: d.unpaidBills ?? 0, pendingSubs: d.pendingSubs ?? 0, priceChanges: d.priceChanges ?? 0 }))
-      .catch(() => {});
   }, [fetchStatus]);
 
-  const PREFETCH = ['/', '/transactions', '/payments', '/price-watch', '/budget', '/settings'];
+  const PREFETCH = ['/', '/transactions', '/payments', '/budget', '/settings'];
   useEffect(() => { PREFETCH.forEach(r => router.prefetch(r)); }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSync() {
@@ -168,6 +125,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
       else { setSyncState('error'); setErrorMsg('Sync failed'); setTimeout(() => setSyncState('idle'), 5000); }
     } catch { setSyncState('error'); setErrorMsg('Network error'); setTimeout(() => setSyncState('idle'), 5000); }
   }
+
 
   const w = collapsed ? 64 : 224;
 
@@ -205,49 +163,44 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
           <button onClick={() => onCollapseChange(false)} style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: '8px 20px', fontSize: 14 }}>›</button>
         )}
 
+        {/* Net Worth — spacer pushes to bottom */}
+
         {/* Nav */}
         <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', overflowY: 'auto' }}>
-          {NAV_SECTIONS.map((section, si) => {
+          {NAV_SECTIONS.map(section => {
             const visibleItems = section.items.filter(item => !item.hidden);
             if (visibleItems.length === 0) return null;
             return (
-              <div key={section.label}>
-                {/* Section divider line (skip first section) */}
-                {si > 0 && !collapsed && (
-                  <div style={{ height: 1, background: 'var(--border)', margin: '8px 8px 4px' }} />
-                )}
-                {!collapsed && (
-                  <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', padding: '12px 8px 5px', fontWeight: 600, fontFamily: 'var(--mono)' }}>
-                    {section.label}
-                  </div>
-                )}
-                {collapsed && si > 0 && (
-                  <div style={{ height: 1, background: 'var(--border)', margin: '6px 8px' }} />
-                )}
-                {visibleItems.map(item => (
-                  <NavItemEl
-                    key={item.href}
-                    href={item.href}
-                    icon={item.icon}
-                    label={item.label}
-                    active={isNavActive(pathname, item.href)}
-                    badge={item.badgeKey ? badges[item.badgeKey] : undefined}
-                    collapsed={collapsed}
-                    hasAlert={item.href === '/settings' && hasUnknown}
-                  />
-                ))}
-              </div>
+            <div key={section.label}>
+              {!collapsed && (
+                <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.12em', padding: '12px 8px 5px', fontWeight: 600, fontFamily: 'var(--mono)' }}>
+                  {section.label}
+                </div>
+              )}
+              {visibleItems.map(item => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
+                  active={pathname === item.href}
+                  collapsed={collapsed}
+                  hasAlert={item.href === '/settings' && hasUnknown}
+                />
+              ))}
+            </div>
             );
           })}
         </nav>
 
-        {/* Net Worth + Sync (unified card) */}
+        {/* Net Worth */}
         <div
           onClick={handleSync}
           style={{
-            marginTop: 'auto', padding: collapsed ? '12px 8px' : '14px 14px',
+            marginTop: 'auto', padding: collapsed ? '12px 8px' : '14px 10px',
             borderTop: '1px solid var(--border)', cursor: 'pointer',
-            borderRadius: 0, transition: 'background .15s', flexShrink: 0,
+            borderRadius: 6, transition: 'background .15s', flexShrink: 0,
+            marginLeft: collapsed ? 0 : 10, marginRight: collapsed ? 0 : 10,
           }}
           onMouseEnter={e => (e.currentTarget.style.background = 'var(--raised)')}
           onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -255,26 +208,7 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
         >
           {!collapsed ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)' }}>Net Worth</div>
-                {/* Sync indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  {syncState === 'syncing' ? (
-                    <span style={{ display: 'inline-block', animation: 'btSpin 1s linear infinite', fontSize: 10, color: 'var(--text3)' }}>↻</span>
-                  ) : (
-                    <span style={{
-                      width: 5, height: 5, borderRadius: '50%',
-                      background: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--green)',
-                    }} />
-                  )}
-                  <span style={{ fontSize: 10, color: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--text3)', fontFamily: 'var(--mono)' }}>
-                    {syncState === 'syncing' ? 'Syncing…' :
-                     syncState === 'done' ? 'Just now' :
-                     syncState === 'error' || syncState === 'quota' ? (errorMsg ?? 'Failed') :
-                     formatLastSync(lastSyncAt).toLowerCase()}
-                  </span>
-                </div>
-              </div>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text3)', marginBottom: 4 }}>Net Worth</div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>
                 {netWorth > 0 ? USD0.format(netWorth) : '—'}
               </div>
@@ -284,21 +218,34 @@ export function Sidebar({ isOpen = true, onClose, collapsed = false, onCollapseC
               </div>
             </>
           ) : (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, color: 'var(--text)' }}>
-                {netWorth > 0 ? USD0.format(netWorth) : '—'}
-              </div>
-              <div style={{ marginTop: 4, display: 'flex', justifyContent: 'center' }}>
-                {syncState === 'syncing' ? (
-                  <span style={{ display: 'inline-block', animation: 'btSpin 1s linear infinite', fontSize: 10, color: 'var(--text3)' }}>↻</span>
-                ) : (
-                  <span style={{
-                    width: 5, height: 5, borderRadius: '50%',
-                    background: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--green)',
-                  }} />
-                )}
-              </div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, color: 'var(--text)', textAlign: 'center' }}>
+              {netWorth > 0 ? USD0.format(netWorth) : '—'}
             </div>
+          )}
+        </div>
+
+        {/* Sync status */}
+        <div
+          onClick={handleSync}
+          style={{
+            padding: collapsed ? '8px' : '10px 10px',
+            display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 8, fontSize: 11, color: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--text3)',
+            cursor: syncState === 'syncing' ? 'not-allowed' : 'pointer',
+            flexShrink: 0, marginLeft: collapsed ? 0 : 10, marginRight: collapsed ? 0 : 10,
+          }}
+          title="Click to sync"
+        >
+          {syncState === 'syncing' ? (
+            <span style={{ display: 'inline-block', animation: 'btSpin 1s linear infinite', fontSize: 12 }}>↻</span>
+          ) : (
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: syncState === 'error' || syncState === 'quota' ? 'var(--red)' : 'var(--green)', flexShrink: 0 }} />
+          )}
+          {!collapsed && (
+            syncState === 'syncing' ? 'Syncing…' :
+            syncState === 'done' ? 'Synced just now' :
+            syncState === 'error' || syncState === 'quota' ? (errorMsg ?? 'Sync failed') :
+            `Synced ${formatLastSync(lastSyncAt).toLowerCase()}`
           )}
         </div>
       </aside>

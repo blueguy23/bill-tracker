@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import type { CategoryBudgetSummary } from '@/types/budget';
 import type { GoalResponse } from '@/types/goal';
 import { GoalData, toGoalData, goalState, GoalsView } from './GoalsView';
@@ -32,7 +30,7 @@ export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
   useEffect(() => {
     fetch('/api/v1/goals')
       .then(r => r.json())
-      .then((data: { goals: GoalResponse[] }) => setGoals(data.goals.map(toGoalData)))
+      .then((data: GoalResponse[]) => setGoals(data.map(toGoalData)))
       .catch(err => console.error('[Goals] fetch failed', err))
       .finally(() => setGoalsLoading(false));
   }, []);
@@ -247,10 +245,10 @@ export function BudgetGoalsShell({ initialTab, budgetData }: Props) {
 
             {/* Overall ring + add-goal button */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 14 }}>
-              <Button data-testid="add-goal-btn" size="sm" onClick={() => setShowAddGoal(true)} style={{ background: 'var(--green)', color: '#fff' }}>
-                <Plus className="w-3 h-3" />
+              <button data-testid="add-goal-btn" onClick={() => setShowAddGoal(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--sans)' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 New Goal
-              </Button>
+              </button>
               <div style={{ position: 'relative', width: 80, height: 80 }}>
                 <svg width="80" height="80" viewBox="0 0 80 80">
                   <circle fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" cx="40" cy="40" r="32"/>

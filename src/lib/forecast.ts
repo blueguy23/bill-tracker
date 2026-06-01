@@ -64,18 +64,18 @@ const INTERVAL_DAYS: Record<string, number> = {
   yearly: INTERVAL_WINDOWS.yearly.midpoint,
 };
 
-export function toDateKey(d: Date): string {
+function toDateKey(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
 
-export function addDays(date: Date, days: number): Date {
+function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * MS_PER_DAY);
 }
 
-export function projectOccurrences(
+function projectOccurrences(
   startDate: Date,
   interval: string,
   windowStart: Date,
@@ -105,110 +105,71 @@ export function detectIncomePatterns(transactions: Transaction[]): IncomePattern
     (t) => t.amount > 0 && !t.pending && !t.isTransfer,
   );
 
-  const results: IncomePattern[] = [];
-  const matchedNames = new Set<string>();
-
-  // Pass 1: name-only grouping with daily dedup (variable-amount paychecks)
-  // This runs first so multi-deposit paychecks get summed correctly.
-  const nameGroups = new Map<string, Transaction[]>();
+  const groups = new Map<string, Transaction[]>();
   for (const txn of income) {
     const nameKey = normalizeDescription(txn.description);
-    const existing = nameGroups.get(nameKey) ?? [];
-    existing.push(txn);
-    nameGroups.set(nameKey, existing);
-  }
-
-  for (const [nameKey, txns] of nameGroups) {
-    const byDate = new Map<string, Transaction[]>();
-    for (const txn of txns) {
-      const key = toDateKey(txn.posted);
-      const existing = byDate.get(key) ?? [];
-      existing.push(txn);
-      byDate.set(key, existing);
-    }
-    if (byDate.size < 2) continue;
-
-    const dailyTxns = Array.from(byDate.entries()).map(([, dayTxns]) => {
-      const total = dayTxns.reduce((s, t) => s + t.amount, 0);
-      return { ...dayTxns[0]!, amount: total };
-    });
-
-    const pattern = detectPattern(nameKey, dailyTxns);
-    if (pattern) {
-      results.push(pattern);
-      matchedNames.add(nameKey);
-    }
-  }
-
-  // Pass 2: exact amount buckets for names not yet matched (fixed-amount side income)
-  const bucketGroups = new Map<string, Transaction[]>();
-  for (const txn of income) {
-    const nameKey = normalizeDescription(txn.description);
-    if (matchedNames.has(nameKey)) continue;
     const bucket = amountBucket(txn.amount);
     const key = `${nameKey}::${bucket}`;
-    const existing = bucketGroups.get(key) ?? [];
+    const existing = groups.get(key) ?? [];
     existing.push(txn);
-    bucketGroups.set(key, existing);
+    groups.set(key, existing);
   }
 
-  for (const [compoundKey, txns] of bucketGroups) {
+  const results: IncomePattern[] = [];
+
+  for (const [compoundKey, txns] of groups) {
     if (txns.length < 2) continue;
+
     const nameKey = compoundKey.split('::')[0] ?? compoundKey;
-    const pattern = detectPattern(nameKey, txns);
-    if (pattern) results.push(pattern);
+    const sorted = [...txns].sort(
+      (a, b) => a.posted.getTime() - b.posted.getTime(),
+    );
+
+    const gaps: number[] = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+      if (prev && curr) {
+        gaps.push(
+          (curr.posted.getTime() - prev.posted.getTime()) / MS_PER_DAY,
+        );
+      }
+    }
+
+    let winningInterval: SubscriptionInterval | null = null;
+    let maxHits = 0;
+
+    for (const interval of INTERVAL_ORDER) {
+      const window = INTERVAL_WINDOWS[interval];
+      const hits = gaps.filter(
+        (g) => g >= window.min && g <= window.max,
+      ).length;
+      if (hits >= 1 && hits > maxHits) {
+        maxHits = hits;
+        winningInterval = interval;
+      }
+    }
+
+    if (!winningInterval) continue;
+
+    const lastTxn = sorted[sorted.length - 1]!;
+    const midpoint = INTERVAL_WINDOWS[winningInterval].midpoint;
+
+    results.push({
+      name: toDisplayName(nameKey),
+      amount: lastTxn.amount,
+      nextExpected: addDays(lastTxn.posted, midpoint),
+      interval: winningInterval,
+      occurrences: txns.length,
+    });
   }
 
   return results.sort((a, b) => b.amount - a.amount);
 }
 
-function detectPattern(nameKey: string, txns: Transaction[]): IncomePattern | null {
-  const sorted = [...txns].sort(
-    (a, b) => a.posted.getTime() - b.posted.getTime(),
-  );
-
-  const gaps: number[] = [];
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1];
-    const curr = sorted[i];
-    if (prev && curr) {
-      gaps.push(
-        (curr.posted.getTime() - prev.posted.getTime()) / MS_PER_DAY,
-      );
-    }
-  }
-
-  let winningInterval: SubscriptionInterval | null = null;
-  let maxHits = 0;
-
-  for (const interval of INTERVAL_ORDER) {
-    const window = INTERVAL_WINDOWS[interval];
-    const hits = gaps.filter(
-      (g) => g >= window.min && g <= window.max,
-    ).length;
-    if (hits >= 1 && hits > maxHits) {
-      maxHits = hits;
-      winningInterval = interval;
-    }
-  }
-
-  if (!winningInterval) return null;
-
-  const lastTxn = sorted[sorted.length - 1]!;
-  const midpoint = INTERVAL_WINDOWS[winningInterval].midpoint;
-
-  return {
-    name: toDisplayName(nameKey),
-    amount: lastTxn.amount,
-    nextExpected: addDays(lastTxn.posted, midpoint),
-    interval: winningInterval,
-    occurrences: txns.length,
-  };
-}
-
 // ── Forecast engine ──────────────────────────────────────────────────────────
 
-export function projectBillDates(
+function projectBillDates(
   bill: ForecastBill,
   windowStart: Date,
   windowEnd: Date,

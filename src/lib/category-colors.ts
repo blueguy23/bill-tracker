@@ -4,13 +4,13 @@
 export const CATEGORY_COLORS: Record<string, string> = {
   // Transaction categories
   food:          '#f97316',  // orange-500
-  transport:     '#a1a1aa',  // zinc-400
+  transport:     '#3b82f6',  // blue-500
   shopping:      '#8b5cf6',  // violet-500
   entertainment: '#ec4899',  // pink-500
   health:        '#10b981',  // emerald-500
   utilities:     '#06b6d4',  // cyan-500
   subscriptions: '#6366f1',  // indigo-500
-  income:        '#4ade80',  // green-400  — mirrors --positive
+  income:        '#22c55e',  // green-500  — mirrors --positive
   transfer:      '#71717a',  // zinc-500
   // Bill-only categories
   insurance:     '#34d399',  // emerald-400
@@ -30,12 +30,12 @@ export function getCategoryColor(category: string): string {
 // Ordered hex palette for Chart.js positional charts (doughnut, grouped bar, etc.).
 // Chart.js cannot resolve CSS vars at runtime, so this is always plain hex/oklch.
 export const CHART_CATEGORY_PALETTE: readonly string[] = [
-  '#fafafa',               // primary (white)
-  '#4ade80',               // income  (= --positive)
-  '#f87171',               // expense (= --negative)
-  '#fbbf24',               // amber
+  'oklch(0.68 0.22 265)',  // accent  (blue-purple)
+  '#22c55e',               // income  (= --positive)
+  '#ef4444',               // expense (= --negative)
+  '#f59e0b',               // amber
   '#c084fc',               // purple
-  '#a1a1aa',               // zinc
+  '#3b82f6',               // blue
   '#34d399',               // emerald
   '#fb923c',               // orange
 ] as const;

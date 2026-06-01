@@ -7,19 +7,23 @@ import { PaymentsHero } from './PaymentsHero';
 import { UnifiedPaymentsList } from './UnifiedPaymentsList';
 import { BillModal } from './BillModal';
 import { PaymentsCalendar } from './PaymentsCalendar';
-import { PendingConfirmationBanner } from './PendingConfirmationBanner';
 
-type ViewMode = 'list' | 'calendar';
+type Tab = 'payments' | 'calendar';
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'payments', label: 'Payments' },
+  { id: 'calendar', label: 'Calendar' },
+];
 
 interface Props {
-  initialTab: string;
+  initialTab: Tab;
   allBills: BillResponse[];
   trackedBills: BillResponse[];
   serverToday: { d: number; m: number; y: number };
 }
 
 export function PaymentsShell({ initialTab, allBills, trackedBills, serverToday }: Props) {
-  const [view, setView] = useState<ViewMode>(initialTab === 'calendar' ? 'calendar' : 'list');
+  const [tab, setTab]             = useState<Tab>(initialTab);
   const [isModalOpen, setModal]   = useState(false);
   const [editingBill, setEditing] = useState<BillResponse | undefined>();
   const router   = useRouter();
@@ -27,9 +31,9 @@ export function PaymentsShell({ initialTab, allBills, trackedBills, serverToday 
 
   const allCombined = [...allBills, ...trackedBills];
 
-  function switchView(next: ViewMode) {
-    setView(next);
-    router.replace(next === 'list' ? pathname : `${pathname}?tab=calendar`, { scroll: false });
+  function switchTab(next: Tab) {
+    setTab(next);
+    router.replace(next === 'payments' ? pathname : `${pathname}?tab=${next}`, { scroll: false });
   }
 
   function openCreate() { setEditing(undefined); setModal(true); }
@@ -77,56 +81,34 @@ export function PaymentsShell({ initialTab, allBills, trackedBills, serverToday 
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
       {/* Sticky header */}
-      <div style={{ padding: '16px 24px', borderBottom: '0.5px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)' }}>Bills & Payments</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: 2 }}>
-          <button
-            onClick={() => switchView('list')}
-            title="List view"
-            aria-label="List view"
-            style={{
-              width: 30, height: 28, borderRadius: 4,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: view === 'list' ? 'rgba(255,255,255,0.08)' : 'transparent',
-              border: 'none', cursor: 'pointer', transition: 'background 0.15s',
-              color: view === 'list' ? 'var(--text)' : 'var(--text3)',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <line x1="2" y1="4" x2="14" y2="4" />
-              <line x1="2" y1="8" x2="14" y2="8" />
-              <line x1="2" y1="12" x2="14" y2="12" />
-            </svg>
-          </button>
-          <button
-            onClick={() => switchView('calendar')}
-            title="Calendar view"
-            aria-label="Calendar view"
-            style={{
-              width: 30, height: 28, borderRadius: 4,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: view === 'calendar' ? 'rgba(255,255,255,0.08)' : 'transparent',
-              border: 'none', cursor: 'pointer', transition: 'background 0.15s',
-              color: view === 'calendar' ? 'var(--text)' : 'var(--text3)',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="12" height="11" rx="1.5" />
-              <line x1="2" y1="7" x2="14" y2="7" />
-              <line x1="5" y1="1.5" x2="5" y2="4" />
-              <line x1="11" y1="1.5" x2="11" y2="4" />
-            </svg>
-          </button>
+      <div style={{ padding: '16px 24px 0', borderBottom: '0.5px solid var(--border)', position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg)' }}>
+        <h1 style={{ fontSize: 20, fontWeight: 500, color: 'var(--text)', fontFamily: 'var(--sans)', marginBottom: 12 }}>Payments</h1>
+        <div data-testid="payments-tabs" role="tablist" style={{ display: 'flex', gap: 0 }}>
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
+              onClick={() => switchTab(t.id)}
+              style={{
+                padding: '8px 16px 10px', fontSize: 14, fontFamily: 'var(--sans)',
+                fontWeight: tab === t.id ? 500 : 400,
+                color: tab === t.id ? 'var(--text)' : 'rgba(255,255,255,0.45)',
+                background: 'transparent', border: 'none',
+                borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent',
+                cursor: 'pointer', transition: 'color 0.15s', marginBottom: -0.5,
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Content */}
-      {view === 'list' && (
-        <div>
+      {/* Tab content */}
+      {tab === 'payments' && (
+        <div role="tabpanel">
           <PaymentsHero bills={allCombined} today={serverToday} onAddBill={openCreate} />
-          <div style={{ padding: '0 20px' }}>
-            <PendingConfirmationBanner />
-          </div>
           <UnifiedPaymentsList
             bills={allCombined}
             today={serverToday}
@@ -138,8 +120,8 @@ export function PaymentsShell({ initialTab, allBills, trackedBills, serverToday 
         </div>
       )}
 
-      {view === 'calendar' && (
-        <div style={{ padding: '16px 20px 24px' }}>
+      {tab === 'calendar' && (
+        <div role="tabpanel" style={{ padding: '16px 20px 24px' }}>
           <PaymentsCalendar bills={allCombined} today={serverToday} onAddBill={openCreate} />
         </div>
       )}

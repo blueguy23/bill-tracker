@@ -26,7 +26,7 @@ function AZEOCardRow({ card }: { card: AZEOCard }) {
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{card.accountName}</div>
           {card.isAnchor && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '2px 8px', display: 'inline-block', marginTop: 3, fontFamily: 'var(--mono)' }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent)', background: 'oklch(0.68 0.22 265 / 0.12)', borderRadius: 10, padding: '2px 8px', display: 'inline-block', marginTop: 3, fontFamily: 'var(--mono)' }}>
               AZEO ANCHOR
             </span>
           )}

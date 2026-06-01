@@ -9,28 +9,6 @@ import { detectSubscriptions } from '@/lib/subscriptions/detect';
 import type { DetectedSubscription, DetectedSubscriptionResponse } from '@/types/subscription';
 import type { SubscriptionInterval } from '@/types/subscription';
 import type { BillCategory, RecurringType } from '@/types/bill';
-import { logger } from '@/lib/logger';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const HINT_STOPWORDS = new Set([
-  'the', 'and', 'for', 'from', 'with', 'payment', 'online', 'bill',
-  'pay', 'ach', 'web', 'auto', 'recurring', 'debit', 'purchase',
-]);
-
-function buildHintFromDescriptions(descriptions: string[]): string | undefined {
-  if (descriptions.length === 0) return undefined;
-  const hint = descriptions[0]!
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(' ')
-    .filter(w => w.length >= 3)
-    .filter(w => !HINT_STOPWORDS.has(w))
-    .join(' ');
-  return hint.length >= 3 ? hint : undefined;
-}
 
 // ─── Serialization ────────────────────────────────────────────────────────────
 
@@ -146,8 +124,6 @@ export async function handleAnchorSubscription(
     ? (b.rawDescriptions as unknown[]).filter((d): d is string => typeof d === 'string')
     : [];
 
-  const hint = buildHintFromDescriptions(rawDescriptions);
-
   const bill = await createBill(db, {
     name:               b.name as string,
     amount:             b.amount as number,
@@ -161,14 +137,9 @@ export async function handleAnchorSubscription(
     isPaid:             false,
     isSubscription,
     detectionId:        b.id as string,
-    paymentDescriptionHint: hint,
     notes:              rawDescriptions.length > 0 ? rawDescriptions.join(', ') : undefined,
     classificationMeta: b.classificationMeta as { recurringType: RecurringType; billScore: number; subScore: number; signals: string[] } | undefined,
   });
-
-  if (hint) {
-    logger.info('anchor.hintLearned', { billName: b.name, hint });
-  }
 
   // Seed charge history with the initial detected charge
   await recordCharge(db, bill._id, b.amount as number);

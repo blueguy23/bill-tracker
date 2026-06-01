@@ -49,7 +49,7 @@ export function SummaryCards({ summary }: SummaryCardsProps) {
       <Card
         label="AutoPay Total"
         value={USD.format(summary.autoPayTotal)}
-        accent="bg-zinc-400"
+        accent="bg-blue-500"
       />
     </div>
   );

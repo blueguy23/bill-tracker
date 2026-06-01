@@ -14,7 +14,7 @@ const USD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD'
 const USD  = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 
 const CAT_COLOR: Record<BillCategory, string> = {
-  utilities:     '#a1a1aa',
+  utilities:     '#60a5fa',
   subscriptions: '#6366f1',
   insurance:     '#34d399',
   rent:          '#a78bfa',

@@ -1,9 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { BillResponse, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import { BILL_CATEGORIES, RECURRENCE_INTERVALS } from '@/types/bill';
 
@@ -92,6 +89,14 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
     }, 300);
   }, []);
 
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    if (isOpen) document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -124,17 +129,20 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
   }
 
   const label = 'block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5';
-  const input = 'w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 transition-colors';
+  const input = 'w-full bg-zinc-800 border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors';
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto gap-0 p-0" data-testid="bill-modal">
-        <DialogHeader className="px-6 py-4 border-b border-border">
-          <DialogTitle>{mode === 'create' ? 'Add Bill' : 'Edit Bill'}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {mode === 'create' ? 'Create a new bill' : 'Edit an existing bill'}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" data-testid="bill-modal">
+      <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+          <h2 className="text-base font-semibold text-white">
+            {mode === 'create' ? 'Add Bill' : 'Edit Bill'}
+          </h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.06]">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {error && (
@@ -155,12 +163,9 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
             </div>
             <div>
               <label className={label}>Category</label>
-              <Select value={form.category} onValueChange={(v) => set('category', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {BILL_CATEGORIES.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <select className={input} value={form.category} onChange={(e) => set('category', e.target.value)}>
+                {BILL_CATEGORIES.map((c) => <option key={c} value={c} className="bg-zinc-800 capitalize">{c}</option>)}
+              </select>
             </div>
           </div>
 
@@ -171,7 +176,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
                   type="checkbox"
                   checked={form[key] as boolean}
                   onChange={(e) => set(key, e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-zinc-300 focus:ring-zinc-500 focus:ring-offset-0"
+                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
                 />
                 {lbl}
               </label>
@@ -193,12 +198,9 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
               )}
               <div>
                 <label className={label}>Recurrence</label>
-                <Select value={form.recurrenceInterval} onValueChange={(v) => set('recurrenceInterval', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {RECURRENCE_INTERVALS.map((r) => <SelectItem key={r} value={r} className="capitalize">{r}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <select className={input} value={form.recurrenceInterval} onChange={(e) => set('recurrenceInterval', e.target.value)}>
+                  {RECURRENCE_INTERVALS.map((r) => <option key={r} value={r} className="bg-zinc-800 capitalize">{r}</option>)}
+                </select>
               </div>
             </div>
           ) : (
@@ -243,7 +245,7 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
               For loans or ambiguous bills, link a real transaction so Folio knows what to look for.
             </p>
             {form.paymentDescriptionHint ? (
-              <div className="flex items-center gap-2 bg-zinc-800 border border-zinc-600/40 rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2 bg-zinc-800 border border-blue-500/30 rounded-lg px-3 py-2.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5" /></svg>
                 <span className="text-sm text-zinc-200 font-mono flex-1 truncate">{form.paymentDescriptionHint}</span>
                 <button
@@ -288,15 +290,15 @@ export function BillModal({ mode, initialData, isOpen, onClose, onSave }: BillMo
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-400 bg-zinc-800 border border-white/[0.08] rounded-lg hover:text-zinc-200 hover:bg-zinc-700 transition-colors">
               Cancel
-            </Button>
-            <Button type="submit" disabled={isSaving} data-testid="save-bill-btn">
+            </button>
+            <button type="submit" disabled={isSaving} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 disabled:opacity-50 transition-colors" data-testid="save-bill-btn">
               {isSaving ? 'Saving…' : 'Save'}
-            </Button>
+            </button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
