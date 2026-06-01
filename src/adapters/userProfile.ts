@@ -8,6 +8,7 @@ const DEFAULTS: Omit<UserProfile, '_id'> = {
   displayName: '',
   ownerName: '',
   payday: null,
+  payFrequency: null,
   currency: 'USD',
   timezone: 'America/Chicago',
   theme: 'dark',

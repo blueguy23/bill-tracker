@@ -51,9 +51,9 @@ function dueDateLabel(bill: BillResponse, today: number, mm: string, monthAbbr: 
 
 const STATUS_STYLE: Record<BillStatus, { bg: string; color: string; border: string; label: string }> = {
   overdue:   { bg: 'rgba(239,68,68,0.10)',   color: 'var(--red)',   border: 'rgba(239,68,68,0.20)',   label: '● Overdue'   },
-  'due-soon':{ bg: 'oklch(0.67 0.13 40 / 0.10)',  color: 'var(--gold)',  border: 'oklch(0.67 0.13 40 / 0.20)',  label: '● Due Soon'  },
+  'due-soon':{ bg: 'rgba(251,191,36,0.10)',  color: 'var(--gold)',  border: 'rgba(251,191,36,0.20)',  label: '● Due Soon'  },
   paid:      { bg: 'rgba(34,197,94,0.10)',   color: 'var(--green)', border: 'rgba(34,197,94,0.20)',   label: '● Paid'      },
-  scheduled: { bg: 'rgba(96,165,250,0.10)',  color: 'var(--accent)',border: 'rgba(96,165,250,0.20)',  label: '● Scheduled' },
+  scheduled: { bg: 'rgba(255,255,255,0.06)',  color: 'var(--text2)',border: 'rgba(255,255,255,0.09)',  label: '● Scheduled' },
   upcoming:  { bg: 'rgba(255,255,255,0.04)', color: 'var(--text3)', border: 'rgba(255,255,255,0.07)', label: '● Upcoming'  },
 };
 
@@ -139,7 +139,7 @@ const FILTER_CHIPS: { id: StatusFilter; label: string; dot?: string }[] = [
   { id: 'overdue', label: 'Overdue', dot: 'var(--red)' },
   { id: 'due-soon', label: 'Due Soon', dot: 'var(--gold)' },
   { id: 'paid', label: 'Paid', dot: 'var(--green)' },
-  { id: 'autopay', label: 'Autopay', dot: 'var(--accent)' },
+  { id: 'autopay', label: 'Autopay', dot: 'var(--text2)' },
 ];
 
 export function BillListPanel({ bills, onEdit, onDelete, onTogglePaid, onToggleAutoPay }: Props) {

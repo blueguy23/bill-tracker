@@ -1,8 +1,11 @@
+import type { PayFrequency } from '@/types/payPeriod';
+
 export interface UserProfile {
   _id: 'singleton';
   displayName: string;
   ownerName: string;
   payday: number | null;
+  payFrequency: PayFrequency | null;
   currency: string;
   timezone: string;
   theme: 'dark' | 'light' | 'auto';

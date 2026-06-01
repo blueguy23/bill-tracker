@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import type { BillCategory } from '@/types/bill';
 
 const STYLES: Record<BillCategory, { pill: string; dot: string }> = {
-  utilities:     { pill: 'bg-blue-500/10 text-blue-400 border-blue-500/20',     dot: 'bg-blue-500' },
+  utilities:     { pill: 'bg-zinc-400/10 text-zinc-400 border-zinc-400/20',     dot: 'bg-zinc-400' },
   subscriptions: { pill: 'bg-violet-500/10 text-violet-400 border-violet-500/20', dot: 'bg-violet-500' },
   insurance:     { pill: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500' },
   rent:          { pill: 'bg-orange-500/10 text-orange-400 border-orange-500/20', dot: 'bg-orange-500' },

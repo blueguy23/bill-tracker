@@ -196,7 +196,7 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             </div>
           )}
         </div>
-        <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>+ Add Transaction</button>
+        <button data-testid="add-transaction-btn" title="Coming soon" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--accent)', color: 'var(--bg)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'not-allowed', opacity: 0.5 }}>+ Add Transaction</button>
       </div>
 
       {/* Filter rows */}
@@ -245,8 +245,8 @@ export function TransactionsView({ initialTransactions, initialHasMore, accounts
             {/* Pending section */}
             {pendingTxns.length > 0 && (
               <>
-                <div data-testid="pending-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 16px 5px', background: 'rgba(96,165,250,0.04)', borderBottom: '1px solid rgba(96,165,250,0.1)' }}>
-                  <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#60a5fa', fontFamily: 'var(--mono)' }}>⏱ Pending · not yet cleared</span>
+                <div data-testid="pending-section" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 16px 5px', background: 'rgba(96,165,250,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#a1a1aa', fontFamily: 'var(--mono)' }}>⏱ Pending · not yet cleared</span>
                   <span style={{ fontSize: 10, color: 'var(--text3)', fontFamily: 'var(--mono)' }}>{pendingTxns.length} transactions · −{USD.format(pendingTxns.reduce((s, t) => s + Math.abs(t.amount), 0))} held</span>
                 </div>
                 {pendingTxns.map(t => <TxRow key={t._id} txn={t} acct={accountMap.get(t.accountId)} onCategoryChanged={onCategoryChanged} onTagsChanged={onTagsChanged} onNotesChanged={onNotesChanged} onAmortizeChanged={onAmortizeChanged} onCustomNameChanged={onCustomNameChanged} />)}

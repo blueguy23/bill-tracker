@@ -12,7 +12,7 @@ const CATEGORY_LABELS: Record<BillCategory, string> = {
 };
 
 const CATEGORY_COLORS: Record<BillCategory, string> = {
-  utilities: '#60a5fa',   // blue-400
+  utilities: '#a1a1aa',   // zinc-400
   subscriptions: '#a78bfa', // violet-400
   insurance: '#34d399',   // emerald-400
   rent: '#f97316',        // orange-500
