@@ -10,6 +10,7 @@ import { buildTransferRe, classifyTransfer } from '@/lib/classifyTransfer';
 import { detectPairedTransfers } from '@/lib/detectPairedTransfers';
 import { syncLinkedGoals } from '@/handlers/goalSync';
 import { logger } from '@/lib/logger';
+import { invalidateAll } from '@/lib/cache';
 
 const QUOTA_GUARD = Number(process.env.SIMPLEFIN_QUOTA_GUARD ?? 20);
 const DAILY_QUOTA = Number(process.env.SIMPLEFIN_DAILY_QUOTA ?? 24);
@@ -165,6 +166,8 @@ export async function runHistoricalImport(
     syncLinkedGoals(db),
   ]);
   if (pairedIds2.length) await markTransfersById(db, pairedIds2);
+
+  invalidateAll();
 
   return {
     accountsUpdated: totalAccounts,

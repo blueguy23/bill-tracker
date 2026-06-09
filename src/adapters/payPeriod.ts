@@ -8,7 +8,8 @@ import type {
 } from '@/types/payPeriod';
 import { getUserProfile } from '@/adapters/userProfile';
 import { listBills } from '@/adapters/bills';
-import { listAccounts, getCashFlowForRange, listTransactions } from '@/adapters/accounts';
+import { listAccounts, listTransactions } from '@/adapters/accounts';
+import { getCashFlowForRange } from '@/handlers/cashFlow';
 import { getForecast } from '@/adapters/forecast';
 import {
   resolvePayConfig,

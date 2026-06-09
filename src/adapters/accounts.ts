@@ -1,12 +1,13 @@
 import type { StrictDB } from 'strictdb';
 import type { Account, Transaction } from '@/lib/simplefin/types';
-import { computeCashFlowSimple, computeCashFlow } from '@/lib/cashFlow';
+import { cached, invalidate } from '@/lib/cache';
 
 const ACCOUNTS = 'accounts';
 const TRANSACTIONS = 'transactions';
 
 export async function upsertAccount(db: StrictDB, account: Account): Promise<void> {
   await db.updateOne<Account>(ACCOUNTS, { _id: account._id }, { $set: account }, true);
+  invalidate('accounts');
 }
 
 export async function getTransaction(db: StrictDB, id: string): Promise<Transaction | null> {
@@ -18,11 +19,14 @@ export async function upsertTransaction(db: StrictDB, txn: Transaction): Promise
   if (existing && !existing.pending) return false;
 
   await db.updateOne<Transaction>(TRANSACTIONS, { _id: txn._id }, { $set: txn }, true);
+  invalidate('transactions');
   return true;
 }
 
 export async function listAccounts(db: StrictDB): Promise<Account[]> {
-  return db.queryMany<Account>(ACCOUNTS, {}, { sort: { orgName: 1 }, limit: 200 });
+  return cached('accounts:list', 5 * 60 * 1000, () =>
+    db.queryMany<Account>(ACCOUNTS, {}, { sort: { orgName: 1 }, limit: 200 })
+  );
 }
 
 export interface ListTransactionsOpts {
@@ -65,42 +69,6 @@ export interface CashFlow {
   income: number;
   expenses: number;
   net: number;
-}
-
-export async function getCashFlowThisMonth(db: StrictDB): Promise<CashFlow> {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-  const [{ transactions }, accounts] = await Promise.all([
-    listTransactions(db, { startDate: startOfMonth, endDate: endOfMonth, limit: 5000 }),
-    listAccounts(db),
-  ]);
-  const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
-
-  return computeCashFlowSimple(transactions, creditAccountIds);
-}
-
-export async function getCashFlowForRange(
-  db: StrictDB,
-  startDate: Date,
-  endDate: Date,
-  normalized = false,
-): Promise<CashFlow> {
-  const fetchStart = normalized
-    ? new Date(startDate.getFullYear(), startDate.getMonth() - 11, 1)
-    : startDate;
-
-  const [{ transactions }, accounts] = await Promise.all([
-    listTransactions(db, { startDate: fetchStart, endDate, limit: 10000 }),
-    listAccounts(db),
-  ]);
-  const creditAccountIds = new Set(accounts.filter(a => a.accountType === 'credit').map(a => a._id));
-
-  return computeCashFlow(transactions, creditAccountIds, {
-    start: startDate.getTime(),
-    end: endDate.getTime(),
-  }, normalized);
 }
 
 export async function markTransfersById(db: StrictDB, ids: string[]): Promise<void> {

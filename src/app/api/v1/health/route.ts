@@ -18,12 +18,18 @@ async function _GET(_req: NextRequest) {
     dbError = err instanceof Error ? err.message : String(err);
   }
 
+  const mem = process.memoryUsage();
   const healthy = dbStatus === 'ok';
   const body = {
     status: healthy ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+    uptime: Math.round(process.uptime()),
     responseTimeMs: Date.now() - start,
+    memory: {
+      heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+      heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
+      rssMB: Math.round(mem.rss / 1024 / 1024),
+    },
     checks: {
       db: { status: dbStatus, ...(dbError ? { error: dbError } : {}) },
     },

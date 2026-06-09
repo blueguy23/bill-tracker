@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import type { StrictDB, StrictFilter } from 'strictdb';
 import type { Bill, CreateBillDto, UpdateBillDto } from '@/types/bill';
 import type { ClassificationMeta } from '@/types/bill';
+import { cached, invalidate } from '@/lib/cache';
 
 const COLLECTION = 'bills';
 
@@ -10,7 +11,9 @@ function byId(id: string): StrictFilter<Bill> {
 }
 
 export async function listBills(db: StrictDB): Promise<Bill[]> {
-  return db.queryMany<Bill>(COLLECTION, {}, { sort: { dueDate: 1 }, limit: 500 });
+  return cached('bills:list', 5 * 60 * 1000, () =>
+    db.queryMany<Bill>(COLLECTION, {}, { sort: { dueDate: 1 }, limit: 500 })
+  );
 }
 
 export async function listSubscriptionBills(db: StrictDB): Promise<Bill[]> {
@@ -65,6 +68,7 @@ export async function createBill(db: StrictDB, data: CreateBillDto): Promise<Bil
   };
 
   await db.insertOne<Bill>(COLLECTION, bill);
+  invalidate('bills');
   return bill;
 }
 
@@ -102,11 +106,13 @@ export async function updateBill(db: StrictDB, id: string, data: UpdateBillDto):
   }
 
   await db.updateOne<Bill>(COLLECTION, byId(id), { $set: updates });
+  invalidate('bills');
 
   return getBillById(db, id);
 }
 
 export async function deleteBill(db: StrictDB, id: string): Promise<boolean> {
   const receipt = await db.deleteOne<Bill>(COLLECTION, byId(id));
+  invalidate('bills');
   return receipt.deletedCount > 0;
 }
