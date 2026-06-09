@@ -1,6 +1,6 @@
 import type { PayPeriodDashboardData, CategorySpend } from '@/types/payPeriod';
 import { PayPeriodBreakdown } from './PayPeriodBreakdown';
-import { PayPeriodBalanceChart } from './PayPeriodBalanceChart';
+import { SpendingCorridorChart } from './SpendingCorridorChart';
 import { PayPeriodTimeline } from './PayPeriodTimeline';
 import { PayPeriodComparisonCard } from './PayPeriodComparison';
 
@@ -46,7 +46,7 @@ export function PayPeriodDashboard({ data }: Props) {
   return (
     <>
       <PayPeriodBreakdown stats={data.stats} />
-      <PayPeriodBalanceChart dailyBalances={data.dailyBalances} />
+      <SpendingCorridorChart dailySpending={data.dailySpending} stats={data.stats} />
       <PayPeriodTimeline
         period={data.period}
         events={data.upcomingEvents}
