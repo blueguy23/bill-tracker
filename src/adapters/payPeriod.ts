@@ -10,7 +10,7 @@ import type {
 import { getUserProfile } from '@/adapters/userProfile';
 import { listBills } from '@/adapters/bills';
 import { listAccounts, listTransactions } from '@/adapters/accounts';
-import { getCashFlowForRange } from '@/handlers/cashFlow';
+import { computeCashFlow } from '@/lib/cashFlow';
 import { getForecast } from '@/adapters/forecast';
 import {
   resolvePayConfig,
@@ -43,10 +43,14 @@ export async function getPayPeriodData(
   const periodEnd = new Date(period.end);
   periodEnd.setHours(23, 59, 59, 999);
 
-  const [cashFlow, { transactions: periodTransactions }] = await Promise.all([
-    getCashFlowForRange(db, period.start, periodEnd),
-    listTransactions(db, { startDate: period.start, endDate: periodEnd, limit: 5000 }),
-  ]);
+  const { transactions: periodTransactions } = await listTransactions(db, { startDate: period.start, endDate: periodEnd, limit: 5000 });
+  const creditAccountIds = new Set(
+    accounts.filter(a => a.accountType === 'credit').map(a => a._id),
+  );
+  const cashFlow = computeCashFlow(periodTransactions, creditAccountIds, {
+    start: period.start.getTime(),
+    end: periodEnd.getTime(),
+  }, false);
 
   const currentYYYYMM = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
@@ -173,7 +177,11 @@ export async function getPayPeriodData(
     const prevPeriod = getAdjacentPeriod(period, payConfig.frequency, 'prev', payConfig.anchor);
     const prevEnd = new Date(prevPeriod.end);
     prevEnd.setHours(23, 59, 59, 999);
-    const prevCashFlow = await getCashFlowForRange(db, prevPeriod.start, prevEnd);
+    const { transactions: prevTxns } = await listTransactions(db, { startDate: prevPeriod.start, endDate: prevEnd, limit: 5000 });
+    const prevCashFlow = computeCashFlow(prevTxns, creditAccountIds, {
+      start: prevPeriod.start.getTime(),
+      end: prevEnd.getTime(),
+    }, false);
 
     const prevBillsDue = recurringBills.reduce((sum, b) => {
       const dates = projectBillDates(

@@ -2,8 +2,6 @@
 
 import type { Action, ActionType } from '@/lib/actionQueue';
 
-const USD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-
 const TYPE_CONFIG: Record<ActionType, { icon: string; accentColor: string; bgColor: string }> = {
   'bill-overdue':      { icon: '!!', accentColor: 'var(--red)',   bgColor: 'rgba(239,68,68,0.08)' },
   'bill-due':          { icon: '$',  accentColor: 'var(--gold)',  bgColor: 'rgba(234,179,8,0.08)' },
