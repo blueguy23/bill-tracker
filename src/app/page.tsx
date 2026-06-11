@@ -7,21 +7,29 @@ import type { CashFlowViewMode } from '@/components/CashFlowToggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import type { Period } from '@/components/PeriodSelector';
 import { getDb } from '@/adapters/db';
-import { listBills } from '@/adapters/bills';
-import { listAccounts, listRecentTransactions, getCashFlowForRange } from '@/adapters/accounts';
+import { listBills, listSubscriptionBills } from '@/adapters/bills';
+import { listAccounts, listRecentTransactions, listTransactionsForDetection } from '@/adapters/accounts';
+import { getCashFlowForRange } from '@/handlers/cashFlow';
 import { listAccountMeta } from '@/adapters/accountMeta';
 import { listBudgets } from '@/adapters/budgets';
 import { getCashFlowHistory } from '@/adapters/cashFlowHistory';
+import { listPendingConfirmations } from '@/adapters/pendingConfirmations';
+import { listDismissedSubscriptions } from '@/adapters/subscriptions';
+import { detectSubscriptions } from '@/lib/subscriptions/detect';
 import { findAutoMatches } from '@/lib/subscriptions/autoMatch';
 import { getForecast } from '@/adapters/forecast';
 import { getPayPeriodData } from '@/adapters/payPeriod';
 import { getUserProfile } from '@/adapters/userProfile';
+import { buildActionQueue } from '@/lib/actionQueue';
 import { DetailPanel } from '@/components/DetailPanel';
 import type { DetailPanelData, PanelBill, PanelTransaction, PanelAccount } from '@/components/DetailPanel';
 import { MonthlyDashboard } from '@/components/MonthlyDashboard';
 import { PayPeriodDashboard } from '@/components/PayPeriodDashboard';
+import { SafeToSpendHero } from '@/components/SafeToSpendHero';
+import { ActionList } from '@/components/ActionList';
 import { PayPeriodHeader } from '@/components/PayPeriodHeader';
 import { DashboardViewToggle } from '@/components/DashboardViewToggle';
+import { WelcomeScreen } from '@/components/WelcomeScreen';
 
 function periodToRange(p: Period): { start: Date; end: Date; historyMonths: number; label: string } {
   const now = new Date();
@@ -99,7 +107,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const db = await getDb();
 
-  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, _forecastResult, payPeriodData, userProfile] = await Promise.all([
+  const [rawBills, allAccounts, recentTransactions, cashFlow, budgets, history, _forecastResult, payPeriodData, userProfile, pendingConfirmations, detectionTxns, dismissedSubs, subBills] = await Promise.all([
     listBills(db),
     listAccounts(db),
     listRecentTransactions(db),
@@ -107,9 +115,27 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     listBudgets(db),
     getCashFlowHistory(db, historyMonths, viewMode === 'normalized'),
     getForecast(db),
-    activeView === 'payperiod' ? getPayPeriodData(db, periodOffset) : Promise.resolve(null),
+    getPayPeriodData(db, periodOffset),
     getUserProfile(db),
+    listPendingConfirmations(db),
+    listTransactionsForDetection(db),
+    listDismissedSubscriptions(db),
+    listSubscriptionBills(db),
   ]);
+
+  // New user — no accounts connected yet
+  if (allAccounts.length === 0) {
+    const h = new Date().getHours();
+    const firstName = userProfile.displayName?.split(/\s+/)[0] || '';
+    const welcomeGreeting = (h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening') + (firstName ? `, ${firstName}` : '');
+    const isDemo = process.env.DEMO_MODE === 'true';
+
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+        <WelcomeScreen greeting={welcomeGreeting} isDemo={isDemo} />
+      </div>
+    );
+  }
 
   const metaList = allAccounts.length > 0 ? await listAccountMeta(db, allAccounts.map(a => a._id)) : [];
   const metaMap  = new Map(metaList.map(m => [m._id, m]));
@@ -154,7 +180,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       } else {
         return null;
       }
-      return { name: b.name, amount: b.amount, daysUntilDue, isOverdue: daysUntilDue < 0 };
+      return { name: b.name, amount: b.amount, daysUntilDue, isOverdue: daysUntilDue < 0, isAutoPay: b.isAutoPay };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
@@ -177,6 +203,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }
     return out;
   })();
+
+  // ── Subscription detection + action queue ─────────────────────────────────
+  const detected = detectSubscriptions(detectionTxns, rawBills);
+  const dismissedIds = new Set(dismissedSubs.map(d => d._id));
+  const trackedIds = new Set(subBills.map(b => b.detectionId).filter(Boolean) as string[]);
+  const pendingSubscriptions = detected
+    .filter(s => !dismissedIds.has(s.id) && !trackedIds.has(s.id))
+    .map(d => ({
+      ...d,
+      lastCharged: d.lastCharged.toISOString(),
+      nextEstimated: d.nextEstimated.toISOString(),
+    }));
+
+  const actions = buildActionQueue({
+    billAlerts,
+    budgetAlerts,
+    priceAlerts,
+    pendingSubscriptions,
+    pendingConfirmations,
+  });
 
   // ── Derived display values ────────────────────────────────────────────────
   const h        = new Date().getHours();
@@ -207,7 +253,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     budgetAlerts,
   };
 
-  const showPayPeriod = activeView === 'payperiod' && payPeriodData !== null;
+  const hasPayPeriod = payPeriodData !== null;
+  const showMonthly = activeView === 'monthly';
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -225,18 +272,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <div style={{ padding: '0 24px 24px' }}>
 
-        {showPayPeriod ? (
+        {hasPayPeriod && !showMonthly ? (
           <>
             <PayPeriodHeader period={payPeriodData.period} activeView="payperiod" offset={periodOffset} />
+            <SafeToSpendHero stats={payPeriodData.stats} period={payPeriodData.period} />
+            <ActionList actions={actions} />
             <PayPeriodDashboard data={payPeriodData} />
           </>
-        ) : activeView === 'payperiod' && payPeriodData === null ? (
+        ) : !hasPayPeriod && !showMonthly ? (
           <>
-            <PayPeriodHeader
-              period={{ start: new Date(), end: new Date(), isActive: true, dayNumber: 1, totalDays: 1, daysLeft: 0 }}
-              activeView="payperiod"
-              offset={0}
-            />
+            <ActionList actions={actions} />
             <div style={{
               background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
               padding: '40px 32px', textAlign: 'center', marginBottom: 20,
@@ -255,6 +300,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 Go to Settings
               </a>
             </div>
+            <DashboardViewToggle activeView="payperiod" />
             <MonthlyDashboard
               bills={bills} accounts={accounts} recentTransactions={recentTransactions}
               cashFlow={cashFlow} enrichedMatches={enrichedMatches} summary={summary}
@@ -266,15 +312,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </>
         ) : (
           <>
-          <DashboardViewToggle activeView="monthly" />
-          <MonthlyDashboard
-            bills={bills} accounts={accounts} recentTransactions={recentTransactions}
-            cashFlow={cashFlow} enrichedMatches={enrichedMatches} summary={summary}
-            savingsRate={savingsRate} categorySpendData={categorySpendData}
-            budgetAlerts={budgetAlerts} billAlerts={billAlerts} priceAlerts={priceAlerts}
-            rawBillCount={rawBills.length} accountCount={accounts.length}
-            hasBudget={budgets.length > 0} simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)}
-          />
+            <DashboardViewToggle activeView="monthly" />
+            <MonthlyDashboard
+              bills={bills} accounts={accounts} recentTransactions={recentTransactions}
+              cashFlow={cashFlow} enrichedMatches={enrichedMatches} summary={summary}
+              savingsRate={savingsRate} categorySpendData={categorySpendData}
+              budgetAlerts={budgetAlerts} billAlerts={billAlerts} priceAlerts={priceAlerts}
+              rawBillCount={rawBills.length} accountCount={accounts.length}
+              hasBudget={budgets.length > 0} simplefinConfigured={Boolean(process.env.SIMPLEFIN_URL)}
+            />
           </>
         )}
       </div>

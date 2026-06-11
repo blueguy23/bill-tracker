@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { AppError } from '@/lib/errors';
+import { reportError } from '@/lib/errorReporter';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RouteHandler = (req: NextRequest, ctx?: any) => Promise<Response> | Response;
@@ -25,6 +27,23 @@ export function withRequestLogging(handler: RouteHandler): RouteHandler {
       response = await handler(enrichedReq, ctx);
     } catch (err) {
       const ms = Date.now() - start;
+      if (err instanceof AppError) {
+        logger[err.statusCode >= 500 ? 'error' : 'warn']('request', {
+          requestId,
+          method: req.method,
+          path: req.nextUrl.pathname,
+          status: err.statusCode,
+          durationMs: ms,
+          code: err.code,
+        });
+        const res = NextResponse.json(
+          { error: err.message, ...(err.code ? { code: err.code } : {}) },
+          { status: err.statusCode },
+        );
+        res.headers.set('x-request-id', requestId);
+        return res;
+      }
+      reportError('request.unhandled', err);
       logger.error('request.unhandled', {
         requestId,
         method: req.method,

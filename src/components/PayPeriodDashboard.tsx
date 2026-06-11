@@ -1,7 +1,6 @@
 import type { PayPeriodDashboardData, CategorySpend } from '@/types/payPeriod';
-import { SafeToSpendHero } from './SafeToSpendHero';
 import { PayPeriodBreakdown } from './PayPeriodBreakdown';
-import { PayPeriodBalanceChart } from './PayPeriodBalanceChart';
+import { SpendingCorridorChart } from './SpendingCorridorChart';
 import { PayPeriodTimeline } from './PayPeriodTimeline';
 import { PayPeriodComparisonCard } from './PayPeriodComparison';
 
@@ -46,9 +45,8 @@ function SpendingByCategory({ categories }: { categories: CategorySpend[] }) {
 export function PayPeriodDashboard({ data }: Props) {
   return (
     <>
-      <SafeToSpendHero stats={data.stats} period={data.period} />
       <PayPeriodBreakdown stats={data.stats} />
-      <PayPeriodBalanceChart dailyBalances={data.dailyBalances} />
+      <SpendingCorridorChart dailySpending={data.dailySpending} stats={data.stats} />
       <PayPeriodTimeline
         period={data.period}
         events={data.upcomingEvents}

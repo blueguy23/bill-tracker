@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { reportError } from '@/lib/errorReporter';
 
 const STARTUP_SYNC_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
 
@@ -14,10 +15,12 @@ export async function register() {
     process.on('SIGTERM', () => db.gracefulShutdown(0));
     process.on('SIGINT', () => db.gracefulShutdown(0));
     process.on('uncaughtException', (err) => {
+      reportError('process.uncaughtException', err);
       logger.error('process.uncaughtException', { error: err instanceof Error ? err.message : String(err) });
       db.gracefulShutdown(1);
     });
     process.on('unhandledRejection', (reason) => {
+      reportError('process.unhandledRejection', reason);
       logger.error('process.unhandledRejection', { error: reason instanceof Error ? reason.message : String(reason) });
       db.gracefulShutdown(1);
     });

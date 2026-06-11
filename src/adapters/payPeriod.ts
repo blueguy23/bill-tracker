@@ -5,10 +5,12 @@ import type {
   PayPeriodComparison,
   PayPeriodEvent,
   CategorySpend,
+  DailySpending,
 } from '@/types/payPeriod';
 import { getUserProfile } from '@/adapters/userProfile';
 import { listBills } from '@/adapters/bills';
-import { listAccounts, getCashFlowForRange, listTransactions } from '@/adapters/accounts';
+import { listAccounts, listTransactions } from '@/adapters/accounts';
+import { computeCashFlow } from '@/lib/cashFlow';
 import { getForecast } from '@/adapters/forecast';
 import {
   resolvePayConfig,
@@ -17,7 +19,7 @@ import {
   buildDailyBalances,
   generateBalanceWarning,
 } from '@/lib/payPeriod';
-import { projectBillDates } from '@/lib/forecast';
+import { projectBillDates, addDays, toDateKey } from '@/lib/forecast';
 
 export async function getPayPeriodData(
   db: StrictDB,
@@ -41,10 +43,14 @@ export async function getPayPeriodData(
   const periodEnd = new Date(period.end);
   periodEnd.setHours(23, 59, 59, 999);
 
-  const [cashFlow, { transactions: periodTransactions }] = await Promise.all([
-    getCashFlowForRange(db, period.start, periodEnd),
-    listTransactions(db, { startDate: period.start, endDate: periodEnd, limit: 5000 }),
-  ]);
+  const { transactions: periodTransactions } = await listTransactions(db, { startDate: period.start, endDate: periodEnd, limit: 5000 });
+  const creditAccountIds = new Set(
+    accounts.filter(a => a.accountType === 'credit').map(a => a._id),
+  );
+  const cashFlow = computeCashFlow(periodTransactions, creditAccountIds, {
+    start: period.start.getTime(),
+    end: periodEnd.getTime(),
+  }, false);
 
   const currentYYYYMM = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
@@ -135,6 +141,26 @@ export async function getPayPeriodData(
   const dailyBalances = buildDailyBalances(period.start, period.end, currentBalance - remaining, txnsForChart, upcomingEvents);
   const balanceWarning = generateBalanceWarning(upcomingEvents, remaining);
 
+  const spendByDay = new Map<string, number>();
+  for (const txn of periodTransactions) {
+    const amt = Number(txn.amount);
+    if (amt >= 0 || txn.isTransfer) continue;
+    const posted = txn.posted instanceof Date ? txn.posted : new Date(Number(txn.posted) * 1000);
+    const key = toDateKey(posted);
+    spendByDay.set(key, (spendByDay.get(key) ?? 0) + Math.abs(amt));
+  }
+  const todayKey = toDateKey(new Date());
+  const totalDays = Math.round((period.end.getTime() - period.start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  const dailySpending: DailySpending[] = [];
+  let cumulative = 0;
+  for (let i = 0; i < totalDays; i++) {
+    const d = addDays(period.start, i);
+    const key = toDateKey(d);
+    const isProjected = key > todayKey;
+    cumulative += spendByDay.get(key) ?? 0;
+    dailySpending.push({ date: key, cumulative: Math.round(cumulative * 100) / 100, isProjected });
+  }
+
   const categoryMap = new Map<string, number>();
   for (const txn of periodTransactions) {
     if (Number(txn.amount) < 0 && !txn.isTransfer) {
@@ -151,7 +177,11 @@ export async function getPayPeriodData(
     const prevPeriod = getAdjacentPeriod(period, payConfig.frequency, 'prev', payConfig.anchor);
     const prevEnd = new Date(prevPeriod.end);
     prevEnd.setHours(23, 59, 59, 999);
-    const prevCashFlow = await getCashFlowForRange(db, prevPeriod.start, prevEnd);
+    const { transactions: prevTxns } = await listTransactions(db, { startDate: prevPeriod.start, endDate: prevEnd, limit: 5000 });
+    const prevCashFlow = computeCashFlow(prevTxns, creditAccountIds, {
+      start: prevPeriod.start.getTime(),
+      end: prevEnd.getTime(),
+    }, false);
 
     const prevBillsDue = recurringBills.reduce((sum, b) => {
       const dates = projectBillDates(
@@ -185,6 +215,7 @@ export async function getPayPeriodData(
     period,
     stats,
     dailyBalances,
+    dailySpending,
     upcomingEvents,
     categorySpend,
     comparison,

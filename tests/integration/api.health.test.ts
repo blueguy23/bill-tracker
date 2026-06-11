@@ -41,6 +41,6 @@ describe('GET /api/v1/health', () => {
   it('returns exactly the expected top-level keys', async () => {
     const res = await get('/api/v1/health');
     const body = await res.json();
-    expect(Object.keys(body).sort()).toEqual(['checks', 'responseTimeMs', 'status', 'timestamp', 'uptime']);
+    expect(Object.keys(body).sort()).toEqual(['checks', 'memory', 'responseTimeMs', 'status', 'timestamp', 'uptime']);
   });
 });

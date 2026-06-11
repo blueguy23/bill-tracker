@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { listTransactions, listRecentTransactions, getCashFlowThisMonth } from '@/adapters/accounts';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { listTransactions, listRecentTransactions } from '@/adapters/accounts';
+import { getCashFlowThisMonth } from '@/handlers/cashFlow';
+import { invalidateAll } from '@/lib/cache';
 import type { StrictDB } from 'strictdb';
 import type { Transaction } from '@/lib/simplefin/types';
 
@@ -109,6 +111,8 @@ describe('listRecentTransactions', () => {
 });
 
 describe('getCashFlowThisMonth', () => {
+  beforeEach(() => invalidateAll());
+
   it('sums income (positive) and expenses (negative) separately', async () => {
     const txns = [
       makeTxn({ _id: 't1', amount: 2000, pending: false }),   // income

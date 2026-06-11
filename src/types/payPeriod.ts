@@ -57,10 +57,17 @@ export interface PayConfig {
   anchor: Date;
 }
 
+export interface DailySpending {
+  date: string;
+  cumulative: number;
+  isProjected: boolean;
+}
+
 export interface PayPeriodDashboardData {
   period: PayPeriodBounds;
   stats: PayPeriodStats;
   dailyBalances: DailyBalance[];
+  dailySpending: DailySpending[];
   upcomingEvents: PayPeriodEvent[];
   categorySpend: CategorySpend[];
   comparison: PayPeriodComparison | null;
