@@ -1,0 +1,44 @@
+name: CI (config-only gate)
+
+# Companion to ci.yml. Branch protection requires the "test" check on every
+# PR, but ci.yml's pull_request path filter skips docs/config-only changes
+# (e.g. .claude/, project-docs/, *.md) — GitHub then creates no check suite
+# for the PR event and the required check waits forever, deadlocking the PR
+# (workflow_dispatch runs on the same commit do NOT satisfy the gate).
+# This workflow reports a passing "test" check for exactly those PRs.
+#
+# paths-ignore below MUST stay a mirror of ci.yml's pull_request `paths`
+# list — update both together. A PR touching both code and non-code paths
+# triggers both workflows; branch protection then requires both "test"
+# checks, so the real pipeline still gates code changes.
+
+on:
+  pull_request:
+    branches: [master]
+    paths-ignore:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'public/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
+      - 'next.config.ts'
+      - 'tailwind.config.ts'
+      - 'postcss.config.mjs'
+      - 'eslint.config.mjs'
+      - 'vitest.config.ts'
+      - 'vitest.integration.config.ts'
+      - 'playwright.config.ts'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.github/workflows/ci.yml'
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Gate satisfied
+        run: echo "No code paths changed — full CI not required; reporting required 'test' check as passed."
