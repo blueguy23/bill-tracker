@@ -53,8 +53,29 @@ else
     fi
 fi
 
-# Only care about main/master
+# Check for stale feature branches (non-main/master only)
 if [ "$BRANCH" != "main" ] && [ "$BRANCH" != "master" ]; then
+    # Compute merge-base and drift (safely with fallbacks)
+    if [ -n "$TARGET_DIR" ] && [ -d "$TARGET_DIR" ]; then
+        MERGE_BASE=$(git -C "$TARGET_DIR" merge-base "$BRANCH" origin/master 2>/dev/null) || exit 0
+        COMMITS_AHEAD=$(git -C "$TARGET_DIR" rev-list --count "$MERGE_BASE".."$BRANCH" 2>/dev/null) || COMMITS_AHEAD=0
+        MERGE_BASE_TIME=$(git -C "$TARGET_DIR" log -1 --format=%ci "$MERGE_BASE" 2>/dev/null) || exit 0
+    else
+        MERGE_BASE=$(git merge-base "$BRANCH" origin/master 2>/dev/null) || exit 0
+        COMMITS_AHEAD=$(git rev-list --count "$MERGE_BASE".."$BRANCH" 2>/dev/null) || COMMITS_AHEAD=0
+        MERGE_BASE_TIME=$(git log -1 --format=%ci "$MERGE_BASE" 2>/dev/null) || exit 0
+    fi
+
+    # Calculate age of merge-base
+    MERGE_BASE_EPOCH=$(date -d "$MERGE_BASE_TIME" +%s 2>/dev/null) || exit 0
+    NOW_EPOCH=$(date +%s)
+    AGE_DAYS=$(( (NOW_EPOCH - MERGE_BASE_EPOCH) / 86400 ))
+
+    # Warn if branch is stale (non-blocking)
+    if [ "$COMMITS_AHEAD" -gt 10 ] || [ "$AGE_DAYS" -gt 7 ]; then
+        echo "Branch '$BRANCH' has drifted ($COMMITS_AHEAD commits / $AGE_DAYS days since branching from master)." >&2
+        echo "Long-lived branches caused a 35-conflict merge — consider landing or rebasing. (CLAUDE.md rule 9)" >&2
+    fi
     exit 0
 fi
 
