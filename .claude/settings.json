@@ -71,6 +71,19 @@
             "command": "bash /home/garci/projects/bill-tracker/.claude/hooks/lint-on-save.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/garci/projects/bill-tracker/.claude/hooks/ci-watch.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash /home/garci/projects/bill-tracker/.claude/hooks/check-ci-alert.sh"
+          }
+        ]
       }
     ],
     "Stop": [
